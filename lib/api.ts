@@ -324,19 +324,42 @@ export async function getMembers(groupId: string): Promise<Profile[]> {
   const members = (data ?? []).map(toProfile);
 
   // Anyone who joined another family later kept their membership but not their
-  // profile's group_id, so pick them up from the roster and from who has posted.
+  // profile's group_id, so pick them up from the roster too. A family with no
+  // roster at all predates the memberships table, so fall back to who posted —
+  // once a roster exists it is authoritative and leaving really removes you.
   const joined = await sb.from('memberships').select('user_id').eq('group_id', groupId);
-  const posted = await sb.from('posts').select('user_id').eq('group_id', groupId);
-  const seen = [
-    ...(joined.error ? [] : (joined.data ?? [])),
-    ...(posted.error ? [] : (posted.data ?? [])),
-  ].map((r) => str(r.user_id));
+  const roster = joined.error ? [] : (joined.data ?? []);
+  const legacy =
+    roster.length === 0
+      ? await sb.from('posts').select('user_id').eq('group_id', groupId)
+      : null;
+  const seen = [...roster, ...(legacy && !legacy.error ? (legacy.data ?? []) : [])].map((r) =>
+    str(r.user_id)
+  );
   const missing = [...new Set(seen)].filter((id) => id && !members.some((m) => m.id === id));
   if (missing.length === 0) return members;
 
   const past = await sb.from('profiles').select().in('id', missing);
   if (past.error) return members;
   return [...members, ...(past.data ?? []).map(toProfile)].map((m) => ({ ...m, groupId }));
+}
+
+/**
+ * People who posted here but are no longer in the family, so their old posts
+ * still carry their name without them counting toward a level.
+ */
+export async function getPastAuthors(groupId: string, members: Profile[]): Promise<Profile[]> {
+  const sb = getSupabase();
+  const posted = await sb.from('posts').select('user_id').eq('group_id', groupId);
+  if (posted.error) return [];
+  const ids = [...new Set((posted.data ?? []).map((r) => str(r.user_id)))].filter(
+    (id) => id && !members.some((m) => m.id === id)
+  );
+  if (ids.length === 0) return [];
+
+  const past = await sb.from('profiles').select().in('id', ids);
+  if (past.error) return [];
+  return (past.data ?? []).map(toProfile).map((m) => ({ ...m, groupId }));
 }
 
 /** The task for the group's current level, created on demand. */

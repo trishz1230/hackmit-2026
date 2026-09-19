@@ -77,6 +77,8 @@ type State = {
   loading: boolean;
   /** Last thing the backend refused to do, for the onboarding screen. */
   error: string | null;
+  /** Drops the last error, so a retry isn't read as having failed again. */
+  dismissError: () => void;
   dismissCelebration: () => void;
   createGroup: (opts: CreateOptions) => void;
   joinGroup: (opts: JoinOptions) => void;
@@ -187,6 +189,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string>('');
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Profile[]>([]);
+  /** Former members, kept only so their old posts still show a name. */
+  const [pastAuthors, setPastAuthors] = useState<Profile[]>([]);
   const [task, setTask] = useState<Task>(mockTask);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -225,6 +229,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       setPosts([]);
       setReactions([]);
       setMembers([]);
+      setPastAuthors([]);
       setClearedLevel(null);
     }
     const stale = () => activeId.current !== null && activeId.current !== groupId;
@@ -246,6 +251,9 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     if (stale()) return;
     setGroup(current);
     setMembers(nextMembers);
+    void api.getPastAuthors(groupId, nextMembers).then((past) => {
+      if (!stale()) setPastAuthors(past);
+    });
     setTask(nextTask);
     setTasks(nextTasks.some((t) => t.id === nextTask.id) ? nextTasks : [...nextTasks, nextTask]);
     setPosts(nextPosts);
@@ -393,6 +401,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       isLive: true,
       loading,
       error,
+      dismissError: () => setError(null),
       dismissCelebration: () => setClearedLevel(null),
       createGroup: (opts) => {
         run(async () => {
@@ -486,7 +495,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       likedByMe: (postId) =>
         reactions.some((r) => r.postId === postId && r.kind === 'like' && r.userId === userId),
       reactionsFor: (postId) => reactions.filter((r) => r.postId === postId),
-      memberById: (id) => members.find((m) => m.id === id),
+      memberById: (id) => members.find((m) => m.id === id) ?? pastAuthors.find((m) => m.id === id),
       updateProfile: ({ name, phone }) => {
         run(async () => {
           await api.saveProfile(userId, name.trim() || me.name, group?.id ?? null, phone);
@@ -821,6 +830,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       isLive: false,
       loading: false,
       error: null,
+      dismissError: () => undefined,
       dismissCelebration: () => setClearedLevel(null),
       createGroup: ({ myName, familyName, phone, goal, cadence, rewardText }) => {
         setGroup({
