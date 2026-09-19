@@ -3,6 +3,7 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, Tex
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { describeWait } from '../lib/levels';
+import { promptKind } from '../lib/promptKind';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -11,7 +12,8 @@ export default function Capture() {
   const { channel } = useLocalSearchParams<{ channel?: string }>();
   const hangout = channel === 'hangout';
   const { task, addPost, taskLocked, opensAt } = useApp();
-  const [mode, setMode] = useState<'photo' | 'text'>('photo');
+  const kind = hangout ? 'either' : promptKind(task.prompt);
+  const [mode, setMode] = useState<'photo' | 'text'>(kind === 'text' ? 'text' : 'photo');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -24,10 +26,11 @@ export default function Capture() {
           ? await ImagePicker.requestCameraPermissionsAsync()
           : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
+        const source = from === 'camera' ? 'camera' : 'photo library';
         setPhotoError(
-          from === 'camera'
-            ? 'Allow camera access in Settings, or use Text instead.'
-            : 'Allow photo library access in Settings, or use Text instead.'
+          kind === 'photo'
+            ? `Allow ${source} access in Settings — this task needs a photo.`
+            : `Allow ${source} access in Settings, or use Text instead.`
         );
         return;
       }
@@ -37,12 +40,17 @@ export default function Capture() {
           : await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
       if (!result.canceled) setPhotoUri(result.assets[0].uri);
     } catch {
-      setPhotoError('Could not open the camera. Switch to Text to post.');
+      setPhotoError(
+        kind === 'photo'
+          ? 'Could not open the camera. Try choosing a photo instead.'
+          : 'Could not open the camera. Switch to Text to post.'
+      );
     }
   };
 
   const post = () => {
     const to = hangout ? 'hangout' : 'task';
+    if (kind !== 'either' && mode !== kind) return;
     if (mode === 'photo' && !photoUri) return;
     if (mode === 'text' && !text.trim()) return;
     const { completedGoal } = addPost(
@@ -79,19 +87,21 @@ export default function Capture() {
         {hangout ? 'Share anything with the family' : task.prompt}
       </Text>
 
-      <View style={styles.toggle}>
-        {(['photo', 'text'] as const).map((m) => (
-          <Pressable
-            key={m}
-            onPress={() => setMode(m)}
-            style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]}
-          >
-            <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
-              {m === 'photo' ? '📷 Photo' : '✍️ Text'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {kind === 'either' ? (
+        <View style={styles.toggle}>
+          {(['photo', 'text'] as const).map((m) => (
+            <Pressable
+              key={m}
+              onPress={() => setMode(m)}
+              style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]}
+            >
+              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
+                {m === 'photo' ? '📷 Photo' : '✍️ Text'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
 
       {mode === 'photo' ? (
         <View style={styles.photoArea}>

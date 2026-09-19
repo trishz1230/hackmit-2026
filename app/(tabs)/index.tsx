@@ -70,6 +70,7 @@ export default function Home() {
         level={group.level}
         goal={group.goal}
         reward={group.rewardText}
+        locked={taskLocked}
         onSelectLevel={setSelected}
       />
 
@@ -80,11 +81,11 @@ export default function Home() {
               <Text style={styles.sheetTitle}>Level {selected}</Text>
               {isCurrent && taskLocked ? (
                 <>
-                  <Text style={styles.taskLabel}>Not open yet</Text>
+                  <Text style={styles.taskLabel}>🔒 Locked</Text>
                   <Text style={styles.sheetBody}>
-                    Wait till the next time for a new conversation! This level starts{' '}
-                    {describeWait(opensAt)}.
+                    Wait till the next notification for a new conversation :)
                   </Text>
+                  <Text style={styles.sheetMeta}>Opens {describeWait(opensAt)}.</Text>
                 </>
               ) : isCurrent ? (
                 <>
@@ -97,17 +98,19 @@ export default function Home() {
                       <Text style={styles.postText}>{myPost.content}</Text>
                     )
                   ) : null}
-                  <Pressable
-                    style={styles.cta}
-                    onPress={() => {
-                      setSelected(null);
-                      router.push('/capture');
-                    }}
-                  >
-                    <Text style={styles.ctaText}>
-                      {hasPostedThisCycle ? 'Post again' : 'Complete task'}
-                    </Text>
-                  </Pressable>
+                  {hasPostedThisCycle ? (
+                    <Text style={styles.complete}>✓ Complete</Text>
+                  ) : (
+                    <Pressable
+                      style={styles.cta}
+                      onPress={() => {
+                        setSelected(null);
+                        router.push('/capture');
+                      }}
+                    >
+                      <Text style={styles.ctaText}>Complete task</Text>
+                    </Pressable>
+                  )}
                 </>
               ) : isCleared ? (
                 <>
@@ -156,6 +159,13 @@ const styles = StyleSheet.create({
   resetTitle: { fontWeight: '800', color: colors.text },
   resetBody: { color: colors.muted, marginTop: 2 },
   dismiss: { marginTop: spacing.xs, color: colors.accent, fontWeight: '700' },
+  sheetMeta: { color: colors.muted, marginTop: spacing.xs },
+  complete: {
+    marginTop: spacing.md,
+    color: colors.success,
+    fontWeight: '800',
+    fontSize: 16,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(20,10,35,0.6)',
