@@ -63,8 +63,17 @@ export function AvatarFace({ value, size }: { value?: string; size: number }) {
   return <FaceLayers face={face} size={size} />;
 }
 
-export function FaceLayers({ face, size }: { face: Face; size: number }) {
-  const hair = HAIR[face.hair];
+/** `upTo` hides later features while the avatar is still being built. */
+export function FaceLayers({
+  face,
+  size,
+  upTo = 'hair',
+}: {
+  face: Face;
+  size: number;
+  upTo?: 'eyes' | 'mouth' | 'hair';
+}) {
+  const hair = upTo === 'hair' ? HAIR[face.hair] : null;
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>
       <Image
@@ -77,11 +86,13 @@ export function FaceLayers({ face, size }: { face: Face; size: number }) {
         resizeMode="contain"
         style={[styles.layer, { top: size * 0.36, width: size * 0.46, height: size * 0.14 }]}
       />
-      <Image
-        source={MOUTHS[face.mouth]}
-        resizeMode="contain"
-        style={[styles.layer, { top: size * 0.56, width: size * 0.34, height: size * 0.18 }]}
-      />
+      {upTo === 'eyes' ? null : (
+        <Image
+          source={MOUTHS[face.mouth]}
+          resizeMode="contain"
+          style={[styles.layer, { top: size * 0.56, width: size * 0.34, height: size * 0.18 }]}
+        />
+      )}
     </View>
   );
 }

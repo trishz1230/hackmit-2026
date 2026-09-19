@@ -30,6 +30,8 @@ const LABEL: Record<Step, string> = {
 
 const SWIPE = 24;
 const DOUBLE_TAP_MS = 320;
+/** The title sits alone on the paper before the face appears. */
+const INTRO_MS = 2000;
 
 export default function MakeAYou() {
   const router = useRouter();
@@ -38,12 +40,29 @@ export default function MakeAYou() {
   const [mouth, setMouth] = useState(0);
   const [hair, setHair] = useState(0);
   const [done, setDone] = useState(false);
+  const [started, setStarted] = useState(false);
+  const reveal = useRef(new Animated.Value(0)).current;
 
-  const finish = useRef(new Animated.Value(0)).current;
+  const finish = useRef(new Animated.Value(1)).current;
   const lastTap = useRef(0);
   const leaving = useRef(false);
 
   const current: Step | undefined = STEPS[step];
+  // Only the features already chosen (plus the one being chosen) are drawn.
+  const upTo = STEPS[Math.min(step, STEPS.length - 1)];
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setStarted(true);
+      Animated.timing(reveal, {
+        toValue: 1,
+        duration: 420,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    }, INTRO_MS);
+    return () => clearTimeout(t);
+  }, [reveal]);
 
   const counts = useMemo(() => ({ eyes: EYES.length, mouth: MOUTHS.length, hair: HAIR.length }), []);
 
@@ -86,7 +105,7 @@ export default function MakeAYou() {
   cycleRef.current = cycle;
 
   useEffect(() => {
-    if (step < STEPS.length || leaving.current) return;
+    if (!started || step < STEPS.length || leaving.current) return;
     leaving.current = true;
     setDone(true);
     savePendingAvatar(encodeFace({ eyes, mouth, hair })).catch(() => {});
@@ -96,18 +115,19 @@ export default function MakeAYou() {
     ]).start();
     const t = setTimeout(() => router.replace('/onboarding'), 1600);
     return () => clearTimeout(t);
-  }, [eyes, finish, hair, mouth, router, step]);
+  }, [eyes, finish, hair, mouth, router, started, step]);
 
   return (
     <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
       <Text style={styles.title}>make a you...</Text>
 
       <Animated.View
-        style={[styles.stage, done && { transform: [{ scale: finish }] }]}
+        style={[styles.stage, { opacity: reveal }, done && { transform: [{ scale: finish }] }]}
+        pointerEvents={started ? 'auto' : 'none'}
         {...pan.panHandlers}
       >
         <Pressable onPress={onTap} style={styles.face}>
-          <FaceLayers face={{ eyes, mouth, hair }} size={FACE} />
+          <FaceLayers face={{ eyes, mouth, hair }} size={FACE} upTo={upTo} />
         </Pressable>
 
         {done ? (
@@ -119,7 +139,7 @@ export default function MakeAYou() {
         ) : null}
       </Animated.View>
 
-      {current ? (
+      {!started ? null : current ? (
         <View style={styles.footer}>
           <Text style={styles.hint}>swipe up or down to switch {LABEL[current]}</Text>
           <Text style={styles.hint}>double tap to lock it in.</Text>
