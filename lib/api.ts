@@ -8,6 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabase } from './supabase';
 import { generatePrompt } from './prompts';
+import { sendExpoPush } from './push';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
 
 type Row = Record<string, unknown>;
@@ -33,6 +34,7 @@ const toProfile = (r: Row): Profile => ({
   groupId: str(r.group_id),
   avatar: str(r.avatar) || '🙂',
   phone: str(r.phone) || undefined,
+  expoPushToken: str(r.expo_push_token) || undefined,
 });
 
 const toTask = (r: Row): Task => ({
@@ -119,6 +121,22 @@ export async function saveProfile(
     .single();
   if (error) throw error;
   return toProfile(data);
+}
+
+export async function savePushToken(userId: string, token: string): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb.from('profiles').update({ expo_push_token: token }).eq('id', userId);
+  if (error) return;
+}
+
+async function notifyProfile(
+  profile: Profile | undefined,
+  title: string,
+  body: string,
+  data: Record<string, string>
+) {
+  if (!profile?.expoPushToken) return;
+  await sendExpoPush(profile.expoPushToken, title, body, data);
 }
 
 export async function createGroup(userId: string, opts: CreateOptions): Promise<Group> {
@@ -247,7 +265,20 @@ export async function createPost(
     .select()
     .single();
   if (error) throw error;
-  return toPost(data);
+  const post = toPost(data);
+  const members = await getMembers(input.groupId);
+  const actor = members.find((m) => m.id === input.userId);
+  await Promise.all(
+    members
+      .filter((m) => m.id !== input.userId)
+      .map((m) =>
+        notifyProfile(m, `${actor?.name ?? 'Family'} posted`, 'Open to react — like, comment, or call.', {
+          type: 'post',
+          postId: post.id,
+        })
+      )
+  );
+  return post;
 }
 
 /** Uploads a local image uri to the public `photos` bucket, returning its url. */
@@ -263,10 +294,16 @@ async function uploadPhoto(uri: string, userId: string): Promise<string> {
 
 export async function getReactions(groupId: string): Promise<Reaction[]> {
   const sb = getSupabase();
-  const { data, error } = await sb
+  const nested = await sb
     .from('reactions')
     .select('*, posts!inner(group_id)')
     .eq('posts.group_id', groupId);
+  if (!nested.error) return (nested.data ?? []).map(toReaction);
+
+  const posts = await getPosts(groupId);
+  const ids = posts.map((p) => p.id);
+  if (ids.length === 0) return [];
+  const { data, error } = await sb.from('reactions').select().in('post_id', ids);
   if (error) throw error;
   return (data ?? []).map(toReaction);
 }
@@ -277,6 +314,27 @@ export async function addReaction(input: Omit<Reaction, 'id'>): Promise<void> {
     .from('reactions')
     .insert({ post_id: input.postId, user_id: input.userId, kind: input.kind, value: input.value });
   if (error) throw error;
+
+  const { data: postRow } = await sb.from('posts').select().eq('id', input.postId).maybeSingle();
+  if (!postRow) return;
+  const authorId = str(postRow.user_id);
+  if (!authorId || authorId === input.userId) return;
+  const [author, actor] = await Promise.all([
+    sb.from('profiles').select().eq('id', authorId).maybeSingle(),
+    sb.from('profiles').select().eq('id', input.userId).maybeSingle(),
+  ]);
+  const actorName = actor.data ? toProfile(actor.data as Row).name : 'Family';
+  const title =
+    input.kind === 'comment'
+      ? `${actorName} commented`
+      : input.kind === 'like'
+        ? `${actorName} liked your post`
+        : `${actorName} reacted ${input.value}`;
+  const body = input.kind === 'comment' ? input.value : 'Open FamStreak to see their reaction.';
+  await notifyProfile(author.data ? toProfile(author.data as Row) : undefined, title, body, {
+    type: 'post',
+    postId: input.postId,
+  });
 }
 
 /**

@@ -94,6 +94,46 @@ export async function startPostNag(authorName: string, postId: string, cadence: 
   );
 }
 
+export async function startReactionNag(
+  nag: {
+    actorName: string;
+    authorName: string;
+    kind: 'like' | 'emoji' | 'comment';
+    value: string;
+    postId: string;
+    forMe: boolean;
+  },
+  cadence: Cadence = 'daily'
+) {
+  const action =
+    nag.kind === 'like'
+      ? 'liked'
+      : nag.kind === 'comment'
+        ? 'commented on'
+        : `reacted ${nag.value} to`;
+  const title = nag.forMe
+    ? nag.kind === 'comment'
+      ? `${nag.actorName} commented`
+      : nag.kind === 'like'
+        ? `${nag.actorName} liked your post`
+        : `${nag.actorName} reacted ${nag.value}`
+    : `${nag.authorName}: ${nag.actorName} ${action} your post`;
+  const body =
+    nag.kind === 'comment' && nag.value
+      ? nag.value
+      : nag.forMe
+        ? 'Open to see their reaction.'
+        : 'They got a ping — open the post.';
+  await fire(
+    {
+      title,
+      body,
+      data: { type: 'post', postId: nag.postId },
+    },
+    cadence
+  );
+}
+
 export async function stopNags() {
   if (Platform.OS === 'web') return;
   await Notifications.cancelAllScheduledNotificationsAsync();

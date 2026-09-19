@@ -11,6 +11,7 @@ import * as api from './api';
 import { clampLevelCount, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { generatePrompt } from './prompts';
+import { getPushToken } from './push';
 import { isSupabaseConfigured } from './supabase';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
 
@@ -46,6 +47,7 @@ type State = {
   everyonePostedThisCycle: boolean;
   missedReset: boolean;
   unseenPosts: Post[];
+  unseenReactions: ReactionNag[];
   /** Members who still owe a post for the current task. */
   pending: Profile[];
   /** Level just cleared, for the celebration overlay; null once dismissed. */
@@ -81,6 +83,44 @@ const emptyMe = (userId: string, groupId = ''): Profile => ({
   avatar: '🙂',
 });
 
+export type ReactionNag = {
+  id: string;
+  postId: string;
+  actorName: string;
+  authorName: string;
+  kind: Reaction['kind'];
+  value: string;
+  /** This device authored the post — only that phone is nagged. */
+  forMe: boolean;
+};
+
+function unseenReactionNags(
+  reactions: Reaction[],
+  allPosts: Post[],
+  members: Profile[],
+  meId: string,
+  seenReactionIds: string[]
+): ReactionNag[] {
+  const nags: ReactionNag[] = [];
+  for (const reaction of reactions) {
+    if (seenReactionIds.includes(reaction.id)) continue;
+    const post = allPosts.find((p) => p.id === reaction.postId);
+    if (!post || reaction.userId === post.userId) continue;
+    const forMe = post.userId === meId && reaction.userId !== meId;
+    if (!forMe) continue;
+    nags.push({
+      id: reaction.id,
+      postId: post.id,
+      actorName: members.find((m) => m.id === reaction.userId)?.name ?? 'Family',
+      authorName: members.find((m) => m.id === post.userId)?.name ?? 'Family',
+      kind: reaction.kind,
+      value: reaction.value,
+      forMe,
+    });
+  }
+  return nags;
+}
+
 const promptForTasks = (tasks: Task[], taskId: string) => tasks.find((t) => t.id === taskId)?.prompt;
 
 const latestTaskForLevel = (tasks: Task[], level: number) =>
@@ -108,6 +148,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [seenPostIds, setSeenPostIds] = useState<string[]>([]);
+  const [seenReactionIds, setSeenReactionIds] = useState<string[]>([]);
   const [missedReset, setMissedReset] = useState(false);
   /** Last level this browser saw, so every member gets the celebration. */
   const lastLevel = useRef<number | null>(null);
@@ -161,6 +202,14 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   useEffect(() => {
+    if (!userId || !group) return;
+    void (async () => {
+      const token = await getPushToken();
+      if (token) await api.savePushToken(userId, token);
+    })();
+  }, [userId, group?.id]);
+
+  useEffect(() => {
     if (!group) return;
     const groupId = group.id;
     return api.subscribeToGroup(groupId, () => void refresh(groupId));
@@ -176,6 +225,13 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const hangoutPosts = posts.filter((p) => p.taskId === '');
   const unseenPosts = posts.filter(
     (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
+  );
+  const unseenReactions = unseenReactionNags(
+    reactions,
+    [...taskPosts, ...hangoutPosts],
+    members,
+    me.id,
+    seenReactionIds
   );
 
   const value = useMemo<State>(
@@ -199,6 +255,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       missedReset,
       unseenPosts,
+      unseenReactions,
       pending,
       clearedLevel,
       isLive: true,
@@ -279,6 +336,10 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       simulateMissedDay: () => setMissedReset(true),
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
+        setSeenReactionIds((prev) => {
+          const extra = reactions.filter((r) => r.postId === postId).map((r) => r.id);
+          return extra.length === 0 ? prev : [...new Set([...prev, ...extra])];
+        });
       },
       restart: () => {
         run(async () => {
@@ -305,6 +366,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       missedReset,
       unseenPosts,
+      unseenReactions,
       pending,
       clearedLevel,
       loading,
@@ -338,6 +400,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const [clearedLevel, setClearedLevel] = useState<number | null>(null);
   const [missedReset, setMissedReset] = useState(false);
   const [seenPostIds, setSeenPostIds] = useState<string[]>([]);
+  const [seenReactionIds, setSeenReactionIds] = useState<string[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const seenPrompts = useRef<string[]>([mockTask.prompt]);
   const missChecked = useRef<string | null>(null);
@@ -365,6 +428,13 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const hangoutPosts = posts.filter((p) => p.taskId === '');
   const unseenPosts = posts.filter(
     (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
+  );
+  const unseenReactions = unseenReactionNags(
+    reactions,
+    [...taskPosts, ...hangoutPosts],
+    members,
+    me.id,
+    seenReactionIds
   );
 
   useEffect(() => {
@@ -446,6 +516,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       missedReset,
       unseenPosts,
+      unseenReactions,
       pending,
       clearedLevel,
       isLive: false,
@@ -467,6 +538,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setMissedReset(false);
         setPosts([]);
         setSeenPostIds([]);
+        setSeenReactionIds([]);
         rememberTask(newTask(mockTask.prompt, 1), true);
       },
       joinGroup: ({ myName, phone }) => {
@@ -474,6 +546,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setMembers(withMe(myName, phone));
         setMissedReset(false);
         setSeenPostIds(mockPosts.map((p) => p.id));
+        setSeenReactionIds([]);
         rememberTask(mockTask, true);
       },
       updateSettings: ({ cadence, rewardText, goal }) => {
@@ -540,6 +613,10 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       },
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
+        setSeenReactionIds((prev) => {
+          const extra = reactions.filter((r) => r.postId === postId).map((r) => r.id);
+          return extra.length === 0 ? prev : [...new Set([...prev, ...extra])];
+        });
       },
       restart: () => {
         clearTimers();
@@ -566,6 +643,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       missedReset,
       unseenPosts,
+      unseenReactions,
       pending,
       clearedLevel,
       appendPost,

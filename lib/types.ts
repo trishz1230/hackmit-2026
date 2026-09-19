@@ -41,6 +41,7 @@ export type Profile = {
   groupId: string;
   avatar: string;
   phone?: string;
+  expoPushToken?: string;
 };
 
 export type Task = {

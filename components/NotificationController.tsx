@@ -1,14 +1,15 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { onNotificationTap, startPostNag, startTaskNag, stopNags } from '../lib/nag';
+import { onNotificationTap, startPostNag, startReactionNag, startTaskNag, stopNags } from '../lib/nag';
 import { useApp } from '../lib/store';
 
 /** Schedules OS notifications and handles taps. Renders nothing. */
 export function NotificationController() {
   const router = useRouter();
-  const { group, task, hasPostedThisCycle, unseenPosts, memberById } = useApp();
+  const { group, task, hasPostedThisCycle, unseenPosts, unseenReactions, memberById } = useApp();
   const unseen = unseenPosts[0];
   const unseenAuthor = unseen ? memberById(unseen.userId) : undefined;
+  const reactionNag = unseenReactions[0];
 
   useEffect(() => {
     return onNotificationTap((data) => {
@@ -22,6 +23,10 @@ export function NotificationController() {
       void stopNags();
       return;
     }
+    if (reactionNag) {
+      void startReactionNag(reactionNag, group.cadence);
+      return;
+    }
     if (!hasPostedThisCycle) {
       void startTaskNag(task.prompt, group.cadence);
       return;
@@ -30,7 +35,14 @@ export function NotificationController() {
     if (unseen) {
       void startPostNag(unseenAuthor?.name ?? 'Family', unseen.id, group.cadence);
     }
-  }, [group, hasPostedThisCycle, task.prompt, unseen?.id, unseenAuthor?.name]);
+  }, [
+    group,
+    hasPostedThisCycle,
+    task.prompt,
+    reactionNag?.id,
+    unseen?.id,
+    unseenAuthor?.name,
+  ]);
 
   return null;
 }

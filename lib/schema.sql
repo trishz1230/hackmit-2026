@@ -21,8 +21,11 @@ create table if not exists profiles (
   group_id uuid references groups(id) on delete set null,
   avatar text default '🙂',
   phone text,
+  expo_push_token text,
   created_at timestamptz default now()
 );
+
+alter table profiles add column if not exists expo_push_token text;
 
 -- One task per level, so a family can clear several levels in one demo.
 create table if not exists tasks (
