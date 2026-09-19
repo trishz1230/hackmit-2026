@@ -1,5 +1,6 @@
 import React from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';

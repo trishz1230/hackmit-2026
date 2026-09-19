@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Handwriting';
 import { colors, radius, spacing } from '../lib/theme';
 import type { Profile } from '../lib/types';
 

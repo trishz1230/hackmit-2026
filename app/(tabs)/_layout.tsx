@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text } from '../../components/Handwriting';
 import { Tabs } from 'expo-router';
-import { colors } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 
 export default function TabLayout() {
   return (
@@ -19,7 +19,7 @@ export default function TabLayout() {
           paddingTop: 6,
           paddingBottom: 22,
         },
-        tabBarLabelStyle: { fontWeight: '700', fontSize: 12, marginTop: 2 },
+        tabBarLabelStyle: { fontFamily: fonts.body, fontSize: 13, marginTop: 2 },
       }}
     >
       <Tabs.Screen

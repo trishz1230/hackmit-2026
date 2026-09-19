@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
