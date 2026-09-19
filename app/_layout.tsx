@@ -41,6 +41,7 @@ export default function RootLayout() {
             <Stack.Screen name="capture" options={{ title: "Today's task", presentation: 'modal' }} />
             <Stack.Screen name="next-goal" options={{ title: 'Next goal' }} />
             <Stack.Screen name="post/[id]" options={{ title: 'Reactions' }} />
+            <Stack.Screen name="level/[n]" options={{ title: 'Level' }} />
           </Stack>
           <KeyboardDismissLayer />
         </PhoneFrame>
