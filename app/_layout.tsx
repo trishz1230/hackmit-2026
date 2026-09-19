@@ -11,8 +11,9 @@ import { AppProvider } from '../lib/store';
 import { colors, fonts } from '../lib/theme';
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ PatrickHand_400Regular });
-  if (!fontsLoaded && !fontError) return null;
+  // Not gated on: a font that never resolves would otherwise leave a white
+  // screen. Text falls back to the system face until it arrives.
+  useFonts({ PatrickHand_400Regular });
 
   return (
     <SafeAreaProvider>
@@ -31,6 +32,7 @@ export default function RootLayout() {
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
+            <Stack.Screen name="welcome" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="hangout" options={{ title: 'Hangout' }} />
             <Stack.Screen name="settings" options={{ title: 'Family settings' }} />
