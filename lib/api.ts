@@ -154,6 +154,19 @@ export async function joinGroup(userId: string, opts: JoinOptions): Promise<Grou
   return group;
 }
 
+/** Settings screen: cadence, reward and level goal can change any time. */
+export async function updateGroup(
+  groupId: string,
+  patch: { cadence: Cadence; rewardText: string; goal: number }
+): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update({ cadence: patch.cadence, reward_text: patch.rewardText, goal: patch.goal })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
 export async function getGroup(groupId: string): Promise<Group | null> {
   const sb = getSupabase();
   const { data } = await sb.from('groups').select().eq('id', groupId).maybeSingle();
@@ -207,8 +220,9 @@ export async function getPosts(groupId: string): Promise<Post[]> {
   return (data ?? []).map(toPost);
 }
 
+/** A null taskId is a hangout post: it counts for nothing, it's just chat. */
 export async function createPost(
-  input: Pick<Post, 'taskId' | 'groupId' | 'userId' | 'kind' | 'content'>
+  input: Pick<Post, 'groupId' | 'userId' | 'kind' | 'content'> & { taskId: string | null }
 ): Promise<Post> {
   const sb = getSupabase();
   const content = input.kind === 'photo' ? await uploadPhoto(input.content, input.userId) : input.content;

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
 export default function Capture() {
   const router = useRouter();
+  const { channel } = useLocalSearchParams<{ channel?: string }>();
+  const hangout = channel === 'hangout';
   const { task, addPost } = useApp();
   const [mode, setMode] = useState<'photo' | 'text'>('photo');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -21,15 +23,18 @@ export default function Capture() {
   };
 
   const post = () => {
-    if (mode === 'photo' && photoUri) addPost('photo', photoUri);
-    else if (mode === 'text' && text.trim()) addPost('text', text.trim());
+    const to = hangout ? 'hangout' : 'task';
+    if (mode === 'photo' && photoUri) addPost('photo', photoUri, to);
+    else if (mode === 'text' && text.trim()) addPost('text', text.trim(), to);
     else return;
-    router.replace('/');
+    router.replace(hangout ? '/hangout' : '/');
   };
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.prompt}>{task.prompt}</Text>
+      <Text style={styles.prompt}>
+        {hangout ? 'Share anything with the family' : task.prompt}
+      </Text>
 
       <View style={styles.toggle}>
         {(['photo', 'text'] as const).map((m) => (
@@ -67,13 +72,13 @@ export default function Capture() {
           value={text}
           onChangeText={setText}
           multiline
-          placeholder="Tell them about your day…"
+          placeholder={hangout ? 'What\u2019s going on?' : 'Tell them about your day…'}
           placeholderTextColor={colors.muted}
         />
       )}
 
       <Pressable style={styles.cta} onPress={post}>
-        <Text style={styles.ctaText}>Post to family</Text>
+        <Text style={styles.ctaText}>{hangout ? 'Post to hangout' : 'Post to family'}</Text>
       </Pressable>
     </View>
   );

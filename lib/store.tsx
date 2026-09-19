@@ -11,7 +11,10 @@ import * as api from './api';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask } from './mockData';
 import { generatePrompt } from './prompts';
 import { isSupabaseConfigured } from './supabase';
-import type { CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
+import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
+
+/** Task posts clear levels; hangout posts are just for fun. */
+export type Channel = 'task' | 'hangout';
 
 const CURRENT_USER_ID = 'user-1';
 
@@ -26,7 +29,10 @@ type State = {
   members: Profile[];
   me: Profile;
   task: Task;
+  /** Answers to the current level's task. */
   posts: Post[];
+  /** Free posts that don't count toward the level. */
+  hangoutPosts: Post[];
   reactions: Reaction[];
   hasPostedThisCycle: boolean;
   /** Members who still owe a post for the current task. */
@@ -42,7 +48,8 @@ type State = {
   dismissCelebration: () => void;
   createGroup: (opts: CreateOptions) => void;
   joinGroup: (opts: JoinOptions) => void;
-  addPost: (kind: Post['kind'], content: string) => void;
+  updateSettings: (patch: { cadence: Cadence; rewardText: string; goal: number }) => void;
+  addPost: (kind: Post['kind'], content: string, channel?: Channel) => void;
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   reactionsFor: (postId: string) => Reaction[];
   memberById: (id: string) => Profile | undefined;
@@ -134,6 +141,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
   const hasPostedThisCycle = postedIds.includes(userId);
   const pending = members.filter((m) => !postedIds.includes(m.id));
+  const taskPosts = posts.filter((p) => p.taskId !== '');
+  const hangoutPosts = posts.filter((p) => p.taskId === '');
 
   const value = useMemo<State>(
     () => ({
@@ -141,7 +150,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
-      posts,
+      posts: taskPosts,
+      hangoutPosts,
       reactions,
       hasPostedThisCycle,
       pending,
@@ -162,10 +172,23 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(joined.id);
         });
       },
-      addPost: (kind, content) => {
+      updateSettings: (patch) => {
         if (!group) return;
         run(async () => {
-          await api.createPost({ taskId: task.id, groupId: group.id, userId, kind, content });
+          await api.updateGroup(group.id, patch);
+          await refresh(group.id);
+        });
+      },
+      addPost: (kind, content, channel = 'task') => {
+        if (!group) return;
+        run(async () => {
+          await api.createPost({
+            taskId: channel === 'hangout' ? null : task.id,
+            groupId: group.id,
+            userId,
+            kind,
+            content,
+          });
           await refresh(group.id);
         });
       },
@@ -191,7 +214,23 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
         });
       },
     }),
-    [group, members, me, task, posts, reactions, hasPostedThisCycle, pending, clearedLevel, loading, error, run, userId, refresh]
+    [
+      group,
+      members,
+      me,
+      task,
+      taskPosts,
+      hangoutPosts,
+      reactions,
+      hasPostedThisCycle,
+      pending,
+      clearedLevel,
+      loading,
+      error,
+      run,
+      userId,
+      refresh,
+    ]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -227,6 +266,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
   const hasPostedThisCycle = postedIds.includes(me.id);
   const pending = members.filter((m) => !postedIds.includes(m.id));
+  const taskPosts = posts.filter((p) => p.taskId !== '');
+  const hangoutPosts = posts.filter((p) => p.taskId === '');
 
   /** Everyone answered, so the family clears the level and draws a new task. */
   const completeLevel = useCallback(async () => {
@@ -263,7 +304,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
-      posts,
+      posts: taskPosts,
+      hangoutPosts,
       reactions,
       hasPostedThisCycle,
       pending,
@@ -286,7 +328,14 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setGroup(mockGroup);
         setMembers(withMyName(myName));
       },
-      addPost: (kind, content) => {
+      updateSettings: ({ cadence, rewardText, goal }) => {
+        setGroup((g) => (g ? { ...g, cadence, rewardText, goal } : g));
+      },
+      addPost: (kind, content, channel = 'task') => {
+        if (channel === 'hangout') {
+          appendPost(me.id, kind, content, '');
+          return;
+        }
         if (hasPostedThisCycle) {
           appendPost(me.id, kind, content, task.id);
           return;
@@ -327,7 +376,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
-      posts,
+      taskPosts,
+      hangoutPosts,
       reactions,
       hasPostedThisCycle,
       pending,

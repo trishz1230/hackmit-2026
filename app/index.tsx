@@ -4,6 +4,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { NagBanner } from '../components/NagBanner';
 import { PostCard } from '../components/PostCard';
 import { ProgressBar } from '../components/ProgressBar';
+import { Tabs } from '../components/Tabs';
 import { startNagging, stopNagging } from '../lib/nag';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
@@ -32,7 +33,7 @@ export default function Feed() {
     if (hasPostedThisCycle) {
       void stopNagging();
     } else {
-      void startNagging(task.prompt);
+      void startNagging(task.prompt, group.cadence);
     }
   }, [group, hasPostedThisCycle, task.prompt]);
 
@@ -51,6 +52,8 @@ export default function Feed() {
       {!hasPostedThisCycle && (
         <NagBanner prompt={task.prompt} onPress={() => router.push('/capture')} />
       )}
+
+      <Tabs active="family" />
 
       <ProgressBar
         level={group.level}
@@ -80,6 +83,9 @@ export default function Feed() {
                 : `Waiting on ${pending.map((m) => m.name).join(', ')}`}
             </Text>
             <Text style={styles.joinCode}>Invite code: {group.joinCode}</Text>
+            <Pressable onPress={() => router.push('/settings')}>
+              <Text style={styles.settings}>Family settings →</Text>
+            </Pressable>
           </View>
         }
         renderItem={({ item }) => (
@@ -138,6 +144,7 @@ const styles = StyleSheet.create({
   taskCtaText: { color: '#fff', fontWeight: '700' },
   waiting: { marginTop: spacing.sm, fontSize: 13, color: colors.text },
   joinCode: { marginTop: spacing.xs, fontSize: 12, color: colors.muted },
+  settings: { marginTop: spacing.xs, fontSize: 13, color: colors.accent, fontWeight: '600' },
   restart: {
     alignSelf: 'center',
     marginBottom: spacing.sm,

@@ -21,8 +21,8 @@ It runs with mock data out of the box — no accounts or keys needed.
 
 | Path | Owner | What's in it |
 | --- | --- | --- |
-| `app/` | UI | Screens: `onboarding`, `index` (feed), `levels` (level map), `capture`, `post/[id]` (reactions) |
-| `components/` | UI | `NagBanner`, `PostCard`, `ProgressBar`, `PhoneFrame`, `LevelMap` |
+| `app/` | UI | Screens: `onboarding`, `index` (level feed), `hangout` (casual feed), `settings`, `levels` (level map), `capture`, `post/[id]` (reactions) |
+| `components/` | UI | `NagBanner`, `PostCard`, `ProgressBar`, `PhoneFrame`, `LevelMap`, `Tabs` |
 | `lib/store.tsx` | shared | App state: live (Supabase) or mock, picked automatically |
 | `lib/api.ts` | backend | Every Supabase read/write |
 | `lib/schema.sql` | backend | Database tables to run in the Supabase SQL editor |
@@ -39,6 +39,15 @@ The family starts at level 1 with an empty feed. Everyone has to post for the
 current task; when the last member posts, the level and the streak both go up, a
 new prompt is generated, and the next level's task begins. The feed shows who
 it's still waiting on.
+
+Levels are strict: only posts answering the current task count, so nothing in
+the Hangout tab can clear a level. The **Hangout** tab is for anything else —
+same photo/text capture and reactions, zero effect on progress.
+
+The level duration picked at onboarding (1 day / 3 days / a week) only sets how
+often the reminder re-fires (`lib/nag.ts`); it never blocks posting or delays a
+level. Change it, the reward, or the number of levels any time in **Family
+settings** (link on the feed) — changes sync to everyone.
 
 Without Supabase keys the app runs in **demo mode**: the relatives are scripted
 and reply on a timer (`REPLY_DELAY_MS`, `familyReplies`) so one person can show
