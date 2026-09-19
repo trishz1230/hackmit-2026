@@ -1,43 +1,52 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
-import { Text } from '../components/Handwriting';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Animated, Easing, ImageBackground, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../lib/theme';
 
-const FACE = 210;
-const HOLD_MS = 1100;
+const paper = require('../assets/welcome/paper.png');
+const faceOutline = require('../assets/welcome/face-outline.png');
+const faceFilled = require('../assets/welcome/face-filled.png');
+const sparkleBig = require('../assets/welcome/sparkle-big.png');
+const sparklePair = require('../assets/welcome/sparkle-pair.png');
+const star = require('../assets/welcome/star.png');
+const hint = require('../assets/welcome/hint.png');
+
+const FACE = 250;
+const HOLD_MS = 1200;
 /** Beat between the face filling up and the app opening. */
-const SETTLE_MS = 850;
+const SETTLE_MS = 900;
 
-const ink = '#2A1B3D';
+type SparkProps = {
+  source: number;
+  at: { top: number; left: number };
+  width: number;
+  height: number;
+  delay: number;
+  on: boolean;
+};
 
-type StarProps = { at: { top?: number; bottom?: number; left?: number; right?: number }; glyph: string; size: number; delay: number; on: boolean };
-
-function Star({ at, glyph, size, delay, on }: StarProps) {
+function Spark({ source, at, width, height, delay, on }: SparkProps) {
   const pop = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(pop, {
       toValue: on ? 1 : 0,
       delay: on ? delay : 0,
-      duration: on ? 320 : 160,
-      easing: on ? Easing.out(Easing.back(2.2)) : Easing.linear,
+      duration: on ? 300 : 150,
+      easing: on ? Easing.out(Easing.back(2.4)) : Easing.linear,
       useNativeDriver: true,
     }).start();
   }, [on, delay, pop]);
 
   return (
-    <Animated.Text
-      pointerEvents="none"
+    <Animated.Image
+      source={source}
+      resizeMode="contain"
       style={[
-        styles.star,
+        styles.spark,
         at,
-        { fontSize: size, opacity: pop, transform: [{ scale: pop }, { rotate: '-8deg' }] },
+        { width, height, opacity: pop, transform: [{ scale: pop }] },
       ]}
-    >
-      {glyph}
-    </Animated.Text>
+    />
   );
 }
 
@@ -60,7 +69,7 @@ export default function Welcome() {
       done.current = true;
       setFull(true);
       Animated.sequence([
-        Animated.spring(squish, { toValue: 1.08, friction: 4, useNativeDriver: true }),
+        Animated.spring(squish, { toValue: 1.07, friction: 4, useNativeDriver: true }),
         Animated.spring(squish, { toValue: 1, friction: 5, useNativeDriver: true }),
       ]).start();
       setTimeout(() => router.replace('/onboarding'), SETTLE_MS);
@@ -71,53 +80,37 @@ export default function Welcome() {
     if (done.current) return;
     Animated.timing(fill, {
       toValue: 0,
-      duration: 260,
+      duration: 240,
       easing: Easing.out(Easing.quad),
       useNativeDriver: false,
     }).start();
   }, [fill]);
 
   const fillHeight = fill.interpolate({ inputRange: [0, 1], outputRange: [0, FACE] });
-  const smile = fill.interpolate({ inputRange: [0.55, 1], outputRange: [0, 1], extrapolate: 'clamp' });
-  const flat = fill.interpolate({ inputRange: [0.35, 0.7], outputRange: [1, 0], extrapolate: 'clamp' });
+  const hintFade = fill.interpolate({
+    inputRange: [0, 0.4],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   return (
-    <View style={styles.screen}>
-      <Animated.View style={{ transform: [{ scale: squish }] }}>
-        <Pressable
-          onPressIn={hold}
-          onPressOut={release}
-          accessibilityRole="button"
-          accessibilityLabel="Hold to get started"
-          style={styles.face}
-        >
-          <Animated.View style={[styles.fill, { height: fillHeight }]} pointerEvents="none">
-            {/* Two washes of yellow, so the fill reads as watercolour rather than flat paint. */}
-            <LinearGradient
-              colors={['#FFE98A', '#F6D330']}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={styles.wash}
-            />
+    <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
+      <Animated.View style={[styles.stage, { transform: [{ scale: squish }] }]}>
+        <Pressable onPressIn={hold} onPressOut={release} style={styles.face}>
+          <Animated.Image source={faceOutline} resizeMode="contain" style={styles.outline} />
+
+          <Animated.View style={[styles.reveal, { height: fillHeight }]} pointerEvents="none">
+            <Animated.Image source={faceFilled} resizeMode="contain" style={styles.filled} />
           </Animated.View>
-
-          <View style={styles.eyes}>
-            <View style={styles.eye} />
-            <View style={styles.eye} />
-          </View>
-
-          <Animated.View style={[styles.mouthFlat, { opacity: flat }]} />
-          <Animated.View style={[styles.mouthSmile, { opacity: smile }]} />
         </Pressable>
 
-        <Star at={{ top: -6, left: -26 }} glyph="✦" size={30} delay={0} on={full} />
-        <Star at={{ top: 26, left: 6 }} glyph="✧" size={16} delay={90} on={full} />
-        <Star at={{ bottom: 18, right: -22 }} glyph="✦" size={26} delay={60} on={full} />
-        <Star at={{ bottom: -12, left: -18 }} glyph="✧" size={34} delay={150} on={full} />
+        <Spark source={sparkleBig} at={{ top: -42, left: -30 }} width={78} height={54} delay={0} on={full} />
+        <Spark source={sparklePair} at={{ top: 156, left: 238 }} width={70} height={68} delay={110} on={full} />
+        <Spark source={star} at={{ top: 208, left: -34 }} width={104} height={74} delay={200} on={full} />
       </Animated.View>
 
-      <Text style={styles.hint}>{full ? 'here we go...' : 'hold to get started...'}</Text>
-    </View>
+      <Animated.Image source={hint} resizeMode="contain" style={[styles.hint, { opacity: hintFade }]} />
+    </ImageBackground>
   );
 }
 
@@ -126,70 +119,43 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bg,
-    gap: 56,
+  },
+  stage: {
+    width: FACE,
+    height: FACE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   face: {
     width: FACE,
     height: FACE,
-    borderRadius: FACE / 2,
-    borderWidth: 2.5,
-    borderColor: ink,
-    backgroundColor: colors.card,
-    overflow: 'hidden',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  fill: {
+  outline: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    width: FACE,
+    height: FACE * (444 / 504),
+  },
+  reveal: {
+    position: 'absolute',
     bottom: 0,
+    left: 0,
+    width: FACE,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
   },
-  wash: {
-    flex: 1,
-    opacity: 0.92,
+  filled: {
+    width: FACE,
+    height: FACE * (465 / 480),
+    marginBottom: (FACE - FACE * (465 / 480)) / 2,
   },
-  eyes: {
-    flexDirection: 'row',
-    gap: 54,
-    marginTop: FACE * 0.34,
-  },
-  eye: {
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    backgroundColor: ink,
-  },
-  mouthFlat: {
+  spark: {
     position: 'absolute',
-    top: FACE * 0.62,
-    width: 52,
-    height: 0,
-    borderBottomWidth: 2.5,
-    borderColor: ink,
-  },
-  mouthSmile: {
-    position: 'absolute',
-    top: FACE * 0.54,
-    width: 74,
-    height: 40,
-    borderBottomWidth: 2.5,
-    borderLeftWidth: 2.5,
-    borderRightWidth: 2.5,
-    borderColor: ink,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    borderTopColor: 'transparent',
-    // The side strokes only exist to curve into the smile, so they fade out.
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-  },
-  star: {
-    position: 'absolute',
-    color: ink,
   },
   hint: {
-    fontSize: 17,
-    color: colors.muted,
+    width: 228,
+    height: 39,
+    marginTop: 28,
   },
 });
