@@ -27,7 +27,7 @@ export default function Settings() {
   const [phone, setPhone] = useState(me.phone ?? '');
   const [saved, setSaved] = useState(false);
   const [familyName, setFamilyName] = useState(group?.name ?? '');
-  const [familySaved, setFamilySaved] = useState(false);
+  const [editingFamily, setEditingFamily] = useState(false);
   const phoneBad = phone.trim().length > 0 && !isValidPhone(phone);
 
   useEffect(() => {
@@ -39,6 +39,16 @@ export default function Settings() {
     if (group) setFamilyName(group.name);
   }, [group?.name]);
 
+  const saveFamilyName = () => {
+    if (!group || !familyName.trim()) return;
+    updateSettings({
+      rewardText: group.rewardText,
+      goal: group.goal,
+      name: familyName.trim(),
+    });
+    setEditingFamily(false);
+  };
+
   if (!group) return <Redirect href="/onboarding" />;
 
   return (
@@ -47,30 +57,40 @@ export default function Settings() {
 
       <View style={styles.card}>
         <Text style={styles.label}>Family name</Text>
-        <TextInput
-          style={styles.input}
-          value={familyName}
-          onChangeText={(t) => {
-            setFamilyName(t);
-            setFamilySaved(false);
-          }}
-          placeholder="The Zhengs"
-          placeholderTextColor={colors.muted}
-        />
-        <Pressable
-          style={styles.cta}
-          onPress={() => {
-            if (!familyName.trim()) return;
-            updateSettings({
-              rewardText: group.rewardText,
-              goal: group.goal,
-              name: familyName.trim(),
-            });
-            setFamilySaved(true);
-          }}
-        >
-          <Text style={styles.ctaText}>{familySaved ? 'Saved' : 'Save family name'}</Text>
-        </Pressable>
+        {editingFamily ? (
+          <>
+            <TextInput
+              style={styles.input}
+              value={familyName}
+              onChangeText={setFamilyName}
+              placeholder="The Zhengs"
+              placeholderTextColor={colors.muted}
+              autoFocus
+              onSubmitEditing={saveFamilyName}
+            />
+            <View style={styles.row}>
+              <Pressable style={[styles.cta, styles.grow]} onPress={saveFamilyName}>
+                <Text style={styles.ctaText}>Save</Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondary}
+                onPress={() => {
+                  setFamilyName(group.name);
+                  setEditingFamily(false);
+                }}
+              >
+                <Text style={styles.secondaryText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.family}>{group.name}</Text>
+            <Pressable onPress={() => setEditingFamily(true)}>
+              <Text style={styles.edit}>Edit</Text>
+            </Pressable>
+          </>
+        )}
         <Text style={styles.label}>Invite code</Text>
         <Text style={styles.code}>{group.joinCode}</Text>
         <Text style={styles.meta}>
@@ -114,12 +134,7 @@ export default function Settings() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Level length &amp; reminders</Text>
-        <Text style={styles.meta}>
-          How long one level lasts and how often the family gets nudged. Everyone can post any
-          time, but the level only clears at midnight once the period is up. Changing it needs
-          every member&apos;s approval.
-        </Text>
+        <Text style={styles.label}>Level frequency</Text>
         <View style={styles.picker}>
           {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => {
             const active = (group.pendingCadence ?? group.cadence) === c;
@@ -233,6 +248,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.5 },
+  row: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center' },
+  grow: { flex: 1 },
+  secondary: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  secondaryText: { color: colors.muted, fontWeight: '700' },
+  edit: { color: colors.accent, fontWeight: '700', fontSize: 13 },
   ctaText: { color: '#fff', fontWeight: '700' },
   inputBad: { borderColor: '#D64545' },
   error: { color: '#D64545', fontSize: 13 },

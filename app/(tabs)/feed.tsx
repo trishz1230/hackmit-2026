@@ -1,14 +1,15 @@
 import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
 import { useApp } from '../../lib/store';
-import { colors, spacing } from '../../lib/theme';
+import { colors, radius, spacing } from '../../lib/theme';
 
 export default function Feed() {
   const router = useRouter();
-  const { group, posts, me, reactionsFor, memberById, addReaction, promptFor } = useApp();
+  const { group, posts, task, hasPostedThisCycle, reactionsFor, memberById, toggleLike, likedByMe, promptFor } =
+    useApp();
 
   if (!group) return <Redirect href="/onboarding" />;
 
@@ -18,6 +19,13 @@ export default function Feed() {
       <View style={styles.header}>
         <Text style={styles.title}>{group.name}</Text>
         <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
+      </View>
+      <View style={styles.task}>
+        <Text style={styles.taskLabel}>Level {group.level} task</Text>
+        <Text style={styles.taskPrompt}>{task.prompt}</Text>
+        <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
+          <Text style={styles.ctaText}>{hasPostedThisCycle ? 'Post again' : 'Complete task'}</Text>
+        </Pressable>
       </View>
       <FlatList
         data={posts}
@@ -32,7 +40,8 @@ export default function Feed() {
             reactions={reactionsFor(item.id)}
             prompt={promptFor(item.taskId)}
             onPress={() => router.push(`/post/${item.id}`)}
-            onLike={() => addReaction(item.id, 'like', me.id)}
+            onLike={() => toggleLike(item.id)}
+            liked={likedByMe(item.id)}
           />
         )}
         contentContainerStyle={{ paddingBottom: spacing.lg }}
@@ -53,5 +62,29 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
   sub: { marginTop: 2, fontSize: 13, color: colors.muted },
+  task: {
+    margin: spacing.md,
+    marginBottom: 0,
+    padding: spacing.md,
+    gap: spacing.xs,
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.md,
+  },
+  taskLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: colors.accent,
+  },
+  taskPrompt: { fontSize: 16, fontWeight: '700', color: colors.text, lineHeight: 22 },
+  cta: {
+    marginTop: spacing.xs,
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  ctaText: { color: '#fff', fontWeight: '700' },
   empty: { margin: spacing.lg, color: colors.muted, textAlign: 'center' },
 });
