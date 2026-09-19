@@ -21,14 +21,11 @@
     },
     "web": {
       "bundler": "metro",
+      "output": "single",
       "favicon": "./assets/favicon.png"
     },
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "supabaseUrl": "",
-      "supabaseAnonKey": ""
     },
     "plugins": [
       "expo-router",

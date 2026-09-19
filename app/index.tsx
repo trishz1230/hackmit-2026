@@ -23,6 +23,7 @@ export default function Feed() {
     memberById,
     addReaction,
     restart,
+    isLive,
   } = useApp();
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function Feed() {
       />
 
       <Pressable style={styles.restart} onPress={restart}>
-        <Text style={styles.restartText}>Restart game</Text>
+        <Text style={styles.restartText}>{isLive ? 'Leave family' : 'Restart game'}</Text>
       </Pressable>
 
       <Modal visible={clearedLevel !== null} transparent animationType="fade">

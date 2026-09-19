@@ -23,7 +23,7 @@ It runs with mock data out of the box — no accounts or keys needed.
 | --- | --- | --- |
 | `app/` | UI | Screens: `onboarding`, `index` (feed), `levels` (level map), `capture`, `post/[id]` (reactions) |
 | `components/` | UI | `NagBanner`, `PostCard`, `ProgressBar`, `PhoneFrame`, `LevelMap` |
-| `lib/store.tsx` | shared | App state, currently backed by mock data |
+| `lib/store.tsx` | shared | App state: live (Supabase) or mock, picked automatically |
 | `lib/api.ts` | backend | Every Supabase read/write |
 | `lib/schema.sql` | backend | Database tables to run in the Supabase SQL editor |
 | `lib/nag.ts` | shared | Repeating, non-dismissable Android reminder |
@@ -37,12 +37,12 @@ The split is by layer, not by screen: one person works in `lib/`, the other in
 
 The family starts at level 1 with an empty feed. Everyone has to post for the
 current task; when the last member posts, the level and the streak both go up, a
-new prompt is drawn, and the feed clears. The feed shows who it's still waiting
-on, and "Restart game" wipes everything back to onboarding.
+new prompt is generated, and the next level's task begins. The feed shows who
+it's still waiting on.
 
-For the demo, the other family members are scripted: after you post, they reply
-one by one on a timer (`REPLY_DELAY_MS` and `familyReplies`). Delete that block
-in `lib/store.tsx` once real members are posting through Supabase.
+Without Supabase keys the app runs in **demo mode**: the relatives are scripted
+and reply on a timer (`REPLY_DELAY_MS`, `familyReplies`) so one person can show
+the whole loop. With keys it runs **live** — see below.
 
 ## Generated prompts
 
@@ -64,14 +64,31 @@ Then paste the resulting URL into `DEPLOYED_PROMPT_API` in `lib/prompts.ts`
 a secret. To point at a different endpoint on one machine only, set
 `EXPO_PUBLIC_PROMPT_API` in `.env`.
 
-## Connecting the real backend
+## Real families (Supabase)
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. Run `lib/schema.sql` in the SQL editor.
-3. Storage → new public bucket named `photos`. Authentication → enable anonymous sign-ins.
-4. Put your project URL and anon key in the `extra` block of `app.json`.
-5. Replace the bodies in `lib/store.tsx` with the matching calls from `lib/api.ts`,
-   one screen at a time — the feed first.
+With Supabase configured, families are shared: one person creates a family, the
+others join with the code from the feed, and every post, reaction, and level-up
+shows up on everyone's screen over realtime — no refresh.
+
+1. Create a project at [supabase.com](https://supabase.com) (free).
+2. SQL Editor → paste all of `lib/schema.sql` → Run. That creates the tables,
+   the public `photos` bucket, and its policies.
+3. Settings → API → copy the **Project URL** and the **anon public** key into
+   `PROJECT_URL` / `ANON_KEY` at the top of `lib/supabase.ts` and commit them.
+   The anon key is a public client key, not a secret.
+
+There is no login: each device generates a uuid on first run and stores it in
+AsyncStorage, which is why the schema leaves row level security off. That's fine
+for a demo and must not ship as-is.
+
+Two people on two laptops = two devices, so the same browser profile can't be
+two family members; use a second browser or an incognito window to test.
+
+## One shared website
+
+`vercel.json` builds the Expo web export and serves `api/prompt.ts` alongside it,
+so `npx vercel --prod` gives you a single URL that everyone opens — that's the
+demo. Pushes to `main` redeploy it automatically once the project is linked.
 
 ## Level map art
 

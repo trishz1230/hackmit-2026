@@ -1,142 +1,185 @@
 /**
- * Person A's layer: every read/write against Supabase lives here.
- * The UI only ever calls these functions, so the two halves of the app
- * can be built in parallel without touching the same files.
+ * Every read/write against Supabase lives here; the UI only calls lib/store.
  *
- * Run lib/schema.sql in the Supabase SQL editor first, then fill in
- * supabaseUrl / supabaseAnonKey in app.json.
+ * There is no login: each device generates a uuid once and stores it locally
+ * (see identity()), which is why lib/schema.sql leaves row level security off.
+ * Run that file in the Supabase SQL editor, then fill in lib/supabase.ts.
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabase } from './supabase';
-import { taskPrompts } from './mockData';
+import { generatePrompt } from './prompts';
 import type { Cadence, Group, Post, Profile, Reaction, Task } from './types';
 
-type Row = Record<string, any>;
+type Row = Record<string, unknown>;
+
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
 
 const toGroup = (r: Row): Group => ({
-  id: r.id,
-  name: r.name,
-  joinCode: r.join_code,
-  goal: r.goal,
-  level: r.level,
-  cadence: r.cadence as Cadence,
-  rewardText: r.reward_text ?? '',
-  currentStreak: r.current_streak,
+  id: str(r.id),
+  name: str(r.name),
+  joinCode: str(r.join_code),
+  goal: num(r.goal),
+  level: num(r.level),
+  cadence: (str(r.cadence) || 'daily') as Cadence,
+  rewardText: str(r.reward_text),
+  currentStreak: num(r.current_streak),
 });
 
 const toProfile = (r: Row): Profile => ({
-  id: r.id,
-  name: r.name,
-  groupId: r.group_id,
-  avatar: r.avatar ?? '🙂',
-  phone: r.phone ?? undefined,
+  id: str(r.id),
+  name: str(r.name),
+  groupId: str(r.group_id),
+  avatar: str(r.avatar) || '🙂',
+  phone: str(r.phone) || undefined,
 });
 
 const toTask = (r: Row): Task => ({
-  id: r.id,
-  groupId: r.group_id,
-  prompt: r.prompt,
-  cycleDate: r.cycle_date,
+  id: str(r.id),
+  groupId: str(r.group_id),
+  prompt: str(r.prompt),
+  level: num(r.level),
 });
 
 const toPost = (r: Row): Post => ({
-  id: r.id,
-  taskId: r.task_id,
-  groupId: r.group_id,
-  userId: r.user_id,
-  kind: r.kind,
-  content: r.content,
-  createdAt: r.created_at,
+  id: str(r.id),
+  taskId: str(r.task_id),
+  groupId: str(r.group_id),
+  userId: str(r.user_id),
+  kind: r.kind === 'photo' ? 'photo' : 'text',
+  content: str(r.content),
+  createdAt: str(r.created_at),
 });
 
 const toReaction = (r: Row): Reaction => ({
-  id: r.id,
-  postId: r.post_id,
-  userId: r.user_id,
-  kind: r.kind,
-  value: r.value ?? '',
+  id: str(r.id),
+  postId: str(r.post_id),
+  userId: str(r.user_id),
+  kind: r.kind === 'like' || r.kind === 'emoji' ? r.kind : 'comment',
+  value: str(r.value),
 });
 
-const today = () => new Date().toISOString().slice(0, 10);
+const USER_ID_KEY = 'famstreak.userId';
+const GROUP_ID_KEY = 'famstreak.groupId';
+
+function uuid(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0;
+    return (ch === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+/** This device's stable user id, created on first run. */
+export async function identity(): Promise<string> {
+  const saved = await AsyncStorage.getItem(USER_ID_KEY);
+  if (saved) return saved;
+  const id = uuid();
+  await AsyncStorage.setItem(USER_ID_KEY, id);
+  return id;
+}
+
+/** The family this device last joined, so a refresh keeps you in it. */
+export async function savedGroupId(): Promise<string | null> {
+  return AsyncStorage.getItem(GROUP_ID_KEY);
+}
+
+export async function rememberGroup(groupId: string | null): Promise<void> {
+  if (groupId) await AsyncStorage.setItem(GROUP_ID_KEY, groupId);
+  else await AsyncStorage.removeItem(GROUP_ID_KEY);
+}
 
 function randomCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
 }
 
-export async function signIn(name: string): Promise<Profile> {
+const AVATARS = ['🙂', '👩', '👨', '🧑', '👵', '👴', '🧒', '🐣'];
+
+export async function saveProfile(userId: string, name: string, groupId: string | null): Promise<Profile> {
   const sb = getSupabase();
-  const { data, error } = await sb.auth.signInAnonymously();
-  if (error) throw error;
-  const id = data.user!.id;
-  const { data: profile, error: upsertError } = await sb
+  const { data, error } = await sb
     .from('profiles')
-    .upsert({ id, name })
-    .select()
-    .single();
-  if (upsertError) throw upsertError;
-  return toProfile(profile);
-}
-
-export async function createGroup(userId: string, name: string, goal: number): Promise<Group> {
-  const sb = getSupabase();
-  const { data, error } = await sb
-    .from('groups')
-    .insert({ name, join_code: randomCode(), goal })
+    .upsert({
+      id: userId,
+      name,
+      group_id: groupId,
+      avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
+    })
     .select()
     .single();
   if (error) throw error;
-  await sb.from('profiles').update({ group_id: data.id }).eq('id', userId);
-  return toGroup(data);
+  return toProfile(data);
 }
 
-export async function joinGroup(userId: string, joinCode: string): Promise<Group> {
+export async function createGroup(userId: string, userName: string, name: string, goal: number): Promise<Group> {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('groups')
+    .insert({ name, join_code: randomCode(), goal, level: 1 })
+    .select()
+    .single();
+  if (error) throw error;
+  const group = toGroup(data);
+  await saveProfile(userId, userName, group.id);
+  await rememberGroup(group.id);
+  return group;
+}
+
+export async function joinGroup(userId: string, userName: string, joinCode: string): Promise<Group> {
   const sb = getSupabase();
   const { data, error } = await sb
     .from('groups')
     .select()
-    .eq('join_code', joinCode.toUpperCase())
-    .single();
-  if (error) throw new Error('No family found with that code');
-  await sb.from('profiles').update({ group_id: data.id }).eq('id', userId);
-  return toGroup(data);
+    .eq('join_code', joinCode.trim().toUpperCase())
+    .maybeSingle();
+  if (error || !data) throw new Error('No family found with that code');
+  const group = toGroup(data);
+  await saveProfile(userId, userName, group.id);
+  await rememberGroup(group.id);
+  return group;
 }
 
-export async function getGroup(groupId: string): Promise<Group> {
+export async function getGroup(groupId: string): Promise<Group | null> {
   const sb = getSupabase();
-  const { data, error } = await sb.from('groups').select().eq('id', groupId).single();
-  if (error) throw error;
-  return toGroup(data);
+  const { data } = await sb.from('groups').select().eq('id', groupId).maybeSingle();
+  return data ? toGroup(data) : null;
 }
 
 export async function getMembers(groupId: string): Promise<Profile[]> {
   const sb = getSupabase();
-  const { data, error } = await sb.from('profiles').select().eq('group_id', groupId);
+  const { data, error } = await sb
+    .from('profiles')
+    .select()
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: true });
   if (error) throw error;
   return (data ?? []).map(toProfile);
 }
 
-/** Returns the current cycle's task, creating one from the rotating prompt list if needed. */
-export async function getCurrentTask(groupId: string): Promise<Task> {
+/** The task for the group's current level, created on demand. */
+export async function getCurrentTask(group: Group): Promise<Task> {
   const sb = getSupabase();
   const { data } = await sb
     .from('tasks')
     .select()
-    .eq('group_id', groupId)
-    .eq('cycle_date', today())
+    .eq('group_id', group.id)
+    .eq('level', group.level)
     .maybeSingle();
   if (data) return toTask(data);
 
-  const { count } = await sb
-    .from('tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('group_id', groupId);
-  const prompt = taskPrompts[(count ?? 0) % taskPrompts.length];
+  const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
+  const recent = (previous ?? []).map((r: Row) => str(r.prompt));
+  const prompt = await generatePrompt(recent.slice(-5));
+
   const { data: created, error } = await sb
     .from('tasks')
-    .insert({ group_id: groupId, prompt, cycle_date: today() })
+    .insert({ group_id: group.id, level: group.level, prompt })
     .select()
     .single();
-  if (error) throw error;
+  // Another member created it first — the unique (group_id, level) index fired.
+  if (error) return getCurrentTask(group);
   return toTask(created);
 }
 
@@ -155,6 +198,7 @@ export async function createPost(
   input: Pick<Post, 'taskId' | 'groupId' | 'userId' | 'kind' | 'content'>
 ): Promise<Post> {
   const sb = getSupabase();
+  const content = input.kind === 'photo' ? await uploadPhoto(input.content, input.userId) : input.content;
   const { data, error } = await sb
     .from('posts')
     .insert({
@@ -162,7 +206,7 @@ export async function createPost(
       group_id: input.groupId,
       user_id: input.userId,
       kind: input.kind,
-      content: input.content,
+      content,
     })
     .select()
     .single();
@@ -170,8 +214,9 @@ export async function createPost(
   return toPost(data);
 }
 
-/** Uploads a local image uri to the `photos` bucket and returns its public url. */
-export async function uploadPhoto(uri: string, userId: string): Promise<string> {
+/** Uploads a local image uri to the public `photos` bucket, returning its url. */
+async function uploadPhoto(uri: string, userId: string): Promise<string> {
+  if (uri.startsWith('http')) return uri;
   const sb = getSupabase();
   const path = `${userId}/${Date.now()}.jpg`;
   const body = await (await fetch(uri)).arrayBuffer();
@@ -182,50 +227,51 @@ export async function uploadPhoto(uri: string, userId: string): Promise<string> 
 
 export async function getReactions(groupId: string): Promise<Reaction[]> {
   const sb = getSupabase();
-  const { data, error } = await sb.from('reactions').select('*, posts!inner(group_id)').eq('posts.group_id', groupId);
+  const { data, error } = await sb
+    .from('reactions')
+    .select('*, posts!inner(group_id)')
+    .eq('posts.group_id', groupId);
   if (error) throw error;
   return (data ?? []).map(toReaction);
 }
 
-export async function addReaction(input: Omit<Reaction, 'id'>): Promise<Reaction> {
+export async function addReaction(input: Omit<Reaction, 'id'>): Promise<void> {
   const sb = getSupabase();
-  const { data, error } = await sb
+  const { error } = await sb
     .from('reactions')
-    .insert({ post_id: input.postId, user_id: input.userId, kind: input.kind, value: input.value })
-    .select()
-    .single();
+    .insert({ post_id: input.postId, user_id: input.userId, kind: input.kind, value: input.value });
   if (error) throw error;
-  return toReaction(data);
 }
 
 /**
- * All-or-nothing streak rule: if every member posted for the current task the
- * group levels up, otherwise the streak resets to zero. Call on app open.
+ * All-or-nothing rule: once every member has posted for the current task the
+ * family levels up. The `eq('level', group.level)` guard means only the first
+ * client to get there wins, so two browsers can't double-increment.
+ * Returns the cleared level, or null if nothing changed.
  */
-export async function evaluateCycle(groupId: string): Promise<Group> {
-  const sb = getSupabase();
-  const group = await getGroup(groupId);
-  const members = await getMembers(groupId);
-  const task = await getCurrentTask(groupId);
-  const { data: posts } = await sb.from('posts').select('user_id').eq('task_id', task.id);
-  const posted = new Set((posts ?? []).map((p: Row) => p.user_id));
-  const everyone = members.length > 0 && members.every((m) => posted.has(m.id));
+export async function clearLevelIfDone(group: Group, members: Profile[], task: Task, posts: Post[]): Promise<number | null> {
+  const posted = new Set(posts.filter((p) => p.taskId === task.id).map((p) => p.userId));
+  if (members.length === 0 || !members.every((m) => posted.has(m.id))) return null;
 
-  const next = everyone
-    ? { level: group.level + 1, current_streak: group.currentStreak + 1 }
-    : { level: group.level, current_streak: 0 };
-  const { data, error } = await sb.from('groups').update(next).eq('id', groupId).select().single();
-  if (error) throw error;
-  return toGroup(data);
+  const sb = getSupabase();
+  const { data } = await sb
+    .from('groups')
+    .update({ level: Math.min(group.level + 1, group.goal), current_streak: group.currentStreak + 1 })
+    .eq('id', group.id)
+    .eq('level', group.level)
+    .select()
+    .maybeSingle();
+  return data ? group.level : null;
 }
 
-/** Realtime: re-run `onChange` whenever the group's posts change. */
-export function subscribeToPosts(groupId: string, onChange: () => void) {
+/** Realtime: re-run `onChange` whenever anything in the family changes. */
+export function subscribeToGroup(groupId: string, onChange: () => void): () => void {
   const sb = getSupabase();
-  const channel = sb
-    .channel(`posts:${groupId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'posts', filter: `group_id=eq.${groupId}` }, onChange)
-    .subscribe();
+  const channel = sb.channel(`family:${groupId}`);
+  for (const table of ['groups', 'profiles', 'tasks', 'posts', 'reactions']) {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table }, onChange);
+  }
+  channel.subscribe();
   return () => {
     void sb.removeChannel(channel);
   };

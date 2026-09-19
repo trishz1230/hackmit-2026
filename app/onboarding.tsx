@@ -6,17 +6,19 @@ import { colors, radius, spacing } from '../lib/theme';
 
 export default function Onboarding() {
   const router = useRouter();
-  const { createGroup, joinGroup } = useApp();
+  const { createGroup, joinGroup, isLive, error } = useApp();
   const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [myName, setMyName] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [goal, setGoal] = useState('50');
   const [code, setCode] = useState('');
 
   const submit = () => {
+    const who = myName.trim() || 'Me';
     if (mode === 'create') {
-      createGroup(familyName.trim() || 'My family', Number(goal) || 50);
+      createGroup(familyName.trim() || 'My family', Number(goal) || 50, who);
     } else {
-      joinGroup(code.trim().toUpperCase());
+      joinGroup(code.trim().toUpperCase(), who);
     }
     router.replace('/');
   };
@@ -41,6 +43,15 @@ export default function Onboarding() {
           </Pressable>
         ))}
       </View>
+
+      <Text style={styles.label}>Your name</Text>
+      <TextInput
+        style={styles.input}
+        value={myName}
+        onChangeText={setMyName}
+        placeholder="Trish"
+        placeholderTextColor={colors.muted}
+      />
 
       {mode === 'create' ? (
         <>
@@ -79,6 +90,15 @@ export default function Onboarding() {
       <Pressable style={styles.cta} onPress={submit}>
         <Text style={styles.ctaText}>{mode === 'create' ? 'Create family' : 'Join family'}</Text>
       </Pressable>
+
+      {error && <Text style={styles.error}>{error}</Text>}
+
+      {!isLive && (
+        <Text style={styles.demoNote}>
+          Demo mode — the rest of the family is scripted. Add Supabase keys in
+          lib/supabase.ts to play with real people.
+        </Text>
+      )}
     </ScrollView>
   );
 }
@@ -117,4 +137,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  error: { marginTop: spacing.md, fontSize: 13, color: '#b3261e', lineHeight: 18 },
+  demoNote: { marginTop: spacing.md, fontSize: 12, color: colors.muted, lineHeight: 17 },
 });

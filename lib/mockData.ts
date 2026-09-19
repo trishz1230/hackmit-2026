@@ -22,7 +22,7 @@ export const mockTask: Task = {
   id: 'task-1',
   groupId: 'group-1',
   prompt: 'Send a pic of what you ate today',
-  cycleDate: new Date().toISOString().slice(0, 10),
+  level: 1,
 };
 
 /** A fresh family starts with an empty feed and clears level 1 together. */

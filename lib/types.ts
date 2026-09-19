@@ -23,7 +23,8 @@ export type Task = {
   id: string;
   groupId: string;
   prompt: string;
-  cycleDate: string;
+  /** The level this task clears. */
+  level: number;
 };
 
 export type Post = {
