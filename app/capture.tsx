@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+  ActionSheetIOS,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -45,8 +47,34 @@ export default function Capture() {
           : await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
       if (!result.canceled) setPhotoUri(result.assets[0].uri);
     } catch {
-      setPhotoError('Could not open the camera. Choose a photo, or just write something.');
+      setPhotoError('Could not open photos. Try again, or just write something.');
     }
+  };
+
+  const addPhoto = () => {
+    const take = { text: 'Take photo', onPress: () => void pick('camera') };
+    const album = { text: 'Add from album', onPress: () => void pick('library') };
+    const remove = { text: 'Remove photo', style: 'destructive' as const, onPress: () => setPhotoUri(null) };
+    const cancel = { text: 'Cancel', style: 'cancel' as const };
+
+    if (Platform.OS === 'ios') {
+      const options = photoUri ? [take.text, album.text, remove.text, cancel.text] : [take.text, album.text, cancel.text];
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: options.length - 1,
+          destructiveButtonIndex: photoUri ? 2 : undefined,
+        },
+        (i) => {
+          if (i === 0) void pick('camera');
+          if (i === 1) void pick('library');
+          if (photoUri && i === 2) setPhotoUri(null);
+        }
+      );
+      return;
+    }
+
+    Alert.alert('Add a photo', undefined, photoUri ? [take, album, remove, cancel] : [take, album, cancel]);
   };
 
   const words = text.trim();
@@ -91,7 +119,7 @@ export default function Capture() {
           {hangout ? 'Share anything with the family' : task.prompt}
         </Text>
 
-        <Pressable style={styles.square} onPress={() => pick(photoUri ? 'library' : 'camera')}>
+        <Pressable style={styles.square} onPress={addPhoto}>
           {photoUri ? (
             <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
           ) : (
@@ -101,20 +129,6 @@ export default function Capture() {
             </>
           )}
         </Pressable>
-
-        <View style={styles.row}>
-          <Pressable style={styles.secondary} onPress={() => pick('camera')}>
-            <Text style={styles.secondaryText}>Open camera</Text>
-          </Pressable>
-          <Pressable style={styles.secondary} onPress={() => pick('library')}>
-            <Text style={styles.secondaryText}>Choose photo</Text>
-          </Pressable>
-          {photoUri ? (
-            <Pressable style={styles.secondary} onPress={() => setPhotoUri(null)}>
-              <Text style={styles.secondaryText}>Remove</Text>
-            </Pressable>
-          ) : null}
-        </View>
         {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
 
         <TextInput
@@ -164,17 +178,6 @@ const styles = StyleSheet.create({
   squareIcon: { fontSize: 40 },
   squareText: { color: colors.muted, fontWeight: '600', marginTop: spacing.xs },
   preview: { width: '100%', height: '100%' },
-  row: { flexDirection: 'row', gap: spacing.sm },
-  secondary: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    alignItems: 'center',
-  },
-  secondaryText: { color: colors.text, fontWeight: '600' },
   input: {
     minHeight: 90,
     backgroundColor: colors.card,
