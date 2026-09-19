@@ -32,6 +32,9 @@ export type LevelMapProps = {
 const isMilestone = (n: number) => n % MILESTONE_EVERY === 0;
 const iconFor = (n: number) => MILESTONE_ICONS[(n / MILESTONE_EVERY - 1) % MILESTONE_ICONS.length];
 
+/** The icon a level wears on the path, or null for a plain numbered level. */
+export const levelSymbol = (n: number) => (isMilestone(n) ? iconFor(n) : null);
+
 /** Level 1 sits at the bottom; the path winds upward toward the goal. */
 function position(n: number, goal: number) {
   const index = n - 1;

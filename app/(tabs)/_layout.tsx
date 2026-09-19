@@ -1,9 +1,14 @@
 import React from 'react';
 import { Text } from '../../components/Handwriting';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useApp } from '../../lib/store';
 import { colors, fonts } from '../../lib/theme';
 
 export default function TabLayout() {
+  const router = useRouter();
+  const { group } = useApp();
+  const currentLevel = group ? Math.min(group.level, group.goal) : 1;
+
   return (
     <Tabs
       screenOptions={{
@@ -30,14 +35,26 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="feed"
+        name="path"
         options={{
-          title: 'Feed',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▣</Text>,
+          title: 'Path',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◈</Text>,
         }}
       />
-      {/* Reached from the Family task / Hangout switcher, not the bottom bar. */}
-      <Tabs.Screen name="hangout" options={{ href: null }} />
+      {/* Not a screen of its own — it drops you on the level you're posting to. */}
+      <Tabs.Screen
+        name="plus"
+        options={{
+          title: 'Post',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>＋</Text>,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push(`/level/${currentLevel}`);
+          },
+        }}
+      />
       <Tabs.Screen
         name="settings"
         options={{
@@ -45,6 +62,9 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⚙</Text>,
         }}
       />
+      {/* Reached from the Family task / Hangout switcher, not the bottom bar. */}
+      <Tabs.Screen name="feed" options={{ href: null }} />
+      <Tabs.Screen name="hangout" options={{ href: null }} />
     </Tabs>
   );
 }
