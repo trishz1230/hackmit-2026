@@ -80,7 +80,12 @@ type State = {
   proposeCadence: (cadence: Cadence) => void;
   approveCadence: () => void;
   cancelCadenceChange: () => void;
-  addPost: (kind: Post['kind'], content: string, channel?: Channel) => { completedGoal: boolean };
+  addPost: (
+    kind: Post['kind'],
+    content: string,
+    channel?: Channel,
+    caption?: string
+  ) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   /** Likes are one per member: liking again takes it back. */
   toggleLike: (postId: string) => void;
@@ -153,6 +158,13 @@ function mergeSeenIds(prev: string[], extra: string[]) {
   return next.length === 0 ? prev : [...prev, ...next];
 }
 
+/** Supabase rejects with plain objects, which stringify to [object Object]. */
+function describeError(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
+  return String(e);
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return isSupabaseConfigured ? (
     <LiveProvider>{children}</LiveProvider>
@@ -191,7 +203,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const run = useCallback((fn: () => Promise<void>) => {
     void fn().then(
       () => setError(null),
-      (e: unknown) => setError(e instanceof Error ? e.message : String(e))
+      (e: unknown) => setError(describeError(e))
     );
   }, []);
 
@@ -368,7 +380,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
-      addPost: (kind, content, channel = 'task') => {
+      addPost: (kind, content, channel = 'task', caption) => {
         if (!group) return { completedGoal: false };
         run(async () => {
           await api.createPost({
@@ -377,6 +389,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
             userId,
             kind,
             content,
+            caption,
           });
           await refresh(group.id);
         });
@@ -623,24 +636,28 @@ function MockProvider({ children }: { children: React.ReactNode }) {
     if (!completedGoal) rememberTask(newTask(prompt, nextLevel));
   }, [rememberTask]);
 
-  const appendPost = useCallback((userId: string, kind: Post['kind'], content: string, taskId: string) => {
-    const id = `post-${userId}-${Date.now()}`;
-    setPosts((prev) => [
-      {
-        id,
-        taskId,
-        groupId: mockGroup.id,
-        userId,
-        kind,
-        content,
-        createdAt: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-    if (userId === CURRENT_USER_ID) {
-      setSeenPostIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-    }
-  }, []);
+  const appendPost = useCallback(
+    (userId: string, kind: Post['kind'], content: string, taskId: string, caption?: string) => {
+      const id = `post-${userId}-${Date.now()}`;
+      setPosts((prev) => [
+        {
+          id,
+          taskId,
+          groupId: mockGroup.id,
+          userId,
+          kind,
+          content,
+          caption,
+          createdAt: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+      if (userId === CURRENT_USER_ID) {
+        setSeenPostIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      }
+    },
+    []
+  );
 
   const value = useMemo<State>(
     () => ({
@@ -737,12 +754,12 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         clearTimers();
         setGroup((g) => (g ? { ...g, pendingCadence: undefined, cadenceApprovals: [] } : g));
       },
-      addPost: (kind, content, channel = 'task') => {
+      addPost: (kind, content, channel = 'task', caption) => {
         if (channel === 'hangout') {
-          appendPost(me.id, kind, content, '');
+          appendPost(me.id, kind, content, '', caption);
           return { completedGoal: false };
         }
-        appendPost(me.id, kind, content, task.id);
+        appendPost(me.id, kind, content, task.id, caption);
         setMissedReset(false);
 
         if (hasPostedThisCycle) return { completedGoal: false };

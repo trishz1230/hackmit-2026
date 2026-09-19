@@ -3,7 +3,6 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
-import { describeWait } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -15,7 +14,6 @@ export default function Feed() {
     task,
     hasPostedThisCycle,
     taskLocked,
-    opensAt,
     reactionsFor,
     memberById,
     toggleLike,
@@ -36,16 +34,18 @@ export default function Feed() {
         <Text style={styles.taskLabel}>Level {group.level} task</Text>
         {taskLocked ? (
           <Text style={styles.taskPrompt}>
-            Wait till the next time for a new conversation! Starts {describeWait(opensAt)}.
+            🔒 Locked! Wait till the next notification for a new conversation :)
           </Text>
         ) : (
           <>
             <Text style={styles.taskPrompt}>{task.prompt}</Text>
-            <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
-              <Text style={styles.ctaText}>
-                {hasPostedThisCycle ? 'Post again' : 'Complete task'}
-              </Text>
-            </Pressable>
+            {hasPostedThisCycle ? (
+              <Text style={styles.complete}>✓ Complete</Text>
+            ) : (
+              <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
+                <Text style={styles.ctaText}>Complete task</Text>
+              </Pressable>
+            )}
           </>
         )}
       </View>
@@ -100,6 +100,7 @@ const styles = StyleSheet.create({
     color: colors.accent,
   },
   taskPrompt: { fontSize: 16, fontWeight: '700', color: colors.text, lineHeight: 22 },
+  complete: { marginTop: spacing.sm, color: colors.success, fontWeight: '800' },
   cta: {
     marginTop: spacing.xs,
     backgroundColor: colors.accent,

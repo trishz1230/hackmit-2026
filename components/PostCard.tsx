@@ -40,7 +40,10 @@ export function PostCard({
       </View>
 
       {post.kind === 'photo' ? (
-        <Image source={{ uri: post.content }} style={styles.photo} resizeMode="cover" />
+        <>
+          <Image source={{ uri: post.content }} style={styles.photo} resizeMode="cover" />
+          {post.caption ? <Text style={styles.body}>{post.caption}</Text> : null}
+        </>
       ) : (
         <Text style={styles.body}>{post.content}</Text>
       )}

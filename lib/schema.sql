@@ -48,8 +48,11 @@ create table if not exists posts (
   user_id uuid,
   kind text not null check (kind in ('photo', 'text')),
   content text not null,
+  caption text,
   created_at timestamptz default now()
 );
+
+alter table posts add column if not exists caption text;
 
 create table if not exists reactions (
   id uuid primary key default gen_random_uuid(),
