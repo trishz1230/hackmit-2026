@@ -46,10 +46,12 @@ export default function Onboarding() {
   const nameMissing = submitted && !myName.trim();
   const codeMissing = submitted && mode === 'join' && !trimmedCode;
   const codeTooShort = submitted && mode === 'join' && trimmedCode.length > 0 && trimmedCode.length !== CODE_LENGTH;
+  const rewardMissing = submitted && mode === 'create' && !reward.trim();
 
   const submit = () => {
     setSubmitted(true);
     if (!myName.trim()) return;
+    if (mode === 'create' && !reward.trim()) return;
     if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
     const who = myName.trim();
     const tel = phone.trim() || undefined;
@@ -58,7 +60,7 @@ export default function Onboarding() {
         myName: who,
         phone: tel,
         cadence,
-        rewardText: reward.trim() || 'a family treat',
+        rewardText: reward.trim(),
         goal: clampLevelCount(Number(levels)),
       });
     } else {
@@ -126,12 +128,15 @@ export default function Onboarding() {
 
           <Text style={styles.label}>Reward</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, rewardMissing && styles.inputBad]}
             value={reward}
             onChangeText={setReward}
             placeholder="Sunday dumplings"
             placeholderTextColor={colors.muted}
           />
+          {rewardMissing && (
+            <Text style={styles.error}>Pick what the family is working toward.</Text>
+          )}
           <Text style={styles.label}>Levels to the reward ({MIN_LEVELS}–{MAX_LEVELS})</Text>
           <TextInput
             style={styles.input}
