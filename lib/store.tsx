@@ -467,6 +467,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       },
       leaveGroup: () => {
         run(async () => {
+          if (group) await api.leaveGroup(group.id, userId);
           await api.saveProfile(userId, me.name, null);
           await api.rememberGroup(null);
           lastLevel.current = null;
@@ -500,6 +501,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       },
       restart: () => {
         run(async () => {
+          if (group) await api.leaveGroup(group.id, userId);
           await api.saveProfile(userId, me.name, null);
           await api.rememberGroup(null);
           lastLevel.current = null;

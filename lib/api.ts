@@ -130,6 +130,17 @@ export async function saveProfile(
   return toProfile(data);
 }
 
+/** Membership survives joining another family, unlike `profiles.group_id`. */
+async function rememberMembership(groupId: string, userId: string): Promise<void> {
+  const sb = getSupabase();
+  await sb.from('memberships').upsert({ group_id: groupId, user_id: userId });
+}
+
+async function forgetMembership(groupId: string, userId: string): Promise<void> {
+  const sb = getSupabase();
+  await sb.from('memberships').delete().eq('group_id', groupId).eq('user_id', userId);
+}
+
 export async function savePushToken(userId: string, token: string): Promise<void> {
   const sb = getSupabase();
   const { error } = await sb.from('profiles').update({ expo_push_token: token }).eq('id', userId);
@@ -187,6 +198,7 @@ export async function createGroup(userId: string, opts: CreateOptions): Promise<
   if (error) throw error;
   const group = toGroup(data);
   await saveProfile(userId, opts.myName, group.id, opts.phone);
+  await rememberMembership(group.id, userId);
   await rememberGroup(group.id);
   return group;
 }
@@ -201,8 +213,13 @@ export async function joinGroup(userId: string, opts: JoinOptions): Promise<Grou
   if (error || !data) throw new Error('No family found with that code');
   const group = toGroup(data);
   await saveProfile(userId, opts.myName, group.id, opts.phone);
+  await rememberMembership(group.id, userId);
   await rememberGroup(group.id);
   return group;
+}
+
+export async function leaveGroup(groupId: string, userId: string): Promise<void> {
+  await forgetMembership(groupId, userId);
 }
 
 /**
@@ -304,7 +321,22 @@ export async function getMembers(groupId: string): Promise<Profile[]> {
     .eq('group_id', groupId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data ?? []).map(toProfile);
+  const members = (data ?? []).map(toProfile);
+
+  // Anyone who joined another family later kept their membership but not their
+  // profile's group_id, so pick them up from the roster and from who has posted.
+  const joined = await sb.from('memberships').select('user_id').eq('group_id', groupId);
+  const posted = await sb.from('posts').select('user_id').eq('group_id', groupId);
+  const seen = [
+    ...(joined.error ? [] : (joined.data ?? [])),
+    ...(posted.error ? [] : (posted.data ?? [])),
+  ].map((r) => str(r.user_id));
+  const missing = [...new Set(seen)].filter((id) => id && !members.some((m) => m.id === id));
+  if (missing.length === 0) return members;
+
+  const past = await sb.from('profiles').select().in('id', missing);
+  if (past.error) return members;
+  return [...members, ...(past.data ?? []).map(toProfile)].map((m) => ({ ...m, groupId }));
 }
 
 /** The task for the group's current level, created on demand. */
