@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
@@ -8,11 +8,12 @@ import { colors, radius, spacing } from '../lib/theme';
 
 export default function NextGoal() {
   const router = useRouter();
-  const { group, startNextGoal } = useApp();
+  const { group, startNextGoal, loading } = useApp();
   const [reward, setReward] = useState('');
   const [levelCount, setLevelCount] = useState('7');
   const [error, setError] = useState('');
 
+  if (loading) return <View style={styles.blank} />;
   if (!group) return <Redirect href="/onboarding" />;
   if (!group.awaitingNextGoal) return <Redirect href="/(tabs)" />;
 
@@ -73,6 +74,7 @@ export default function NextGoal() {
 
 const styles = StyleSheet.create({
   wrap: { padding: spacing.lg, gap: spacing.sm, backgroundColor: colors.bg },
+  blank: { flex: 1, backgroundColor: colors.bg },
   kicker: { color: colors.accent, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   sub: { color: colors.muted, lineHeight: 21, marginBottom: spacing.md },
