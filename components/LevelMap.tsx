@@ -87,13 +87,6 @@ export function LevelMap({ level, goal, reward, onSelectLevel }: LevelMapProps) 
 
   return (
     <LinearGradient colors={[colors.night, colors.nightSoft, colors.accent]} style={styles.fill}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Down the rabbit hole</Text>
-        <Text style={styles.subtitle}>
-          Level {level} of {goal} · {reward}
-        </Text>
-      </View>
-
       <ScrollView
         ref={scrollRef}
         onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
@@ -153,9 +146,6 @@ export function LevelMap({ level, goal, reward, onSelectLevel }: LevelMapProps) 
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
-  title: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  subtitle: { color: '#D8C9F5', fontSize: 13, marginTop: 2 },
   board: { flex: 1, alignItems: 'center' },
   nodeWrap: { position: 'absolute', left: '50%', alignItems: 'center', width: NODE },
   ring: {

@@ -26,7 +26,7 @@ export function ProgressBar({
         <View style={[styles.fill, { width: `${pct * 100}%` }]} />
       </View>
       <Text style={styles.reward}>
-        {goal - level} more to go → {reward}
+        {goal <= level ? `You earned ${reward}` : `${goal - level} more to go → ${reward}`}
       </Text>
       {onPress && <Text style={styles.link}>See the level map →</Text>}
     </Pressable>

@@ -9,6 +9,7 @@ export type Group = {
   cadence: Cadence;
   rewardText: string;
   currentStreak: number;
+  awaitingNextGoal: boolean;
 };
 
 export type Profile = {

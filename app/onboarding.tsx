@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -9,12 +10,12 @@ export default function Onboarding() {
   const { createGroup, joinGroup } = useApp();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [familyName, setFamilyName] = useState('');
-  const [goal, setGoal] = useState('50');
+  const [goal, setGoal] = useState('7');
   const [code, setCode] = useState('');
 
   const submit = () => {
     if (mode === 'create') {
-      createGroup(familyName.trim() || 'My family', Number(goal) || 50);
+      createGroup(familyName.trim() || 'My family', clampLevelCount(Number(goal)));
     } else {
       joinGroup(code.trim().toUpperCase());
     }
@@ -52,13 +53,13 @@ export default function Onboarding() {
             placeholder="The Zhangs"
             placeholderTextColor={colors.muted}
           />
-          <Text style={styles.label}>Level goal</Text>
+          <Text style={styles.label}>Level goal ({MIN_LEVELS}–{MAX_LEVELS})</Text>
           <TextInput
             style={styles.input}
             value={goal}
             onChangeText={setGoal}
             keyboardType="number-pad"
-            placeholder="50"
+            placeholder="7"
             placeholderTextColor={colors.muted}
           />
         </>

@@ -11,20 +11,43 @@ export default function Capture() {
   const [mode, setMode] = useState<'photo' | 'text'>('photo');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
+  const [photoError, setPhotoError] = useState('');
 
   const pick = async (from: 'camera' | 'library') => {
-    const result =
-      from === 'camera'
-        ? await ImagePicker.launchCameraAsync({ quality: 0.6 })
-        : await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    setPhotoError('');
+    try {
+      const permission =
+        from === 'camera'
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setPhotoError(
+          from === 'camera'
+            ? 'Allow camera access in Settings, or use Text instead.'
+            : 'Allow photo library access in Settings, or use Text instead.'
+        );
+        return;
+      }
+      const result =
+        from === 'camera'
+          ? await ImagePicker.launchCameraAsync({ quality: 0.6 })
+          : await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
+      if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    } catch {
+      setPhotoError('Could not open the camera. Switch to Text to post.');
+    }
   };
 
   const post = () => {
-    if (mode === 'photo' && photoUri) addPost('photo', photoUri);
-    else if (mode === 'text' && text.trim()) addPost('text', text.trim());
-    else return;
-    router.replace('/');
+    if (mode === 'photo') {
+      if (!photoUri) return;
+      const { completedGoal } = addPost('photo', photoUri);
+      router.replace(completedGoal ? '/next-goal' : '/(tabs)/feed');
+      return;
+    }
+    if (!text.trim()) return;
+    const { completedGoal } = addPost('text', text.trim());
+    router.replace(completedGoal ? '/next-goal' : '/(tabs)/feed');
   };
 
   return (
@@ -57,9 +80,10 @@ export default function Capture() {
               <Text style={styles.secondaryText}>Open camera</Text>
             </Pressable>
             <Pressable style={styles.secondary} onPress={() => pick('library')}>
-              <Text style={styles.secondaryText}>Choose file</Text>
+              <Text style={styles.secondaryText}>Choose photo</Text>
             </Pressable>
           </View>
+          {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
         </View>
       ) : (
         <TextInput
@@ -124,4 +148,5 @@ const styles = StyleSheet.create({
   },
   cta: { backgroundColor: colors.accent, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
   ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  error: { color: '#C62828', fontWeight: '600' },
 });

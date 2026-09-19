@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
 const EMOJIS = ['❤️', '😂', '🔥', '🥹', '👏', '🍜'];
 
+function e164(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return `+${digits}`;
+}
+
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, memberById, reactionsFor, addReaction } = useApp();
+  const { posts, memberById, reactionsFor, addReaction, markPostSeen } = useApp();
   const [comment, setComment] = useState('');
+
+  useEffect(() => {
+    if (id) markPostSeen(id);
+  }, [id, markPostSeen]);
 
   const post = posts.find((p) => p.id === id);
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
@@ -21,7 +32,12 @@ export default function PostDetail() {
   const emojis = reactions.filter((r) => r.kind === 'emoji');
 
   const call = () => {
-    if (author?.phone) void Linking.openURL(`tel:${author.phone}`);
+    if (author?.phone) void Linking.openURL(`tel:${e164(author.phone)}`);
+  };
+
+  const facetime = () => {
+    if (!author?.phone) return;
+    void Linking.openURL(`facetime://${e164(author.phone)}`);
   };
 
   const sendComment = () => {
@@ -47,8 +63,13 @@ export default function PostDetail() {
           <Text style={styles.actionText}>❤️ Like ({likes})</Text>
         </Pressable>
         <Pressable style={styles.action} onPress={call} disabled={!author?.phone}>
-          <Text style={styles.actionText}>📞 Call {author?.name}</Text>
+          <Text style={styles.actionText}>📞 Call</Text>
         </Pressable>
+        {Platform.OS === 'ios' ? (
+          <Pressable style={styles.action} onPress={facetime} disabled={!author?.phone}>
+            <Text style={styles.actionText}>📹 FaceTime</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={styles.emojiRow}>
@@ -105,7 +126,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     alignItems: 'center',
   },
-  actionText: { color: colors.text, fontWeight: '600' },
+  actionText: { color: colors.text, fontWeight: '600', fontSize: 13, textAlign: 'center' },
   emojiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   emoji: {
     backgroundColor: colors.accentSoft,
