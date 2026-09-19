@@ -446,15 +446,18 @@ export async function getReactions(groupId: string): Promise<Reaction[]> {
 export async function removeReaction(
   postId: string,
   userId: string,
-  kind: Reaction['kind']
+  kind: Reaction['kind'],
+  value?: string
 ): Promise<void> {
   const sb = getSupabase();
-  const { error } = await sb
+  let query = sb
     .from('reactions')
     .delete()
     .eq('post_id', postId)
     .eq('user_id', userId)
     .eq('kind', kind);
+  if (value !== undefined) query = query.eq('value', value);
+  const { error } = await query;
   if (error) throw error;
 }
 

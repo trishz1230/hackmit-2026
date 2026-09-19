@@ -93,6 +93,8 @@ type State = {
     caption?: string
   ) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
+  /** Emoji are one per member per emoji: reacting again takes it back. */
+  toggleEmoji: (postId: string, value: string) => void;
   /** Likes are one per member: liking again takes it back. */
   toggleLike: (postId: string) => void;
   likedByMe: (postId: string) => boolean;
@@ -452,6 +454,21 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
         if (!group) return;
         run(async () => {
           await api.addReaction({ postId, userId, kind, value: val });
+          await refresh(group.id);
+        });
+      },
+      toggleEmoji: (postId, value) => {
+        if (!group) return;
+        const mine = reactions.some(
+          (r) =>
+            r.postId === postId &&
+            r.kind === 'emoji' &&
+            r.userId === userId &&
+            r.value === value
+        );
+        run(async () => {
+          if (mine) await api.removeReaction(postId, userId, 'emoji', value);
+          else await api.addReaction({ postId, userId, kind: 'emoji', value });
           await refresh(group.id);
         });
       },
@@ -891,6 +908,19 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       },
       addReaction: (postId, kind, val) => {
         setReactions((prev) => [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind, value: val }]);
+      },
+      toggleEmoji: (postId, value) => {
+        setReactions((prev) => {
+          const mine = prev.find(
+            (r) =>
+              r.postId === postId &&
+              r.kind === 'emoji' &&
+              r.userId === me.id &&
+              r.value === value
+          );
+          if (mine) return prev.filter((r) => r !== mine);
+          return [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind: 'emoji', value }];
+        });
       },
       toggleLike: (postId) => {
         setReactions((prev) => {

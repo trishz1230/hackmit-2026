@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
+import { firstEmoji, tallyEmoji } from '../../lib/reactions';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -16,8 +17,10 @@ function e164(phone: string) {
 
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, hangoutPosts, memberById, reactionsFor, addReaction, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
+  const { posts, hangoutPosts, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
   const [comment, setComment] = useState('');
+  const [ownEmoji, setOwnEmoji] = useState('');
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     if (id) markPostSeen(id);
@@ -32,7 +35,7 @@ export default function PostDetail() {
   const comments = reactions.filter((r) => r.kind === 'comment');
   const likes = reactions.filter((r) => r.kind === 'like').length;
   const liked = likedByMe(post.id);
-  const emojis = reactions.filter((r) => r.kind === 'emoji');
+  const emojis = tallyEmoji(reactions, me.id);
 
   const call = () => {
     if (author?.phone) void Linking.openURL(`tel:${e164(author.phone)}`);
@@ -41,6 +44,13 @@ export default function PostDetail() {
   const facetime = () => {
     if (!author?.phone) return;
     void Linking.openURL(`facetime://${e164(author.phone)}`);
+  };
+
+  const sendOwnEmoji = () => {
+    const emoji = firstEmoji(ownEmoji);
+    setOwnEmoji('');
+    setPicking(false);
+    if (emoji) toggleEmoji(post.id, emoji);
   };
 
   const sendComment = () => {
@@ -86,14 +96,45 @@ export default function PostDetail() {
 
       <View style={styles.emojiRow}>
         {EMOJIS.map((e) => (
-          <Pressable key={e} style={styles.emoji} onPress={() => addReaction(post.id, 'emoji', e)}>
+          <Pressable key={e} style={styles.emoji} onPress={() => toggleEmoji(post.id, e)}>
             <Text style={styles.emojiText}>{e}</Text>
           </Pressable>
         ))}
+        <Pressable style={styles.emoji} onPress={() => setPicking((on) => !on)}>
+          <Text style={styles.emojiText}>➕</Text>
+        </Pressable>
       </View>
 
+      {picking ? (
+        <View style={styles.commentRow}>
+          <TextInput
+            style={styles.input}
+            value={ownEmoji}
+            onChangeText={setOwnEmoji}
+            autoFocus
+            placeholder="Any emoji from your keyboard…"
+            placeholderTextColor={colors.muted}
+            onSubmitEditing={sendOwnEmoji}
+          />
+          <Pressable style={styles.send} onPress={sendOwnEmoji}>
+            <Text style={styles.sendText}>Add</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {emojis.length > 0 && (
-        <Text style={styles.emojiSummary}>{emojis.map((r) => r.value).join(' ')}</Text>
+        <View style={styles.tallyRow}>
+          {emojis.map((t) => (
+            <Pressable
+              key={t.value}
+              style={[styles.tally, t.mine && styles.tallyMine]}
+              onPress={() => toggleEmoji(post.id, t.value)}
+            >
+              <Text style={styles.tallyEmoji}>{t.value}</Text>
+              <Text style={[styles.tallyCount, t.mine && styles.tallyCountMine]}>{t.count}</Text>
+            </Pressable>
+          ))}
+        </View>
       )}
 
       <Text style={styles.sectionTitle}>Comments</Text>
@@ -150,7 +191,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   emojiText: { fontSize: 20 },
-  emojiSummary: { fontSize: 18 },
+  tallyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  tally: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  tallyMine: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+  tallyEmoji: { fontSize: 16 },
+  tallyCount: { fontSize: 13, fontWeight: '700', color: colors.muted },
+  tallyCountMine: { color: colors.accent },
   sectionTitle: { marginTop: spacing.md, fontWeight: '700', color: colors.text },
   empty: { color: colors.muted, fontSize: 14 },
   comment: { color: colors.text, fontSize: 15 },
