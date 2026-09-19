@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
-import { EYES, FaceLayers, HAIR, HEAD, MOUTHS, encodeFace } from '../components/AvatarFace';
+import { EYES, FaceLayers, HAIR, MOUTHS, encodeFace } from '../components/AvatarFace';
 import { savePendingAvatar } from '../lib/api';
 
 const paper = require('../assets/welcome/paper.png');
@@ -31,6 +31,8 @@ const LABEL: Record<Step, string> = {
 };
 
 const SWIPE = 24;
+/** One row of the feature reel. */
+const ITEM = 64;
 const DOUBLE_TAP_MS = 320;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 2000;
@@ -143,13 +145,14 @@ export default function MakeAYou() {
 
       {!started ? null : current ? (
         <View style={styles.footer}>
-          <OptionStrip
+          <Roller
+            key={current}
             options={current === 'eyes' ? EYES : current === 'mouth' ? MOUTHS : HAIR}
             selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
             onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
           />
-          <Text style={styles.hint}>swipe up or down to switch {LABEL[current]}</Text>
-          <Text style={styles.hint}>double tap to lock it in.</Text>
+          <Text style={styles.hint}>roll through the {LABEL[current]}</Text>
+          <Text style={styles.hint}>double tap the face to lock it in.</Text>
           <Text style={styles.steps}>
             {STEPS.map((s, i) => (i <= step ? `• ${s}  ` : `◦ ${s}  `)).join('')}
           </Text>
@@ -161,8 +164,12 @@ export default function MakeAYou() {
   );
 }
 
-/** Every choice for the feature being picked, so nothing is a surprise. */
-function OptionStrip({
+/**
+ * A slot-machine reel of one feature's art. The list is repeated three times so
+ * it rolls forever: when a scroll settles outside the middle copy it jumps back
+ * by one copy's height, which is invisible since the art there is identical.
+ */
+function Roller({
   options,
   selected,
   onSelect,
@@ -171,21 +178,52 @@ function OptionStrip({
   selected: number;
   onSelect: (i: number) => void;
 }) {
+  const scroller = useRef<ScrollView>(null);
+  const placed = useRef(false);
+  const len = options.length;
+  const loop = len * ITEM;
+  const reel = [...options, ...options, ...options];
+  const indexAt = (y: number) => ((Math.round(y / ITEM) % len) + len) % len;
+
+  const settle = (y: number) => {
+    const index = indexAt(y);
+    onSelect(index);
+    if (y < loop / 2 || y > loop * 2.5) {
+      scroller.current?.scrollTo({ y: loop + index * ITEM, animated: false });
+    }
+  };
+
   return (
-    <View style={styles.stripWrap}>
+    <View style={styles.reelWindow}>
+      <View style={styles.reelLine} pointerEvents="none" />
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.strip}
+        ref={scroller}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingVertical: ITEM }}
+        onContentSizeChange={() => {
+          // Start in the middle copy; contentOffset isn't honoured everywhere.
+          if (placed.current) return;
+          placed.current = true;
+          scroller.current?.scrollTo({ y: loop + selected * ITEM, animated: false });
+        }}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          const index = indexAt(e.nativeEvent.contentOffset.y);
+          if (index !== selected) onSelect(index);
+        }}
+        onScrollEndDrag={(e) => settle(e.nativeEvent.contentOffset.y)}
+        onMomentumScrollEnd={(e) => settle(e.nativeEvent.contentOffset.y)}
       >
-        {options.map((option, i) => (
-          <Pressable
-            key={i}
-            onPress={() => onSelect(i)}
-            style={[styles.option, i === selected && styles.optionOn]}
-          >
-            <Image source={option ?? HEAD} resizeMode="contain" style={styles.optionArt} />
-          </Pressable>
+        {reel.map((option, i) => (
+          <View key={i} style={styles.reelItem}>
+            {option ? (
+              <Image source={option} resizeMode="contain" style={styles.reelArt} />
+            ) : (
+              <Text style={styles.reelNone}>none</Text>
+            )}
+          </View>
         ))}
       </ScrollView>
     </View>
@@ -253,34 +291,35 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  stripWrap: {
-    width: '100%',
-    maxHeight: 76,
+  reelWindow: {
+    height: ITEM * 3,
+    width: 130,
+    marginBottom: 14,
+    overflow: 'hidden',
   },
-  strip: {
-    flexGrow: 1,
-    justifyContent: 'center',
+  /** The row in the middle is the one you land on. */
+  reelLine: {
+    position: 'absolute',
+    top: ITEM,
+    height: ITEM,
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(47,42,38,0.22)',
+  },
+  reelItem: {
+    height: ITEM,
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 14,
-    gap: 8,
-  },
-  option: {
-    width: 52,
-    height: 52,
-    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
-  optionOn: {
-    borderColor: '#2F2A26',
-    backgroundColor: 'rgba(255,255,255,0.45)',
+  reelArt: {
+    width: 96,
+    height: ITEM - 12,
   },
-  optionArt: {
-    width: 40,
-    height: 40,
+  reelNone: {
+    fontSize: 16,
+    color: '#6B5F52',
   },
   hint: {
     fontSize: 16,
