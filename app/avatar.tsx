@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
   Image,
   ImageBackground,
-  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
-import { EYES, FaceLayers, HAIR, MOUTHS, encodeFace } from '../components/AvatarFace';
+import { EYES, HAIR, HEAD, MOUTHS, encodeFace } from '../components/AvatarFace';
 import { savePendingAvatar } from '../lib/api';
 
 const paper = require('../assets/welcome/paper.png');
@@ -30,9 +29,16 @@ const LABEL: Record<Step, string> = {
   hair: 'hair',
 };
 
-const SWIPE = 24;
-/** One row of the feature reel. */
-const ITEM = 64;
+/**
+ * Where each feature sits on the head, as a fraction of the face, and how tall
+ * a row of its reel is. The reel rolls inside `window`, so only that slice of
+ * the face moves while the rest of the drawing stays put.
+ */
+const SLOT = {
+  eyes: { top: 0.3, height: 0.26, art: { top: 0.06, width: 0.46, height: 0.14 } },
+  mouth: { top: 0.5, height: 0.3, art: { top: 0.06, width: 0.34, height: 0.18 } },
+  hair: { top: 0, height: 0.42, art: { top: 0, width: 1, height: 1 } },
+} as const;
 const DOUBLE_TAP_MS = 320;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 2000;
@@ -52,8 +58,6 @@ export default function MakeAYou() {
   const leaving = useRef(false);
 
   const current: Step | undefined = STEPS[step];
-  // Only the features already chosen (plus the one being chosen) are drawn.
-  const upTo = STEPS[Math.min(step, STEPS.length - 1)];
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -67,19 +71,6 @@ export default function MakeAYou() {
     }, INTRO_MS);
     return () => clearTimeout(t);
   }, [reveal]);
-
-  const counts = useMemo(() => ({ eyes: EYES.length, mouth: MOUTHS.length, hair: HAIR.length }), []);
-
-  const cycle = useCallback(
-    (dir: 1 | -1) => {
-      if (!current) return;
-      const next = (v: number, len: number) => (v + dir + len) % len;
-      if (current === 'eyes') setEyes((v) => next(v, counts.eyes));
-      if (current === 'mouth') setMouth((v) => next(v, counts.mouth));
-      if (current === 'hair') setHair((v) => next(v, counts.hair));
-    },
-    [counts, current],
-  );
 
   const lockIn = useCallback(() => {
     if (leaving.current) return;
@@ -95,18 +86,6 @@ export default function MakeAYou() {
     }
     lastTap.current = now;
   }, [lockIn]);
-
-  const pan = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 8 && Math.abs(g.dy) > Math.abs(g.dx),
-      onPanResponderRelease: (_e, g) => {
-        if (g.dy <= -SWIPE) cycleRef.current(1);
-        else if (g.dy >= SWIPE) cycleRef.current(-1);
-      },
-    }),
-  ).current;
-  const cycleRef = useRef(cycle);
-  cycleRef.current = cycle;
 
   useEffect(() => {
     if (!started || step < STEPS.length || leaving.current) return;
@@ -128,11 +107,31 @@ export default function MakeAYou() {
       <Animated.View
         style={[styles.stage, { opacity: reveal }, done && { transform: [{ scale: finish }] }]}
         pointerEvents={started ? 'auto' : 'none'}
-        {...pan.panHandlers}
       >
         <Pressable onPress={onTap} style={styles.face}>
-          <FaceLayers face={{ eyes, mouth, hair }} size={FACE} upTo={upTo} />
+          {/* Hair carries its own head outline, so a locked one replaces the head. */}
+          <Image
+            source={(current ? null : HAIR[hair]) ?? HEAD}
+            resizeMode="contain"
+            style={[styles.layer, { width: FACE, height: FACE }]}
+          />
+          {current === 'eyes' ? null : (
+            <Image source={EYES[eyes]} resizeMode="contain" style={artStyle('eyes')} />
+          )}
+          {step >= 1 && current !== 'mouth' ? (
+            <Image source={MOUTHS[mouth]} resizeMode="contain" style={artStyle('mouth')} />
+          ) : null}
         </Pressable>
+
+        {current ? (
+          <FaceReel
+            key={current}
+            slot={SLOT[current]}
+            options={current === 'eyes' ? EYES : current === 'mouth' ? MOUTHS : HAIR}
+            selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
+            onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
+          />
+        ) : null}
 
         {done ? (
           <>
@@ -145,13 +144,7 @@ export default function MakeAYou() {
 
       {!started ? null : current ? (
         <View style={styles.footer}>
-          <Roller
-            key={current}
-            options={current === 'eyes' ? EYES : current === 'mouth' ? MOUTHS : HAIR}
-            selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
-            onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
-          />
-          <Text style={styles.hint}>roll through the {LABEL[current]}</Text>
+          <Text style={styles.hint}>scroll the {LABEL[current]} on the face</Text>
           <Text style={styles.hint}>double tap the face to lock it in.</Text>
           <Text style={styles.steps}>
             {STEPS.map((s, i) => (i <= step ? `• ${s}  ` : `◦ ${s}  `)).join('')}
@@ -164,65 +157,98 @@ export default function MakeAYou() {
   );
 }
 
+type Slot = (typeof SLOT)[Step];
+
+const artStyle = (step: Step) => {
+  const { top, art } = SLOT[step];
+  return [
+    styles.layer,
+    {
+      top: (top + art.top) * FACE,
+      width: art.width * FACE,
+      height: art.height * FACE,
+    },
+  ];
+};
+
 /**
- * A slot-machine reel of one feature's art. The list is repeated three times so
- * it rolls forever: when a scroll settles outside the middle copy it jumps back
- * by one copy's height, which is invisible since the art there is identical.
+ * The feature being chosen, rolling in place on the face. Its options are laid
+ * out three times over so the reel never ends: once a scroll settles outside
+ * the middle copy it jumps back by one copy's height, which can't be seen
+ * because the drawing at that offset is the same one.
  */
-function Roller({
+function FaceReel({
+  slot,
   options,
   selected,
   onSelect,
 }: {
+  slot: Slot;
   options: (number | null)[];
   selected: number;
   onSelect: (i: number) => void;
 }) {
   const scroller = useRef<ScrollView>(null);
   const placed = useRef(false);
+  const resting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const row = slot.height * FACE;
   const len = options.length;
-  const loop = len * ITEM;
+  const loop = len * row;
   const reel = [...options, ...options, ...options];
-  const indexAt = (y: number) => ((Math.round(y / ITEM) % len) + len) % len;
+  const indexAt = (y: number) => ((Math.round(y / row) % len) + len) % len;
 
+  /**
+   * Land on whichever option the reel stopped over. Driven by a pause in the
+   * scroll rather than the end of a drag, because a mouse wheel never reports
+   * one — it just stops.
+   */
   const settle = (y: number) => {
     const index = indexAt(y);
     onSelect(index);
-    if (y < loop / 2 || y > loop * 2.5) {
-      scroller.current?.scrollTo({ y: loop + index * ITEM, animated: false });
-    }
+    const middle = loop + index * row;
+    const jump = y < loop / 2 || y > loop * 2.5;
+    scroller.current?.scrollTo({ y: jump ? middle : Math.round(y / row) * row, animated: !jump });
   };
 
+  const onMove = (y: number) => {
+    const index = indexAt(y);
+    if (index !== selected) onSelect(index);
+    clearTimeout(resting.current);
+    resting.current = setTimeout(() => settle(y), 140);
+  };
+
+  useEffect(() => () => clearTimeout(resting.current), []);
+
   return (
-    <View style={styles.reelWindow}>
-      <View style={styles.reelLine} pointerEvents="none" />
+    <View style={[styles.reelWindow, { top: slot.top * FACE, height: row }]}>
       <ScrollView
         ref={scroller}
         showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM}
+        snapToInterval={row}
         decelerationRate="fast"
-        contentContainerStyle={{ paddingVertical: ITEM }}
         onContentSizeChange={() => {
-          // Start in the middle copy; contentOffset isn't honoured everywhere.
+          // Start on the middle copy; contentOffset isn't honoured everywhere.
           if (placed.current) return;
           placed.current = true;
-          scroller.current?.scrollTo({ y: loop + selected * ITEM, animated: false });
+          scroller.current?.scrollTo({ y: loop + selected * row, animated: false });
         }}
         scrollEventThrottle={16}
-        onScroll={(e) => {
-          const index = indexAt(e.nativeEvent.contentOffset.y);
-          if (index !== selected) onSelect(index);
-        }}
-        onScrollEndDrag={(e) => settle(e.nativeEvent.contentOffset.y)}
-        onMomentumScrollEnd={(e) => settle(e.nativeEvent.contentOffset.y)}
+        onScroll={(e) => onMove(e.nativeEvent.contentOffset.y)}
       >
         {reel.map((option, i) => (
-          <View key={i} style={styles.reelItem}>
-            {option ? (
-              <Image source={option} resizeMode="contain" style={styles.reelArt} />
-            ) : (
-              <Text style={styles.reelNone}>none</Text>
-            )}
+          <View key={i} style={{ width: FACE, height: row, overflow: 'hidden' }}>
+            <Image
+              source={option ?? HEAD}
+              resizeMode="contain"
+              style={[
+                styles.layer,
+                {
+                  top: slot.art.top * FACE,
+                  width: slot.art.width * FACE,
+                  height: slot.art.height * FACE,
+                },
+              ]}
+            />
           </View>
         ))}
       </ScrollView>
@@ -291,35 +317,11 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
   },
+  layer: { position: 'absolute', alignSelf: 'center' },
   reelWindow: {
-    height: ITEM * 3,
-    width: 130,
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  /** The row in the middle is the one you land on. */
-  reelLine: {
     position: 'absolute',
-    top: ITEM,
-    height: ITEM,
-    left: 0,
-    right: 0,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(47,42,38,0.22)',
-  },
-  reelItem: {
-    height: ITEM,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reelArt: {
-    width: 96,
-    height: ITEM - 12,
-  },
-  reelNone: {
-    fontSize: 16,
-    color: '#6B5F52',
+    width: FACE,
+    overflow: 'hidden',
   },
   hint: {
     fontSize: 16,
