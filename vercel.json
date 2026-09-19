@@ -1,0 +1,6 @@
+{
+  "framework": null,
+  "buildCommand": "mkdir -p public && echo \"FamStreak prompt API\" > public/index.html",
+  "outputDirectory": "public",
+  "installCommand": "echo skip"
+}
