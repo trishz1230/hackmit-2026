@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { tallyEmoji } from '../lib/reactions';
 import { colors, radius, spacing } from '../lib/theme';
 import type { Post, Profile, Reaction } from '../lib/types';
 
@@ -28,7 +29,7 @@ export function PostCard({
   liked: boolean;
 }) {
   const likes = reactions.filter((r) => r.kind === 'like').length;
-  const emojis = reactions.filter((r) => r.kind === 'emoji').map((r) => r.value);
+  const emojis = tallyEmoji(reactions, '');
   const comments = reactions.filter((r) => r.kind === 'comment').length;
 
   return (
@@ -56,7 +57,11 @@ export function PostCard({
           </Text>
         </Pressable>
         <Text style={styles.action}>💬 {comments}</Text>
-        {emojis.length > 0 && <Text style={styles.action}>{emojis.join(' ')}</Text>}
+        {emojis.map((t) => (
+          <Text key={t.value} style={styles.action}>
+            {t.value} {t.count}
+          </Text>
+        ))}
       </View>
     </Pressable>
   );

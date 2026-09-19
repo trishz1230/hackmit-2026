@@ -8,7 +8,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from './api';
-import { clampLevelCount, levelOpensAt, levelUnlocksAt, todayKey } from './levels';
+import { clampLevelCount, levelOpensAt, levelUnlocksAt, postsForTask, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { nudgeContent, nudgeTargetId } from './nudge';
 import { generatePrompt } from './prompts';
@@ -93,6 +93,8 @@ type State = {
     caption?: string
   ) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
+  /** Emoji are one per member per emoji: reacting again takes it back. */
+  toggleEmoji: (postId: string, value: string) => void;
   /** Likes are one per member: liking again takes it back. */
   toggleLike: (postId: string) => void;
   likedByMe: (postId: string) => boolean;
@@ -216,7 +218,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /** Pulls the whole family in one go, then clears the level if everyone posted. */
-  const refresh = useCallback(async (groupId: string, becomeActive = false) => {
+  const refresh = useCallback(async (groupId: string, becomeActive = false, depth = 0) => {
     if (becomeActive) {
       activeId.current = groupId;
       lastLevel.current = null;
@@ -256,8 +258,19 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     }
     lastLevel.current = current.level;
 
-    await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts, waived.current);
+    const cleared = await api.clearLevelIfDone(
+      current,
+      nextMembers,
+      nextTask,
+      nextPosts,
+      waived.current
+    );
+    // Realtime may not carry our own update back, so pick the new level up now.
+    if (cleared !== null && depth === 0) await refreshRef.current(groupId, false, 1);
   }, []);
+
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
 
   useEffect(() => {
     void (async () => {
@@ -283,7 +296,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   }, [group?.id, refresh]);
 
   const me = members.find((m) => m.id === userId) ?? emptyMe(userId, group?.id ?? '');
-  const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
+  const postedIds = postsForTask(posts, task).map((p) => p.userId);
   const hasPostedThisCycle = postedIds.includes(userId);
   const pending = members.filter((m) => !postedIds.includes(m.id));
   const everyonePostedThisCycle =
@@ -444,6 +457,21 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
+      toggleEmoji: (postId, value) => {
+        if (!group) return;
+        const mine = reactions.some(
+          (r) =>
+            r.postId === postId &&
+            r.kind === 'emoji' &&
+            r.userId === userId &&
+            r.value === value
+        );
+        run(async () => {
+          if (mine) await api.removeReaction(postId, userId, 'emoji', value);
+          else await api.addReaction({ postId, userId, kind: 'emoji', value });
+          await refresh(group.id);
+        });
+      },
       toggleLike: (postId) => {
         if (!group) return;
         const mine = reactions.some(
@@ -489,7 +517,20 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
-      simulateMissedDay: () => setMissedReset((prev) => !prev),
+      simulateMissedDay: () => {
+        if (missedReset) {
+          setMissedReset(false);
+          return;
+        }
+        if (!group) return;
+        setMissedReset(true);
+        run(async () => {
+          await api.resetForMissedPeriod(group);
+          lastLevel.current = 1;
+          setClearedLevel(null);
+          await refresh(group.id);
+        });
+      },
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
         setSeenReactionIds((prev) =>
@@ -869,6 +910,19 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       },
       addReaction: (postId, kind, val) => {
         setReactions((prev) => [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind, value: val }]);
+      },
+      toggleEmoji: (postId, value) => {
+        setReactions((prev) => {
+          const mine = prev.find(
+            (r) =>
+              r.postId === postId &&
+              r.kind === 'emoji' &&
+              r.userId === me.id &&
+              r.value === value
+          );
+          if (mine) return prev.filter((r) => r !== mine);
+          return [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind: 'emoji', value }];
+        });
       },
       toggleLike: (postId) => {
         setReactions((prev) => {
