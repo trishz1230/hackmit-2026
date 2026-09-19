@@ -10,6 +10,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import * as api from './api';
 import { clampLevelCount, levelOpensAt, levelUnlocksAt, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
+import { nudgeContent, nudgeTargetId } from './nudge';
 import { generatePrompt } from './prompts';
 import { getPushToken, sendExpoPush } from './push';
 import { isSupabaseConfigured } from './supabase';
@@ -61,6 +62,9 @@ type State = {
   dismissMissedReset: () => void;
   unseenPosts: Post[];
   unseenReactions: ReactionNag[];
+  /** A family member tapped Remind on this device. */
+  incomingNudge: { id: string; fromName: string; prompt: string } | null;
+  ackNudge: () => void;
   /** Members who still owe a post for the current task. */
   pending: Profile[];
   /** Ping someone who hasn't posted this cycle. */
@@ -271,9 +275,18 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const pending = members.filter((m) => !postedIds.includes(m.id));
   const everyonePostedThisCycle =
     members.length > 0 && members.every((m) => postedIds.includes(m.id));
-  const taskPosts = posts.filter((p) => p.taskId !== '');
-  const hangoutPosts = posts.filter((p) => p.taskId === '');
-  const unseenPosts = posts.filter(
+  const visible = posts.filter((p) => !nudgeTargetId(p));
+  const taskPosts = visible.filter((p) => p.taskId !== '');
+  const hangoutPosts = visible.filter((p) => p.taskId === '');
+  const nudgePost = posts.find((p) => nudgeTargetId(p) === me.id);
+  const incomingNudge = nudgePost
+    ? {
+        id: nudgePost.id,
+        fromName: members.find((m) => m.id === nudgePost.userId)?.name ?? 'Family',
+        prompt: nudgePost.caption || task.prompt,
+      }
+    : null;
+  const unseenPosts = visible.filter(
     (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
   );
   const unseenReactions = unseenReactionNags(
@@ -335,6 +348,15 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       dismissMissedReset: () => setMissedReset(false),
       unseenPosts,
       unseenReactions,
+      incomingNudge,
+      ackNudge: () => {
+        if (!incomingNudge) return;
+        const id = incomingNudge.id;
+        run(async () => {
+          await api.deletePost(id);
+          if (group) await refresh(group.id);
+        });
+      },
       pending,
       remindToPost: (memberId) => {
         const target = members.find((m) => m.id === memberId);
@@ -496,6 +518,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       unseenPosts,
       unseenReactions,
       pending,
+      incomingNudge,
       clearedLevel,
       loading,
       error,
@@ -554,9 +577,18 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const pending = members.filter((m) => !postedIds.includes(m.id));
   const everyonePostedThisCycle =
     members.length > 0 && members.every((m) => postedIds.includes(m.id));
-  const taskPosts = posts.filter((p) => p.taskId !== '');
-  const hangoutPosts = posts.filter((p) => p.taskId === '');
-  const unseenPosts = posts.filter(
+  const visible = posts.filter((p) => !nudgeTargetId(p));
+  const taskPosts = visible.filter((p) => p.taskId !== '');
+  const hangoutPosts = visible.filter((p) => p.taskId === '');
+  const nudgePost = posts.find((p) => nudgeTargetId(p) === me.id);
+  const incomingNudge = nudgePost
+    ? {
+        id: nudgePost.id,
+        fromName: members.find((m) => m.id === nudgePost.userId)?.name ?? 'Family',
+        prompt: nudgePost.caption || task.prompt,
+      }
+    : null;
+  const unseenPosts = visible.filter(
     (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
   );
   const unseenReactions = unseenReactionNags(
@@ -698,13 +730,34 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       dismissMissedReset: () => setMissedReset(false),
       unseenPosts,
       unseenReactions,
+      incomingNudge,
+      ackNudge: () => {
+        if (!incomingNudge) return;
+        const id = incomingNudge.id;
+        setPosts((prev) => prev.filter((p) => p.id !== id));
+      },
       pending,
       remindToPost: (memberId) => {
         const target = members.find((m) => m.id === memberId);
-        if (!target?.expoPushToken || target.id === me.id) return;
-        void sendExpoPush(target.expoPushToken, `${me.name} is waiting 👀`, task.prompt, {
-          type: 'capture',
-        });
+        if (!target || target.id === me.id) return;
+        setPosts((prev) => [
+          ...prev,
+          {
+            id: `nudge-${Date.now()}`,
+            taskId: '',
+            groupId: group?.id ?? mockGroup.id,
+            userId: me.id,
+            kind: 'text',
+            content: nudgeContent(target.id),
+            caption: task.prompt,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        if (target.expoPushToken) {
+          void sendExpoPush(target.expoPushToken, `${me.name} is waiting 👀`, task.prompt, {
+            type: 'capture',
+          });
+        }
       },
       clearedLevel,
       isLive: false,
@@ -890,6 +943,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       unseenPosts,
       unseenReactions,
       pending,
+      incomingNudge,
       clearedLevel,
       appendPost,
       completeLevel,

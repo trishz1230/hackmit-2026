@@ -1,16 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { onNotificationTap, startPostNag, startReactionNag, startTaskNag, stopNags } from '../lib/nag';
+import { fireOnce, onNotificationTap, startPostNag, startReactionNag, startTaskNag, stopNags } from '../lib/nag';
 import { useApp } from '../lib/store';
 
 /** Schedules OS notifications and handles taps. Renders nothing. */
 export function NotificationController() {
   const router = useRouter();
-  const { group, task, hasPostedThisCycle, taskLocked, unseenPosts, unseenReactions, memberById } =
-    useApp();
+  const {
+    group,
+    task,
+    hasPostedThisCycle,
+    taskLocked,
+    unseenPosts,
+    unseenReactions,
+    memberById,
+    incomingNudge,
+    ackNudge,
+  } = useApp();
   const unseen = unseenPosts[0];
   const unseenAuthor = unseen ? memberById(unseen.userId) : undefined;
   const reactionNag = unseenReactions[0];
+  const handledNudge = useRef<string | null>(null);
 
   useEffect(() => {
     return onNotificationTap((data) => {
@@ -20,6 +30,14 @@ export function NotificationController() {
   }, [router]);
 
   useEffect(() => {
+    if (!incomingNudge || handledNudge.current === incomingNudge.id) return;
+    handledNudge.current = incomingNudge.id;
+    void fireOnce(`${incomingNudge.fromName} is waiting 👀`, incomingNudge.prompt);
+    ackNudge();
+  }, [incomingNudge, ackNudge]);
+
+  useEffect(() => {
+    if (incomingNudge) return;
     if (!group || group.awaitingNextGoal) {
       void stopNags();
       return;
@@ -44,6 +62,7 @@ export function NotificationController() {
     reactionNag?.id,
     unseen?.id,
     unseenAuthor?.name,
+    incomingNudge,
   ]);
 
   return null;

@@ -17,13 +17,18 @@ export async function getPushToken(): Promise<string | null> {
       importance: Notifications.AndroidImportance.MAX,
     });
   }
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? undefined;
   try {
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? undefined;
     const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
     return token.data;
   } catch {
-    return null;
+    try {
+      const token = await Notifications.getExpoPushTokenAsync();
+      return token.data;
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -37,9 +42,17 @@ export async function sendExpoPush(
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, title, body, sound: 'default', data }),
+      body: JSON.stringify({
+        to,
+        title,
+        body,
+        sound: 'default',
+        channelId: 'nags',
+        priority: 'high',
+        data,
+      }),
     });
   } catch {
-    /* The author's phone still nags locally if the app is open. */
+    /* Local nags on the other phone still fire if that app is open. */
   }
 }

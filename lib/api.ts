@@ -10,6 +10,7 @@ import { levelUnlocksAt } from './levels';
 import { getSupabase } from './supabase';
 import { generatePrompt } from './prompts';
 import { sendExpoPush } from './push';
+import { nudgeContent } from './nudge';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
 
 type Row = Record<string, unknown>;
@@ -148,6 +149,25 @@ async function notifyProfile(
 export async function remindToPost(from: Profile, to: Profile, prompt: string): Promise<void> {
   if (from.id === to.id) return;
   await notifyProfile(to, `${from.name} is waiting 👀`, prompt, { type: 'capture' });
+  const sb = getSupabase();
+  const row = {
+    task_id: null,
+    group_id: from.groupId,
+    user_id: from.id,
+    kind: 'text',
+    content: nudgeContent(to.id),
+    caption: prompt,
+  };
+  const inserted = await sb.from('posts').insert(row).select().single();
+  if (inserted.error) {
+    const { caption: _caption, ...withoutCaption } = row;
+    await sb.from('posts').insert(withoutCaption);
+  }
+}
+
+export async function deletePost(id: string): Promise<void> {
+  const sb = getSupabase();
+  await sb.from('posts').delete().eq('id', id);
 }
 
 export async function createGroup(userId: string, opts: CreateOptions): Promise<Group> {

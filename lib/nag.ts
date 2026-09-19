@@ -101,7 +101,6 @@ async function fire(content: Notifications.NotificationContentInput, cadence: Ca
 export async function startTaskNag(prompt: string) {
   if (!(await ensurePermission())) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
-  await Notifications.dismissAllNotificationsAsync();
 
   await Notifications.scheduleNotificationAsync({
     content: {
@@ -168,6 +167,24 @@ export async function startReactionNag(
     },
     cadence
   );
+}
+
+export async function fireOnce(
+  title: string,
+  body: string,
+  data: Record<string, string> = { type: 'capture' }
+) {
+  if (!(await ensurePermission())) return;
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data,
+      sound: true,
+      ...(Platform.OS === 'android' ? { channelId: 'nags' } : {}),
+    },
+    trigger: null,
+  });
 }
 
 export async function stopNags() {
