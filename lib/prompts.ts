@@ -10,7 +10,7 @@
 import { taskPrompts } from './mockData';
 
 /** Paste your deployed function URL here once, e.g. https://famstreak.vercel.app/api/prompt */
-const DEPLOYED_PROMPT_API = '';
+const DEPLOYED_PROMPT_API = 'https://hackmit-2026.vercel.app/api/prompt';
 
 const PROMPT_API = process.env.EXPO_PUBLIC_PROMPT_API || DEPLOYED_PROMPT_API;
 
