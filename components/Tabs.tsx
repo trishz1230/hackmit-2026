@@ -5,7 +5,7 @@ import { colors, radius, spacing } from '../lib/theme';
 
 const TABS = [
   { key: 'family', label: 'Family task', href: '/(tabs)/feed' },
-  { key: 'hangout', label: 'Hangout', href: '/hangout' },
+  { key: 'hangout', label: 'Hangout', href: '/(tabs)/hangout' },
 ] as const;
 
 /** Switches between the level feed and the anything-goes feed. */

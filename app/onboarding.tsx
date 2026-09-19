@@ -15,6 +15,7 @@ export default function Onboarding() {
   const [myName, setMyName] = useState('');
   const [phone, setPhone] = useState('');
   const [cadence, setCadence] = useState<Cadence>('daily');
+  const [familyName, setFamilyName] = useState('');
   const [reward, setReward] = useState('');
   const [levels, setLevels] = useState('10');
   const [code, setCode] = useState('');
@@ -58,6 +59,7 @@ export default function Onboarding() {
     if (mode === 'create') {
       createGroup({
         myName: who,
+        familyName: familyName.trim() || undefined,
         phone: tel,
         cadence,
         rewardText: reward.trim(),
@@ -111,6 +113,15 @@ export default function Onboarding() {
 
       {mode === 'create' ? (
         <>
+          <Text style={styles.label}>Family name (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={familyName}
+            onChangeText={setFamilyName}
+            placeholder={myName.trim() ? `${myName.trim()}'s family` : 'The Zhengs'}
+            placeholderTextColor={colors.muted}
+          />
+
           <Text style={styles.label}>What does one level equal?</Text>
           <View style={styles.picker}>
             {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (

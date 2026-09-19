@@ -8,7 +8,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from './api';
-import { clampLevelCount, todayKey } from './levels';
+import { clampLevelCount, levelUnlocksAt, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { generatePrompt } from './prompts';
 import { isSupabaseConfigured } from './supabase';
@@ -39,6 +39,12 @@ type State = {
   reactions: Reaction[];
   hasPostedThisCycle: boolean;
   everyonePostedThisCycle: boolean;
+  /** Everyone answered, but the level's period hasn't run out yet. */
+  waitingForPeriod: boolean;
+  /** Epoch ms when the current level's period ends (local midnight). */
+  unlocksAt: number;
+  /** Demo escape hatch: treat the period as over right now. */
+  endPeriodNow: () => void;
   missedReset: boolean;
   unseenPosts: Post[];
   /** Members who still owe a post for the current task. */
@@ -54,7 +60,7 @@ type State = {
   dismissCelebration: () => void;
   createGroup: (opts: CreateOptions) => void;
   joinGroup: (opts: JoinOptions) => void;
-  updateSettings: (patch: { cadence: Cadence; rewardText: string; goal: number }) => void;
+  updateSettings: (patch: { cadence: Cadence; rewardText: string; goal: number; name?: string }) => void;
   addPost: (kind: Post['kind'], content: string, channel?: Channel) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   reactionsFor: (postId: string) => Reaction[];
@@ -100,6 +106,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const [missedReset, setMissedReset] = useState(false);
   /** Last level this browser saw, so every member gets the celebration. */
   const lastLevel = useRef<number | null>(null);
+  /** Set by the demo button to clear the level without waiting for midnight. */
+  const waived = useRef(false);
 
   /** Fire-and-forget a backend call, surfacing whatever it refuses to do. */
   const run = useCallback((fn: () => Promise<void>) => {
@@ -132,10 +140,11 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
 
     if (lastLevel.current !== null && current.level > lastLevel.current) {
       setClearedLevel(current.level - 1);
+      waived.current = false;
     }
     lastLevel.current = current.level;
 
-    await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts);
+    await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts, waived.current);
   }, []);
 
   useEffect(() => {
@@ -164,6 +173,19 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const unseenPosts = posts.filter(
     (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
   );
+  const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily');
+  const waitingForPeriod = everyonePostedThisCycle && Date.now() < unlocksAt;
+
+  // Nothing pushes an event when midnight arrives, so poll while we're waiting.
+  useEffect(() => {
+    if (!group || !waitingForPeriod) return;
+    const groupId = group.id;
+    const timer = setTimeout(
+      () => void refresh(groupId),
+      Math.min(Math.max(unlocksAt - Date.now(), 1000), 60_000)
+    );
+    return () => clearTimeout(timer);
+  }, [group?.id, waitingForPeriod, unlocksAt, refresh]);
 
   const value = useMemo<State>(
     () => ({
@@ -176,6 +198,13 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       reactions,
       hasPostedThisCycle,
       everyonePostedThisCycle,
+      waitingForPeriod,
+      unlocksAt,
+      endPeriodNow: () => {
+        if (!group) return;
+        waived.current = true;
+        run(() => refresh(group.id));
+      },
       missedReset,
       unseenPosts,
       pending,
@@ -282,6 +311,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       reactions,
       hasPostedThisCycle,
       everyonePostedThisCycle,
+      waitingForPeriod,
+      unlocksAt,
       missedReset,
       unseenPosts,
       pending,
@@ -305,6 +336,7 @@ const newTask = (prompt: string, level: number): Task => ({
   prompt,
   level,
   cycleDate: todayKey(),
+  createdAt: new Date().toISOString(),
 });
 
 function MockProvider({ children }: { children: React.ReactNode }) {
@@ -318,6 +350,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const [seenPostIds, setSeenPostIds] = useState<string[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const seenPrompts = useRef<string[]>([mockTask.prompt]);
+  const [waived, setWaived] = useState(false);
   const missChecked = useRef<string | null>(null);
 
   const clearTimers = useCallback(() => {
@@ -339,6 +372,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const unseenPosts = posts.filter(
     (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
   );
+  const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily');
+  const waitingForPeriod = everyonePostedThisCycle && !waived && Date.now() < unlocksAt;
 
   useEffect(() => {
     if (!group || group.awaitingNextGoal) return;
@@ -360,6 +395,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   }, [group, task, everyonePostedThisCycle]);
 
   const completeLevel = useCallback(async () => {
+    setWaived(false);
     const prompt = await generatePrompt(seenPrompts.current.slice(-5));
     seenPrompts.current.push(prompt);
     let completedGoal = false;
@@ -409,6 +445,12 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       reactions,
       hasPostedThisCycle,
       everyonePostedThisCycle,
+      waitingForPeriod,
+      unlocksAt,
+      endPeriodNow: () => {
+        setWaived(true);
+        if (everyonePostedThisCycle) void completeLevel();
+      },
       missedReset,
       unseenPosts,
       pending,
@@ -417,10 +459,10 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       loading: false,
       error: null,
       dismissCelebration: () => setClearedLevel(null),
-      createGroup: ({ myName, phone, goal, cadence, rewardText }) => {
+      createGroup: ({ myName, familyName, phone, goal, cadence, rewardText }) => {
         setGroup({
           ...mockGroup,
-          name: `${myName}'s family`,
+          name: familyName?.trim() || `${myName}'s family`,
           goal: clampLevelCount(goal),
           cadence,
           rewardText: rewardText || mockGroup.rewardText,
@@ -440,8 +482,12 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setMissedReset(false);
         setSeenPostIds(mockPosts.map((p) => p.id));
       },
-      updateSettings: ({ cadence, rewardText, goal }) => {
-        setGroup((g) => (g ? { ...g, cadence, rewardText, goal: clampLevelCount(goal) } : g));
+      updateSettings: ({ cadence, rewardText, goal, name }) => {
+        setGroup((g) =>
+          g
+            ? { ...g, cadence, rewardText, goal: clampLevelCount(goal), name: name?.trim() || g.name }
+            : g
+        );
       },
       addPost: (kind, content, channel = 'task') => {
         if (channel === 'hangout') {
@@ -464,7 +510,12 @@ function MockProvider({ children }: { children: React.ReactNode }) {
           );
         });
         const willComplete = Boolean(group && !group.awaitingNextGoal && group.level >= group.goal);
-        timers.current.push(setTimeout(() => void completeLevel(), REPLY_DELAY_MS * (others.length + 1)));
+        timers.current.push(
+          setTimeout(() => {
+            if (Date.now() < unlocksAt && !waived) return;
+            void completeLevel();
+          }, REPLY_DELAY_MS * (others.length + 1))
+        );
         return { completedGoal: willComplete };
       },
       addReaction: (postId, kind, val) => {
@@ -527,6 +578,9 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       reactions,
       hasPostedThisCycle,
       everyonePostedThisCycle,
+      waitingForPeriod,
+      unlocksAt,
+      waived,
       missedReset,
       unseenPosts,
       pending,

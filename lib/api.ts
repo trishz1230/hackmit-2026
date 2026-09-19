@@ -6,6 +6,7 @@
  * Run that file in the Supabase SQL editor, then fill in lib/supabase.ts.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { levelUnlocksAt } from './levels';
 import { getSupabase } from './supabase';
 import { generatePrompt } from './prompts';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
@@ -41,6 +42,7 @@ const toTask = (r: Row): Task => ({
   prompt: str(r.prompt),
   level: num(r.level),
   cycleDate: str(r.cycle_date) || undefined,
+  createdAt: str(r.created_at) || undefined,
 });
 
 const toPost = (r: Row): Post => ({
@@ -126,7 +128,7 @@ export async function createGroup(userId: string, opts: CreateOptions): Promise<
   const { data, error } = await sb
     .from('groups')
     .insert({
-      name: `${opts.myName}'s family`,
+      name: opts.familyName?.trim() || `${opts.myName}'s family`,
       join_code: randomCode(),
       goal: opts.goal,
       level: 1,
@@ -156,15 +158,20 @@ export async function joinGroup(userId: string, opts: JoinOptions): Promise<Grou
   return group;
 }
 
-/** Settings screen: cadence, reward and level goal can change any time. */
+/** Settings screen: name, cadence, reward and level goal can change any time. */
 export async function updateGroup(
   groupId: string,
-  patch: { cadence: Cadence; rewardText: string; goal: number }
+  patch: { cadence: Cadence; rewardText: string; goal: number; name?: string }
 ): Promise<void> {
   const sb = getSupabase();
   const { error } = await sb
     .from('groups')
-    .update({ cadence: patch.cadence, reward_text: patch.rewardText, goal: patch.goal })
+    .update({
+      cadence: patch.cadence,
+      reward_text: patch.rewardText,
+      goal: patch.goal,
+      ...(patch.name ? { name: patch.name } : {}),
+    })
     .eq('id', groupId);
   if (error) throw error;
 }
@@ -273,14 +280,22 @@ export async function addReaction(input: Omit<Reaction, 'id'>): Promise<void> {
 }
 
 /**
- * All-or-nothing rule: once every member has posted for the current task the
- * family levels up. The `eq('level', group.level)` guard means only the first
- * client to get there wins, so two browsers can't double-increment.
+ * All-or-nothing rule: once every member has posted for the current task AND
+ * the level's period has run out at midnight, the family levels up. The
+ * `eq('level', group.level)` guard means only the first client to get there
+ * wins, so two browsers can't double-increment.
  * Returns the cleared level, or null if nothing changed.
  */
-export async function clearLevelIfDone(group: Group, members: Profile[], task: Task, posts: Post[]): Promise<number | null> {
+export async function clearLevelIfDone(
+  group: Group,
+  members: Profile[],
+  task: Task,
+  posts: Post[],
+  ignoreWait = false
+): Promise<number | null> {
   const posted = new Set(posts.filter((p) => p.taskId === task.id).map((p) => p.userId));
   if (members.length === 0 || !members.every((m) => posted.has(m.id))) return null;
+  if (!ignoreWait && Date.now() < levelUnlocksAt(task.createdAt, group.cadence)) return null;
 
   const sb = getSupabase();
   const { data } = await sb

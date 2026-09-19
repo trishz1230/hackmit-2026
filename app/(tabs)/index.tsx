@@ -3,12 +3,13 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
+import { describeWait } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
 export default function Home() {
   const router = useRouter();
-  const { group, task, hasPostedThisCycle, missedReset } = useApp();
+  const { group, task, hasPostedThisCycle, missedReset, waitingForPeriod, unlocksAt } = useApp();
   const [selected, setSelected] = useState<number | null>(null);
 
   useEffect(() => {
@@ -30,6 +31,15 @@ export default function Home() {
         reward={group.rewardText}
         streak={group.currentStreak}
       />
+
+      {waitingForPeriod ? (
+        <View style={styles.waitBanner}>
+          <Text style={styles.waitTitle}>Everyone&apos;s posted</Text>
+          <Text style={styles.waitBody}>
+            Level {group.level} clears when the period ends — {describeWait(unlocksAt)}.
+          </Text>
+        </View>
+      ) : null}
 
       {missedReset ? (
         <View style={styles.resetBanner}>
@@ -91,6 +101,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
+  waitBanner: {
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  waitTitle: { fontWeight: '800', color: colors.text },
+  waitBody: { color: colors.muted, marginTop: 2 },
   resetTitle: { fontWeight: '800', color: colors.text },
   resetBody: { color: colors.muted, marginTop: 2 },
   backdrop: {
