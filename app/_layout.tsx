@@ -20,10 +20,11 @@ export default function RootLayout() {
               headerStyle: { backgroundColor: colors.bg },
               headerTintColor: colors.text,
               contentStyle: { backgroundColor: colors.bg },
+              headerBackButtonDisplayMode: 'minimal',
             }}
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="hangout" options={{ title: 'Hangout' }} />
             <Stack.Screen name="settings" options={{ title: 'Family settings' }} />

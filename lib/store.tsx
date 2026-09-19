@@ -11,7 +11,7 @@ import * as api from './api';
 import { clampLevelCount, levelOpensAt, levelUnlocksAt, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { generatePrompt } from './prompts';
-import { getPushToken } from './push';
+import { getPushToken, sendExpoPush } from './push';
 import { isSupabaseConfigured } from './supabase';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
 
@@ -63,6 +63,8 @@ type State = {
   unseenReactions: ReactionNag[];
   /** Members who still owe a post for the current task. */
   pending: Profile[];
+  /** Ping someone who hasn't posted this cycle. */
+  remindToPost: (memberId: string) => void;
   /** Level just cleared, for the celebration overlay; null once dismissed. */
   clearedLevel: number | null;
   /** True once every member is real rather than scripted. */
@@ -334,6 +336,11 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       unseenPosts,
       unseenReactions,
       pending,
+      remindToPost: (memberId) => {
+        const target = members.find((m) => m.id === memberId);
+        if (!target || target.id === me.id) return;
+        void api.remindToPost(me, target, task.prompt);
+      },
       clearedLevel,
       isLive: true,
       loading,
@@ -692,6 +699,13 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       unseenPosts,
       unseenReactions,
       pending,
+      remindToPost: (memberId) => {
+        const target = members.find((m) => m.id === memberId);
+        if (!target?.expoPushToken || target.id === me.id) return;
+        void sendExpoPush(target.expoPushToken, `${me.name} is waiting 👀`, task.prompt, {
+          type: 'capture',
+        });
+      },
       clearedLevel,
       isLive: false,
       loading: false,

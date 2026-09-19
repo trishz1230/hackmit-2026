@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
 import { describeWait } from '../../lib/levels';
@@ -13,6 +14,8 @@ export default function Home() {
     group,
     task,
     hasPostedThisCycle,
+    pending,
+    remindToPost,
     missedReset,
     dismissMissedReset,
     waitingForPeriod,
@@ -49,10 +52,14 @@ export default function Home() {
 
       {waitingForPeriod ? (
         <View style={styles.waitBanner}>
-          <Text style={styles.waitTitle}>Everyone&apos;s posted</Text>
+          <Text style={styles.waitTitle}>Everyone posted</Text>
           <Text style={styles.waitBody}>
             Level {group.level} clears when the period ends — {describeWait(unlocksAt)}.
           </Text>
+        </View>
+      ) : hasPostedThisCycle ? (
+        <View style={styles.waitBanner}>
+          <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
         </View>
       ) : null}
 
@@ -105,7 +112,7 @@ export default function Home() {
                     )
                   ) : null}
                   {hasPostedThisCycle ? (
-                    <Text style={styles.complete}>✓ Complete</Text>
+                    <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
                   ) : (
                     <Pressable
                       style={styles.cta}

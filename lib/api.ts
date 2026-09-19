@@ -145,6 +145,11 @@ async function notifyProfile(
   await sendExpoPush(profile.expoPushToken, title, body, data);
 }
 
+export async function remindToPost(from: Profile, to: Profile, prompt: string): Promise<void> {
+  if (from.id === to.id) return;
+  await notifyProfile(to, `${from.name} is waiting 👀`, prompt, { type: 'capture' });
+}
+
 export async function createGroup(userId: string, opts: CreateOptions): Promise<Group> {
   const sb = getSupabase();
   const { data, error } = await sb

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
 import { useApp } from '../../lib/store';
@@ -13,6 +14,8 @@ export default function Feed() {
     posts,
     task,
     hasPostedThisCycle,
+    pending,
+    remindToPost,
     taskLocked,
     reactionsFor,
     memberById,
@@ -40,7 +43,7 @@ export default function Feed() {
           <>
             <Text style={styles.taskPrompt}>{task.prompt}</Text>
             {hasPostedThisCycle ? (
-              <Text style={styles.complete}>✓ Complete</Text>
+              <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
             ) : (
               <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
                 <Text style={styles.ctaText}>Complete task</Text>
