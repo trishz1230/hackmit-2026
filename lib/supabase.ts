@@ -7,9 +7,9 @@ import 'react-native-url-polyfill/auto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /** e.g. https://abcdefgh.supabase.co — Supabase dashboard → Settings → API */
-const PROJECT_URL = '';
+const PROJECT_URL = 'https://ezsuvyiiooxshswnxyws.supabase.co';
 /** The `anon` `public` key from the same page. Safe to commit. */
-const ANON_KEY = '';
+const ANON_KEY = 'sb_publishable_4httacI9cXrsOtIWTY6Xvw_3ohO834I';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL || PROJECT_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ANON_KEY;
