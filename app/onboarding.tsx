@@ -13,7 +13,7 @@ const CODE_LENGTH = 6;
 export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { group, createGroup, joinGroup, isLive, error } = useApp();
+  const { group, createGroup, joinGroup, isLive, error, dismissError } = useApp();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [myName, setMyName] = useState('');
   const [phone, setPhone] = useState('');
@@ -79,6 +79,7 @@ export default function Onboarding() {
     if (mode === 'create' && !reward.trim()) return;
     if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
     setPriorGroupId(group?.id ?? null);
+    dismissError();
     setWorking(true);
     const who = myName.trim();
     const tel = phone.trim() ? formatPhone(phone) : undefined;
