@@ -24,6 +24,7 @@ export default function Home() {
     opensAt,
     taskForLevel,
     myPostForLevel,
+    loading,
   } = useApp();
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -31,6 +32,7 @@ export default function Home() {
     if (group?.awaitingNextGoal) router.replace('/next-goal');
   }, [group?.awaitingNextGoal, router]);
 
+  if (loading) return <View style={styles.fill} />;
   if (!group) return <Redirect href="/onboarding" />;
 
   const current = Math.min(group.level, group.goal);
@@ -54,7 +56,7 @@ export default function Home() {
         <View style={styles.waitBanner}>
           <Text style={styles.waitTitle}>Everyone posted</Text>
           <Text style={styles.waitBody}>
-            Level {group.level} clears when the period ends — {describeWait(unlocksAt)}.
+            Level {group.level + 1} will open {describeWait(unlocksAt)}.
           </Text>
         </View>
       ) : hasPostedThisCycle ? (
@@ -65,8 +67,11 @@ export default function Home() {
 
       {missedReset ? (
         <View style={styles.resetBanner}>
-          <Text style={styles.resetTitle}>Family streak reset</Text>
-          <Text style={styles.resetBody}>Someone missed a day, so everyone is back at level 1.</Text>
+          <Text style={styles.resetTitle}>Demo: family streak reset</Text>
+          <Text style={styles.resetBody}>
+            This is how a missed period looks — the streak goes to 0 and the family restarts at
+            level 1.
+          </Text>
           <Pressable onPress={dismissMissedReset} hitSlop={8}>
             <Text style={styles.dismiss}>Dismiss</Text>
           </Pressable>

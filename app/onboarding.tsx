@@ -23,21 +23,40 @@ export default function Onboarding() {
   const [levels, setLevels] = useState('10');
   const [code, setCode] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [working, setWorking] = useState(false);
+  const [priorGroupId, setPriorGroupId] = useState<string | null>(null);
 
-  // The family only exists once the backend answers, so the invite code screen
-  // (and the hop to the feed) waits for it rather than navigating optimistically.
+  // Any family already in the store belongs to a previous session, so the invite
+  // code screen waits for a different one rather than flashing the old family.
+  const fresh = group && group.id !== priorGroupId ? group : null;
+
   useEffect(() => {
-    if (submitted && mode === 'join' && group) router.replace('/');
-  }, [submitted, mode, group, router]);
+    if (working && mode === 'join' && fresh) router.replace('/');
+  }, [working, mode, fresh, router]);
 
-  if (submitted && mode === 'create' && group) {
+  useEffect(() => {
+    if (working && error) setWorking(false);
+  }, [working, error]);
+
+  if (working && mode === 'create' && !fresh) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.logo}>One moment</Text>
+        <Text style={styles.tagline}>Setting up your family…</Text>
+      </View>
+    );
+  }
+
+  if (working && mode === 'create' && fresh) {
+    const created = fresh;
     return (
       <View style={styles.wrap}>
         <Text style={styles.logo}>You&apos;re in</Text>
         <Text style={styles.tagline}>Share this code with the family — they pick “Join a family”.</Text>
-        <Text style={styles.bigCode}>{group.joinCode}</Text>
+        <Text style={styles.bigCode}>{created.joinCode}</Text>
         <Text style={styles.summary}>
-          {group.goal} levels to “{group.rewardText}” · one level every {CADENCE_LABELS[group.cadence]}
+          {created.goal} levels to “{created.rewardText}” · one level every{' '}
+          {CADENCE_LABELS[created.cadence]}
         </Text>
         <Pressable style={styles.cta} onPress={() => router.replace('/')}>
           <Text style={styles.ctaText}>Go to the map</Text>
@@ -59,6 +78,8 @@ export default function Onboarding() {
     if (phone.trim() && !isValidPhone(phone)) return;
     if (mode === 'create' && !reward.trim()) return;
     if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
+    setPriorGroupId(group?.id ?? null);
+    setWorking(true);
     const who = myName.trim();
     const tel = phone.trim() ? formatPhone(phone) : undefined;
     if (mode === 'create') {

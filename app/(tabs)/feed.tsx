@@ -22,8 +22,10 @@ export default function Feed() {
     toggleLike,
     likedByMe,
     promptFor,
+    loading,
   } = useApp();
 
+  if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
 
   return (
