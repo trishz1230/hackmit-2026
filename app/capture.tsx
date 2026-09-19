@@ -50,7 +50,7 @@ export default function Capture() {
       to
     );
     if (hangout) {
-      router.replace('/hangout');
+      router.replace('/(tabs)/hangout');
       return;
     }
     router.replace(completedGoal ? '/next-goal' : '/(tabs)/feed');

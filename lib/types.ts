@@ -10,6 +10,8 @@ export const CADENCE_LABELS: Record<Cadence, string> = {
 /** Everything the create-a-family form collects. */
 export type CreateOptions = {
   myName: string;
+  /** What the family calls itself; defaults to "<myName>'s family". */
+  familyName?: string;
   phone?: string;
   cadence: Cadence;
   rewardText: string;
@@ -51,6 +53,8 @@ export type Task = {
   level: number;
   /** Calendar day this cycle started (YYYY-MM-DD). Used to detect a missed day. */
   cycleDate?: string;
+  /** When the level started, i.e. when this level's wait is measured from. */
+  createdAt?: string;
 };
 
 export type Post = {

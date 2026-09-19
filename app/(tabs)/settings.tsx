@@ -1,21 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { formatPhone, isValidPhone } from '../../lib/phone';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../../lib/types';
 
 export default function Settings() {
   const router = useRouter();
-  const { group, members, me, updateProfile, updateSettings, leaveGroup, simulateMissedDay } = useApp();
+  const {
+    group,
+    members,
+    me,
+    updateProfile,
+    updateSettings,
+    leaveGroup,
+    simulateMissedDay,
+    endPeriodNow,
+  } = useApp();
   const [name, setName] = useState(me.name);
   const [phone, setPhone] = useState(me.phone ?? '');
   const [saved, setSaved] = useState(false);
+  const [familyName, setFamilyName] = useState(group?.name ?? '');
+  const [familySaved, setFamilySaved] = useState(false);
+  const phoneBad = phone.trim().length > 0 && !isValidPhone(phone);
 
   useEffect(() => {
     setName(me.name);
     setPhone(me.phone ?? '');
   }, [me.name, me.phone]);
+
+  useEffect(() => {
+    if (group) setFamilyName(group.name);
+  }, [group?.name]);
 
   if (!group) return <Redirect href="/onboarding" />;
 
@@ -24,12 +41,36 @@ export default function Settings() {
       <Text style={styles.title}>Settings</Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Family</Text>
-        <Text style={styles.family}>{group.name}</Text>
+        <Text style={styles.label}>Family name</Text>
+        <TextInput
+          style={styles.input}
+          value={familyName}
+          onChangeText={(t) => {
+            setFamilyName(t);
+            setFamilySaved(false);
+          }}
+          placeholder="The Zhengs"
+          placeholderTextColor={colors.muted}
+        />
+        <Pressable
+          style={styles.cta}
+          onPress={() => {
+            if (!familyName.trim()) return;
+            updateSettings({
+              cadence: group.cadence,
+              rewardText: group.rewardText,
+              goal: group.goal,
+              name: familyName.trim(),
+            });
+            setFamilySaved(true);
+          }}
+        >
+          <Text style={styles.ctaText}>{familySaved ? 'Saved' : 'Save family name'}</Text>
+        </Pressable>
         <Text style={styles.label}>Invite code</Text>
         <Text style={styles.code}>{group.joinCode}</Text>
         <Text style={styles.meta}>
-          {group.rewardText} · {group.goal} levels · {group.cadence.replace('_', ' ')}
+          {group.rewardText} · {group.goal} levels · 1 level = {CADENCE_LABELS[group.cadence]}
         </Text>
       </View>
 
@@ -45,7 +86,7 @@ export default function Settings() {
         />
         <Text style={styles.label}>Phone (optional)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, phoneBad && styles.inputBad]}
           value={phone}
           onChangeText={(t) => {
             setPhone(t);
@@ -55,10 +96,12 @@ export default function Settings() {
           placeholder="For Call on posts"
           placeholderTextColor={colors.muted}
         />
+        {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}
         <Pressable
-          style={styles.cta}
+          style={[styles.cta, phoneBad && styles.ctaDisabled]}
+          disabled={phoneBad}
           onPress={() => {
-            updateProfile({ name, phone: phone.trim() || undefined });
+            updateProfile({ name, phone: phone.trim() ? formatPhone(phone) : undefined });
             setSaved(true);
           }}
         >
@@ -67,9 +110,10 @@ export default function Settings() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Reminder frequency</Text>
+        <Text style={styles.label}>Level length &amp; reminders</Text>
         <Text style={styles.meta}>
-          How often the family gets nudged about the current task. It never blocks posting.
+          How long one level lasts and how often the family gets nudged. Everyone can post any
+          time, but the level only clears at midnight once the period is up.
         </Text>
         <View style={styles.picker}>
           {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (
@@ -107,6 +151,10 @@ export default function Settings() {
 
       <Pressable style={styles.demo} onPress={simulateMissedDay}>
         <Text style={styles.demoText}>Demo: someone missed a day</Text>
+      </Pressable>
+
+      <Pressable style={styles.demo} onPress={endPeriodNow}>
+        <Text style={styles.demoText}>Demo: end this period now</Text>
       </Pressable>
 
       <Pressable
@@ -161,7 +209,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
+  ctaDisabled: { opacity: 0.5 },
   ctaText: { color: '#fff', fontWeight: '700' },
+  inputBad: { borderColor: '#D64545' },
+  error: { color: '#D64545', fontSize: 13 },
   member: { fontSize: 16, color: colors.text, paddingVertical: 2 },
   picker: { flexDirection: 'row', gap: spacing.xs },
   pickerBtn: {
