@@ -49,6 +49,7 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [familyName, setFamilyName] = useState(group?.name ?? '');
   const [editingFamily, setEditingFamily] = useState(false);
+  const [editingCadence, setEditingCadence] = useState(false);
   const phoneBad = phone.trim().length > 0 && !isValidPhone(phone);
 
   useEffect(() => {
@@ -156,22 +157,40 @@ export default function Settings() {
 
       <View style={styles.card}>
         <Text style={styles.label}>Level frequency</Text>
-        <View style={styles.picker}>
-          {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => {
-            const active = (group.pendingCadence ?? group.cadence) === c;
-            return (
-              <Pressable
-                key={c}
-                onPress={() => proposeCadence(c)}
-                style={[styles.pickerBtn, active && styles.pickerBtnActive]}
-              >
-                <Text style={[styles.pickerText, active && styles.pickerTextActive]}>
-                  {CADENCE_LABELS[c]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Text style={styles.meta}>Every family member needs to approve.</Text>
+        {editingCadence ? (
+          <>
+            <View style={styles.picker}>
+              {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => {
+                const active = (group.pendingCadence ?? group.cadence) === c;
+                return (
+                  <Pressable
+                    key={c}
+                    onPress={() => {
+                      proposeCadence(c);
+                      setEditingCadence(false);
+                    }}
+                    style={[styles.pickerBtn, active && styles.pickerBtnActive]}
+                  >
+                    <Text style={[styles.pickerText, active && styles.pickerTextActive]}>
+                      {CADENCE_LABELS[c]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable onPress={() => setEditingCadence(false)}>
+              <Text style={styles.edit}>Cancel</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.family}>{CADENCE_LABELS[group.cadence]}</Text>
+            <Pressable onPress={() => setEditingCadence(true)}>
+              <Text style={styles.edit}>Edit</Text>
+            </Pressable>
+          </>
+        )}
         {group.pendingCadence ? (
           <View style={styles.vote}>
             <Text style={styles.voteTitle}>
