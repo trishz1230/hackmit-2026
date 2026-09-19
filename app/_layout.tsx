@@ -31,6 +31,7 @@ export default function RootLayout() {
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
+            <Stack.Screen name="welcome" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="hangout" options={{ title: 'Hangout' }} />
             <Stack.Screen name="settings" options={{ title: 'Family settings' }} />
