@@ -65,7 +65,12 @@ type State = {
   dismissCelebration: () => void;
   createGroup: (opts: CreateOptions) => void;
   joinGroup: (opts: JoinOptions) => void;
-  updateSettings: (patch: { cadence: Cadence; rewardText: string; goal: number; name?: string }) => void;
+  updateSettings: (patch: { rewardText: string; goal: number; name?: string }) => void;
+  /** Members who still have to approve the pending cadence change. */
+  cadencePendingOn: Profile[];
+  proposeCadence: (cadence: Cadence) => void;
+  approveCadence: () => void;
+  cancelCadenceChange: () => void;
   addPost: (kind: Post['kind'], content: string, channel?: Channel) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   reactionsFor: (postId: string) => Reaction[];
@@ -188,6 +193,9 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   );
   const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily');
   const waitingForPeriod = everyonePostedThisCycle && Date.now() < unlocksAt;
+  const cadencePendingOn = group?.pendingCadence
+    ? members.filter((m) => !group.cadenceApprovals.includes(m.id))
+    : [];
 
   // Nothing pushes an event when midnight arrives, so poll while we're waiting.
   useEffect(() => {
@@ -253,6 +261,28 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
+      cadencePendingOn,
+      proposeCadence: (cadence) => {
+        if (!group) return;
+        run(async () => {
+          await api.proposeCadence(group, members, userId, cadence);
+          await refresh(group.id);
+        });
+      },
+      approveCadence: () => {
+        if (!group) return;
+        run(async () => {
+          await api.approveCadence(group, members, userId);
+          await refresh(group.id);
+        });
+      },
+      cancelCadenceChange: () => {
+        if (!group) return;
+        run(async () => {
+          await api.cancelCadenceChange(group.id);
+          await refresh(group.id);
+        });
+      },
       addPost: (kind, content, channel = 'task') => {
         if (!group) return { completedGoal: false };
         run(async () => {
@@ -298,7 +328,6 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
         if (!group) return;
         run(async () => {
           await api.updateGroup(group.id, {
-            cadence: group.cadence,
             rewardText: reward.trim(),
             goal: clampLevelCount(levelCount),
           });
@@ -334,6 +363,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       waitingForPeriod,
       unlocksAt,
+      cadencePendingOn,
       missedReset,
       unseenPosts,
       pending,
@@ -401,6 +431,26 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   );
   const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily');
   const waitingForPeriod = everyonePostedThisCycle && !waived && Date.now() < unlocksAt;
+  const cadencePendingOn = group?.pendingCadence
+    ? members.filter((m) => !group.cadenceApprovals.includes(m.id))
+    : [];
+
+  /** Tallies a vote, applying the cadence once every member has approved. */
+  const castVote = useCallback(
+    (cadence: Cadence, voterId: string) => {
+      setGroup((g) => {
+        if (!g) return g;
+        const approvals = g.cadenceApprovals.includes(voterId)
+          ? g.cadenceApprovals
+          : [...g.cadenceApprovals, voterId];
+        if (members.every((m) => approvals.includes(m.id))) {
+          return { ...g, cadence, pendingCadence: undefined, cadenceApprovals: [] };
+        }
+        return { ...g, pendingCadence: cadence, cadenceApprovals: approvals };
+      });
+    },
+    [members]
+  );
 
   useEffect(() => {
     if (!group || group.awaitingNextGoal) return;
@@ -518,12 +568,36 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setSeenPostIds(mockPosts.map((p) => p.id));
         rememberTask(mockTask, true);
       },
-      updateSettings: ({ cadence, rewardText, goal, name }) => {
+      updateSettings: ({ rewardText, goal, name }) => {
         setGroup((g) =>
-          g
-            ? { ...g, cadence, rewardText, goal: clampLevelCount(goal), name: name?.trim() || g.name }
-            : g
+          g ? { ...g, rewardText, goal: clampLevelCount(goal), name: name?.trim() || g.name } : g
         );
+      },
+      cadencePendingOn,
+      proposeCadence: (cadence) => {
+        if (!group) return;
+        if (cadence === group.cadence) {
+          setGroup((g) => (g ? { ...g, pendingCadence: undefined, cadenceApprovals: [] } : g));
+          return;
+        }
+        setGroup((g) => (g ? { ...g, pendingCadence: cadence, cadenceApprovals: [] } : g));
+        castVote(cadence, me.id);
+        // The scripted relatives vote a moment later, so the demo can finish.
+        members
+          .filter((m) => m.id !== me.id)
+          .forEach((m, i) => {
+            timers.current.push(
+              setTimeout(() => castVote(cadence, m.id), REPLY_DELAY_MS * (i + 1))
+            );
+          });
+      },
+      approveCadence: () => {
+        if (!group?.pendingCadence) return;
+        castVote(group.pendingCadence, me.id);
+      },
+      cancelCadenceChange: () => {
+        clearTimers();
+        setGroup((g) => (g ? { ...g, pendingCadence: undefined, cadenceApprovals: [] } : g));
       },
       addPost: (kind, content, channel = 'task') => {
         if (channel === 'hangout') {
@@ -617,6 +691,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       waitingForPeriod,
       unlocksAt,
+      cadencePendingOn,
+      castVote,
       waived,
       missedReset,
       unseenPosts,

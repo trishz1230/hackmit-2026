@@ -10,6 +10,7 @@ export const mockGroup: Group = {
   rewardText: 'Pizza night, on Dad',
   currentStreak: 0,
   awaitingNextGoal: false,
+  cadenceApprovals: [],
 };
 
 export const mockProfiles: Profile[] = [

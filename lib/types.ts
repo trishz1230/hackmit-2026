@@ -35,6 +35,10 @@ export type Group = {
   rewardText: string;
   currentStreak: number;
   awaitingNextGoal: boolean;
+  /** Cadence the family has been asked to switch to, until everyone approves. */
+  pendingCadence?: Cadence;
+  /** Ids of the members who approved the pending cadence. */
+  cadenceApprovals: string[];
 };
 
 export type Profile = {
