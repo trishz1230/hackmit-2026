@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useApp } from '../lib/store';
@@ -16,6 +16,14 @@ export default function Settings() {
   const [reward, setReward] = useState(group?.rewardText ?? '');
   const [levels, setLevels] = useState(String(group?.goal ?? 10));
 
+  // The group arrives after the saved membership is restored, so seed the form then.
+  useEffect(() => {
+    if (!group) return;
+    setCadence(group.cadence);
+    setReward(group.rewardText);
+    setLevels(String(group.goal));
+  }, [group?.id]);
+
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
 
@@ -26,7 +34,7 @@ export default function Settings() {
       rewardText: reward.trim() || group.rewardText,
       goal: Math.min(MAX_LEVELS, Math.max(floor, Number(levels) || floor)),
     });
-    router.back();
+    router.replace('/');
   };
 
   return (
