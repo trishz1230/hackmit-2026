@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { NagBanner } from '../components/NagBanner';
 import { PostCard } from '../components/PostCard';
 import { ProgressBar } from '../components/ProgressBar';
+import { Tabs } from '../components/Tabs';
 import { startNagging, stopNagging } from '../lib/nag';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
@@ -23,6 +24,8 @@ export default function Feed() {
     memberById,
     addReaction,
     restart,
+    isLive,
+    loading,
   } = useApp();
 
   useEffect(() => {
@@ -30,9 +33,17 @@ export default function Feed() {
     if (hasPostedThisCycle) {
       void stopNagging();
     } else {
-      void startNagging(task.prompt);
+      void startNagging(task.prompt, group.cadence);
     }
   }, [group, hasPostedThisCycle, task.prompt]);
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
 
   if (!group) return <Redirect href="/onboarding" />;
 
@@ -41,6 +52,8 @@ export default function Feed() {
       {!hasPostedThisCycle && (
         <NagBanner prompt={task.prompt} onPress={() => router.push('/capture')} />
       )}
+
+      <Tabs active="family" />
 
       <ProgressBar
         level={group.level}
@@ -55,7 +68,9 @@ export default function Feed() {
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View style={styles.taskCard}>
-            <Text style={styles.taskLabel}>Today&apos;s task · {group.name}</Text>
+            <Text style={styles.taskLabel}>
+              Level {group.level} task · {group.name}
+            </Text>
             <Text style={styles.taskPrompt}>{task.prompt}</Text>
             <Pressable style={styles.taskCta} onPress={() => router.push('/capture')}>
               <Text style={styles.taskCtaText}>
@@ -68,6 +83,9 @@ export default function Feed() {
                 : `Waiting on ${pending.map((m) => m.name).join(', ')}`}
             </Text>
             <Text style={styles.joinCode}>Invite code: {group.joinCode}</Text>
+            <Pressable onPress={() => router.push('/settings')}>
+              <Text style={styles.settings}>Family settings →</Text>
+            </Pressable>
           </View>
         }
         renderItem={({ item }) => (
@@ -83,7 +101,7 @@ export default function Feed() {
       />
 
       <Pressable style={styles.restart} onPress={restart}>
-        <Text style={styles.restartText}>Restart game</Text>
+        <Text style={styles.restartText}>{isLive ? 'Leave family' : 'Restart game'}</Text>
       </Pressable>
 
       <Modal visible={clearedLevel !== null} transparent animationType="fade">
@@ -106,6 +124,7 @@ export default function Feed() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
+  loading: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   taskCard: {
     margin: spacing.md,
     marginBottom: 0,
@@ -125,6 +144,7 @@ const styles = StyleSheet.create({
   taskCtaText: { color: '#fff', fontWeight: '700' },
   waiting: { marginTop: spacing.sm, fontSize: 13, color: colors.text },
   joinCode: { marginTop: spacing.xs, fontSize: 12, color: colors.muted },
+  settings: { marginTop: spacing.xs, fontSize: 13, color: colors.accent, fontWeight: '600' },
   restart: {
     alignSelf: 'center',
     marginBottom: spacing.sm,

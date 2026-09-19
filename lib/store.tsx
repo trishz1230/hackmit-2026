@@ -1,15 +1,27 @@
 /**
- * Mock-backed app state so the UI runs with zero configuration.
- * Person A swaps each of these bodies for the matching call in lib/api.ts
- * once the Supabase project is set up; the UI never has to change.
+ * App state. Two implementations behind one hook:
+ *
+ *   Supabase configured -> LiveProvider: real shared families, realtime feed,
+ *                          everyone on the same deployment sees each other.
+ *   not configured      -> MockProvider: solo demo with scripted relatives,
+ *                          so the app still runs with zero setup.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import * as api from './api';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask } from './mockData';
 import { generatePrompt } from './prompts';
-import type { Group, Post, Profile, Reaction, Task } from './types';
+import { isSupabaseConfigured } from './supabase';
+import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
+
+/** Task posts clear levels; hangout posts are just for fun. */
+export type Channel = 'task' | 'hangout';
 
 const CURRENT_USER_ID = 'user-1';
-/** How long each simulated family member takes to answer the task. */
+
+/** Mock family with the person at this browser renamed. */
+const withMyName = (myName: string): Profile[] =>
+  mockProfiles.map((p) => (p.id === CURRENT_USER_ID ? { ...p, name: myName } : p));
+/** How long each simulated family member takes to answer the task (mock only). */
 const REPLY_DELAY_MS = 2500;
 
 type State = {
@@ -17,17 +29,27 @@ type State = {
   members: Profile[];
   me: Profile;
   task: Task;
+  /** Answers to the current level's task. */
   posts: Post[];
+  /** Free posts that don't count toward the level. */
+  hangoutPosts: Post[];
   reactions: Reaction[];
   hasPostedThisCycle: boolean;
   /** Members who still owe a post for the current task. */
   pending: Profile[];
   /** Level just cleared, for the celebration overlay; null once dismissed. */
   clearedLevel: number | null;
+  /** True once every member is real rather than scripted. */
+  isLive: boolean;
+  /** True while the saved family is still being fetched on boot. */
+  loading: boolean;
+  /** Last thing the backend refused to do, for the onboarding screen. */
+  error: string | null;
   dismissCelebration: () => void;
-  createGroup: (name: string, goal: number) => void;
-  joinGroup: (code: string) => void;
-  addPost: (kind: Post['kind'], content: string) => void;
+  createGroup: (opts: CreateOptions) => void;
+  joinGroup: (opts: JoinOptions) => void;
+  updateSettings: (patch: { cadence: Cadence; rewardText: string; goal: number }) => void;
+  addPost: (kind: Post['kind'], content: string, channel?: Channel) => void;
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   reactionsFor: (postId: string) => Reaction[];
   memberById: (id: string) => Profile | undefined;
@@ -36,14 +58,194 @@ type State = {
 
 const AppContext = createContext<State | null>(null);
 
-const newTask = (prompt: string): Task => ({
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  return isSupabaseConfigured ? (
+    <LiveProvider>{children}</LiveProvider>
+  ) : (
+    <MockProvider>{children}</MockProvider>
+  );
+}
+
+/* ------------------------------------------------------------------ live */
+
+function LiveProvider({ children }: { children: React.ReactNode }) {
+  const [userId, setUserId] = useState<string>('');
+  const [group, setGroup] = useState<Group | null>(null);
+  const [members, setMembers] = useState<Profile[]>([]);
+  const [task, setTask] = useState<Task>(mockTask);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [reactions, setReactions] = useState<Reaction[]>([]);
+  const [clearedLevel, setClearedLevel] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  /** Last level this browser saw, so every member gets the celebration. */
+  const lastLevel = useRef<number | null>(null);
+
+  /** Fire-and-forget a backend call, surfacing whatever it refuses to do. */
+  const run = useCallback((fn: () => Promise<void>) => {
+    void fn().then(
+      () => setError(null),
+      (e: unknown) => setError(e instanceof Error ? e.message : String(e))
+    );
+  }, []);
+
+  /** Pulls the whole family in one go, then clears the level if everyone posted. */
+  const refresh = useCallback(async (groupId: string) => {
+    const current = await api.getGroup(groupId);
+    if (!current) {
+      await api.rememberGroup(null);
+      setGroup(null);
+      lastLevel.current = null;
+      return;
+    }
+    const [nextMembers, nextTask, nextPosts, nextReactions] = await Promise.all([
+      api.getMembers(groupId),
+      api.getCurrentTask(current),
+      api.getPosts(groupId),
+      api.getReactions(groupId),
+    ]);
+    setGroup(current);
+    setMembers(nextMembers);
+    setTask(nextTask);
+    setPosts(nextPosts);
+    setReactions(nextReactions);
+
+    if (lastLevel.current !== null && current.level > lastLevel.current) {
+      setClearedLevel(current.level - 1);
+    }
+    lastLevel.current = current.level;
+
+    await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts);
+  }, []);
+
+  // Restore this device's identity and last family on boot.
+  useEffect(() => {
+    void (async () => {
+      setUserId(await api.identity());
+      const saved = await api.savedGroupId();
+      if (saved) await refresh(saved);
+      setLoading(false);
+    })();
+  }, [refresh]);
+
+  // Realtime: any change anyone makes re-pulls the family.
+  useEffect(() => {
+    if (!group) return;
+    const groupId = group.id;
+    return api.subscribeToGroup(groupId, () => void refresh(groupId));
+  }, [group?.id, refresh]);
+
+  const me =
+    members.find((m) => m.id === userId) ??
+    { id: userId, name: 'You', groupId: group?.id ?? '', avatar: '🙂' };
+  const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
+  const hasPostedThisCycle = postedIds.includes(userId);
+  const pending = members.filter((m) => !postedIds.includes(m.id));
+  const taskPosts = posts.filter((p) => p.taskId !== '');
+  const hangoutPosts = posts.filter((p) => p.taskId === '');
+
+  const value = useMemo<State>(
+    () => ({
+      group,
+      members,
+      me,
+      task,
+      posts: taskPosts,
+      hangoutPosts,
+      reactions,
+      hasPostedThisCycle,
+      pending,
+      clearedLevel,
+      isLive: true,
+      loading,
+      error,
+      dismissCelebration: () => setClearedLevel(null),
+      createGroup: (opts) => {
+        run(async () => {
+          const created = await api.createGroup(userId, opts);
+          await refresh(created.id);
+        });
+      },
+      joinGroup: (opts) => {
+        run(async () => {
+          const joined = await api.joinGroup(userId, opts);
+          await refresh(joined.id);
+        });
+      },
+      updateSettings: (patch) => {
+        if (!group) return;
+        run(async () => {
+          await api.updateGroup(group.id, patch);
+          await refresh(group.id);
+        });
+      },
+      addPost: (kind, content, channel = 'task') => {
+        if (!group) return;
+        run(async () => {
+          await api.createPost({
+            taskId: channel === 'hangout' ? null : task.id,
+            groupId: group.id,
+            userId,
+            kind,
+            content,
+          });
+          await refresh(group.id);
+        });
+      },
+      addReaction: (postId, kind, val) => {
+        if (!group) return;
+        run(async () => {
+          await api.addReaction({ postId, userId, kind, value: val });
+          await refresh(group.id);
+        });
+      },
+      reactionsFor: (postId) => reactions.filter((r) => r.postId === postId),
+      memberById: (id) => members.find((m) => m.id === id),
+      restart: () => {
+        run(async () => {
+          await api.saveProfile(userId, me.name, null);
+          await api.rememberGroup(null);
+          lastLevel.current = null;
+          setGroup(null);
+          setMembers([]);
+          setPosts([]);
+          setReactions([]);
+          setClearedLevel(null);
+        });
+      },
+    }),
+    [
+      group,
+      members,
+      me,
+      task,
+      taskPosts,
+      hangoutPosts,
+      reactions,
+      hasPostedThisCycle,
+      pending,
+      clearedLevel,
+      loading,
+      error,
+      run,
+      userId,
+      refresh,
+    ]
+  );
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+/* ------------------------------------------------------------------ mock */
+
+const newTask = (prompt: string, level: number): Task => ({
   id: `task-${Date.now()}`,
   groupId: mockGroup.id,
   prompt,
-  cycleDate: new Date().toISOString().slice(0, 10),
+  level,
 });
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
+function MockProvider({ children }: { children: React.ReactNode }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Profile[]>(mockProfiles);
   const [task, setTask] = useState<Task>(mockTask);
@@ -64,17 +266,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
   const hasPostedThisCycle = postedIds.includes(me.id);
   const pending = members.filter((m) => !postedIds.includes(m.id));
+  const taskPosts = posts.filter((p) => p.taskId !== '');
+  const hangoutPosts = posts.filter((p) => p.taskId === '');
 
   /** Everyone answered, so the family clears the level and draws a new task. */
   const completeLevel = useCallback(async () => {
     const prompt = await generatePrompt(seenPrompts.current.slice(-5));
     seenPrompts.current.push(prompt);
+    let nextLevel = 1;
     setGroup((g) => {
       if (!g) return g;
       setClearedLevel(g.level);
-      return { ...g, level: Math.min(g.level + 1, g.goal), currentStreak: g.currentStreak + 1 };
+      nextLevel = Math.min(g.level + 1, g.goal);
+      return { ...g, level: nextLevel, currentStreak: g.currentStreak + 1 };
     });
-    setTask(newTask(prompt));
+    setTask(newTask(prompt, nextLevel));
   }, []);
 
   const appendPost = useCallback((userId: string, kind: Post['kind'], content: string, taskId: string) => {
@@ -98,21 +304,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
-      posts,
+      posts: taskPosts,
+      hangoutPosts,
       reactions,
       hasPostedThisCycle,
       pending,
       clearedLevel,
+      isLive: false,
+      loading: false,
+      error: null,
       dismissCelebration: () => setClearedLevel(null),
-      createGroup: (name, goal) => {
-        setGroup({ ...mockGroup, name, goal });
-        setMembers(mockProfiles);
+      createGroup: ({ myName, goal, cadence, rewardText }) => {
+        setGroup({
+          ...mockGroup,
+          name: `${myName}'s family`,
+          goal,
+          cadence,
+          rewardText: rewardText || mockGroup.rewardText,
+        });
+        setMembers(withMyName(myName));
       },
-      joinGroup: () => {
+      joinGroup: ({ myName }) => {
         setGroup(mockGroup);
-        setMembers(mockProfiles);
+        setMembers(withMyName(myName));
       },
-      addPost: (kind, content) => {
+      updateSettings: ({ cadence, rewardText, goal }) => {
+        setGroup((g) => (g ? { ...g, cadence, rewardText, goal } : g));
+      },
+      addPost: (kind, content, channel = 'task') => {
+        if (channel === 'hangout') {
+          appendPost(me.id, kind, content, '');
+          return;
+        }
         if (hasPostedThisCycle) {
           appendPost(me.id, kind, content, task.id);
           return;
@@ -133,10 +356,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         timers.current.push(setTimeout(() => void completeLevel(), REPLY_DELAY_MS * (others.length + 1)));
       },
       addReaction: (postId, kind, val) => {
-        setReactions((prev) => [
-          ...prev,
-          { id: `r-${Date.now()}`, postId, userId: me.id, kind, value: val },
-        ]);
+        setReactions((prev) => [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind, value: val }]);
       },
       reactionsFor: (postId) => reactions.filter((r) => r.postId === postId),
       memberById: (id) => members.find((m) => m.id === id),
@@ -156,7 +376,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
-      posts,
+      taskPosts,
+      hangoutPosts,
       reactions,
       hasPostedThisCycle,
       pending,

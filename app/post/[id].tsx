@@ -8,10 +8,10 @@ const EMOJIS = ['❤️', '😂', '🔥', '🥹', '👏', '🍜'];
 
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, memberById, reactionsFor, addReaction } = useApp();
+  const { posts, hangoutPosts, memberById, reactionsFor, addReaction } = useApp();
   const [comment, setComment] = useState('');
 
-  const post = posts.find((p) => p.id === id);
+  const post = [...posts, ...hangoutPosts].find((p) => p.id === id);
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
 
   const author = memberById(post.userId);

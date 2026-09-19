@@ -1,31 +1,78 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
+import { CADENCE_LABELS, type Cadence } from '../lib/types';
+
+const CODE_LENGTH = 6;
+const MIN_LEVELS = 3;
+const MAX_LEVELS = 20;
 
 export default function Onboarding() {
   const router = useRouter();
-  const { createGroup, joinGroup } = useApp();
+  const { group, createGroup, joinGroup, isLive, error } = useApp();
   const [mode, setMode] = useState<'create' | 'join'>('create');
-  const [familyName, setFamilyName] = useState('');
-  const [goal, setGoal] = useState('50');
+  const [myName, setMyName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [cadence, setCadence] = useState<Cadence>('daily');
+  const [reward, setReward] = useState('');
+  const [levels, setLevels] = useState('10');
   const [code, setCode] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  // The family only exists once the backend answers, so the invite code screen
+  // (and the hop to the feed) waits for it rather than navigating optimistically.
+  useEffect(() => {
+    if (submitted && mode === 'join' && group) router.replace('/');
+  }, [submitted, mode, group, router]);
+
+  if (submitted && mode === 'create' && group) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.logo}>You&apos;re in</Text>
+        <Text style={styles.tagline}>Share this code with the family — they pick “Join a family”.</Text>
+        <Text style={styles.bigCode}>{group.joinCode}</Text>
+        <Text style={styles.summary}>
+          {group.goal} levels to “{group.rewardText}” · one level every {CADENCE_LABELS[group.cadence]}
+        </Text>
+        <Pressable style={styles.cta} onPress={() => router.replace('/')}>
+          <Text style={styles.ctaText}>Go to the feed</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const trimmedCode = code.trim();
+  const nameMissing = submitted && !myName.trim();
+  const codeMissing = submitted && mode === 'join' && !trimmedCode;
+  const codeTooShort = submitted && mode === 'join' && trimmedCode.length > 0 && trimmedCode.length !== CODE_LENGTH;
 
   const submit = () => {
+    setSubmitted(true);
+    if (!myName.trim()) return;
+    if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
+    const who = myName.trim();
+    const tel = phone.trim() || undefined;
     if (mode === 'create') {
-      createGroup(familyName.trim() || 'My family', Number(goal) || 50);
+      const clamped = Math.min(MAX_LEVELS, Math.max(MIN_LEVELS, Number(levels) || MIN_LEVELS));
+      createGroup({
+        myName: who,
+        phone: tel,
+        cadence,
+        rewardText: reward.trim() || 'a family treat',
+        goal: clamped,
+      });
     } else {
-      joinGroup(code.trim().toUpperCase());
+      joinGroup({ myName: who, phone: tel, code: trimmedCode.toUpperCase() });
     }
-    router.replace('/');
   };
 
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
       <Text style={styles.logo}>FamStreak</Text>
       <Text style={styles.tagline}>
-        One task a day. Everyone posts, or the whole family&apos;s streak resets.
+        One task per level. Everyone posts, or the whole family&apos;s streak resets.
       </Text>
 
       <View style={styles.toggle}>
@@ -42,43 +89,93 @@ export default function Onboarding() {
         ))}
       </View>
 
+      <Text style={styles.label}>Your name</Text>
+      <TextInput
+        style={[styles.input, nameMissing && styles.inputBad]}
+        value={myName}
+        onChangeText={setMyName}
+        placeholder="Trish"
+        placeholderTextColor={colors.muted}
+      />
+      {nameMissing && <Text style={styles.error}>Your name is required.</Text>}
+
+      <Text style={styles.label}>Phone (optional, for the call button)</Text>
+      <TextInput
+        style={styles.input}
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+        placeholder="555 123 4567"
+        placeholderTextColor={colors.muted}
+      />
+
       {mode === 'create' ? (
         <>
-          <Text style={styles.label}>Family name</Text>
+          <Text style={styles.label}>What does one level equal?</Text>
+          <View style={styles.picker}>
+            {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setCadence(c)}
+                style={[styles.pickerBtn, cadence === c && styles.pickerBtnActive]}
+              >
+                <Text style={[styles.pickerText, cadence === c && styles.pickerTextActive]}>
+                  {CADENCE_LABELS[c]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Reward</Text>
           <TextInput
             style={styles.input}
-            value={familyName}
-            onChangeText={setFamilyName}
-            placeholder="The Zhangs"
+            value={reward}
+            onChangeText={setReward}
+            placeholder="Sunday dumplings"
             placeholderTextColor={colors.muted}
           />
-          <Text style={styles.label}>Level goal</Text>
+
+          <Text style={styles.label}>Levels to the reward ({MIN_LEVELS}–{MAX_LEVELS})</Text>
           <TextInput
             style={styles.input}
-            value={goal}
-            onChangeText={setGoal}
+            value={levels}
+            onChangeText={setLevels}
             keyboardType="number-pad"
-            placeholder="50"
+            placeholder="10"
             placeholderTextColor={colors.muted}
           />
         </>
       ) : (
         <>
-          <Text style={styles.label}>Join code</Text>
+          <Text style={styles.label}>Group code</Text>
           <TextInput
-            style={[styles.input, styles.code]}
+            style={[styles.input, styles.code, (codeMissing || codeTooShort) && styles.inputBad]}
             value={code}
             onChangeText={setCode}
             autoCapitalize="characters"
+            maxLength={CODE_LENGTH}
             placeholder="FAM123"
             placeholderTextColor={colors.muted}
           />
+          {codeMissing && <Text style={styles.error}>Enter the family&apos;s code to join.</Text>}
+          {codeTooShort && (
+            <Text style={styles.error}>Codes are {CODE_LENGTH} characters.</Text>
+          )}
         </>
       )}
 
       <Pressable style={styles.cta} onPress={submit}>
         <Text style={styles.ctaText}>{mode === 'create' ? 'Create family' : 'Join family'}</Text>
       </Pressable>
+
+      {error && <Text style={styles.error}>{error}</Text>}
+
+      {!isLive && (
+        <Text style={styles.demoNote}>
+          Demo mode — the rest of the family is scripted. Add Supabase keys in
+          lib/supabase.ts to play with real people.
+        </Text>
+      )}
     </ScrollView>
   );
 }
@@ -108,7 +205,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
+  inputBad: { borderColor: '#b3261e' },
+  picker: { flexDirection: 'row', gap: spacing.xs },
+  pickerBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+  },
+  pickerBtnActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+  pickerText: { color: colors.muted, fontWeight: '600' },
+  pickerTextActive: { color: colors.text },
   code: { letterSpacing: 4, fontSize: 20, fontWeight: '700' },
+  bigCode: {
+    fontSize: 40,
+    fontWeight: '800',
+    letterSpacing: 8,
+    color: colors.accent,
+    textAlign: 'center',
+    marginVertical: spacing.lg,
+  },
+  summary: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20 },
   cta: {
     marginTop: spacing.lg,
     backgroundColor: colors.accent,
@@ -117,4 +237,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  error: { marginTop: spacing.md, fontSize: 13, color: '#b3261e', lineHeight: 18 },
+  demoNote: { marginTop: spacing.md, fontSize: 12, color: colors.muted, lineHeight: 17 },
 });

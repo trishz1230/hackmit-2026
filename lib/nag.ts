@@ -9,8 +9,18 @@
  */
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import type { Cadence } from './types';
 
-const REMINDER_INTERVAL_SECONDS = 60 * 5;
+/**
+ * How often the reminder re-fires. The family picks this so the app nudges
+ * without nagging every hour; it never gates when a level can be cleared.
+ * Demo-length intervals, not real days.
+ */
+const REMINDER_INTERVAL_SECONDS: Record<Cadence, number> = {
+  daily: 60 * 5,
+  every_3_days: 60 * 15,
+  weekly: 60 * 30,
+};
 
 let scheduledId: string | null = null;
 
@@ -23,7 +33,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function startNagging(prompt: string) {
+export async function startNagging(prompt: string, cadence: Cadence = 'daily') {
   if (Platform.OS === 'web') return;
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== 'granted') return;
@@ -38,7 +48,7 @@ export async function startNagging(prompt: string) {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: REMINDER_INTERVAL_SECONDS,
+      seconds: REMINDER_INTERVAL_SECONDS[cadence],
       repeats: true,
     },
   });
