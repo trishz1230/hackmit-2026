@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
+import { formatPhone, isValidPhone } from '../lib/phone';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../lib/types';
@@ -48,14 +49,16 @@ export default function Onboarding() {
   const codeMissing = submitted && mode === 'join' && !trimmedCode;
   const codeTooShort = submitted && mode === 'join' && trimmedCode.length > 0 && trimmedCode.length !== CODE_LENGTH;
   const rewardMissing = submitted && mode === 'create' && !reward.trim();
+  const phoneBad = submitted && phone.trim().length > 0 && !isValidPhone(phone);
 
   const submit = () => {
     setSubmitted(true);
     if (!myName.trim()) return;
+    if (phone.trim() && !isValidPhone(phone)) return;
     if (mode === 'create' && !reward.trim()) return;
     if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
     const who = myName.trim();
-    const tel = phone.trim() || undefined;
+    const tel = phone.trim() ? formatPhone(phone) : undefined;
     if (mode === 'create') {
       createGroup({
         myName: who,
@@ -103,13 +106,14 @@ export default function Onboarding() {
 
       <Text style={styles.label}>Phone (optional, for the call button)</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, phoneBad && styles.inputBad]}
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
         placeholder="555 123 4567"
         placeholderTextColor={colors.muted}
       />
+      {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}
 
       {mode === 'create' ? (
         <>

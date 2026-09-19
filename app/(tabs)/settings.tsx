@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { formatPhone, isValidPhone } from '../../lib/phone';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../../lib/types';
@@ -22,6 +23,7 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [familyName, setFamilyName] = useState(group?.name ?? '');
   const [familySaved, setFamilySaved] = useState(false);
+  const phoneBad = phone.trim().length > 0 && !isValidPhone(phone);
 
   useEffect(() => {
     setName(me.name);
@@ -84,7 +86,7 @@ export default function Settings() {
         />
         <Text style={styles.label}>Phone (optional)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, phoneBad && styles.inputBad]}
           value={phone}
           onChangeText={(t) => {
             setPhone(t);
@@ -94,10 +96,12 @@ export default function Settings() {
           placeholder="For Call on posts"
           placeholderTextColor={colors.muted}
         />
+        {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}
         <Pressable
-          style={styles.cta}
+          style={[styles.cta, phoneBad && styles.ctaDisabled]}
+          disabled={phoneBad}
           onPress={() => {
-            updateProfile({ name, phone: phone.trim() || undefined });
+            updateProfile({ name, phone: phone.trim() ? formatPhone(phone) : undefined });
             setSaved(true);
           }}
         >
@@ -205,7 +209,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
+  ctaDisabled: { opacity: 0.5 },
   ctaText: { color: '#fff', fontWeight: '700' },
+  inputBad: { borderColor: '#D64545' },
+  error: { color: '#D64545', fontSize: 13 },
   member: { fontSize: 16, color: colors.text, paddingVertical: 2 },
   picker: { flexDirection: 'row', gap: spacing.xs },
   pickerBtn: {
