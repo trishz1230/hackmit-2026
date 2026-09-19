@@ -3,7 +3,6 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, Tex
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { describeWait } from '../lib/levels';
-import { promptKind } from '../lib/promptKind';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -12,8 +11,6 @@ export default function Capture() {
   const { channel } = useLocalSearchParams<{ channel?: string }>();
   const hangout = channel === 'hangout';
   const { task, addPost, taskLocked, opensAt } = useApp();
-  const kind = hangout ? 'either' : promptKind(task.prompt);
-  const [mode, setMode] = useState<'photo' | 'text'>(kind === 'text' ? 'text' : 'photo');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -27,11 +24,7 @@ export default function Capture() {
           : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         const source = from === 'camera' ? 'camera' : 'photo library';
-        setPhotoError(
-          kind === 'photo'
-            ? `Allow ${source} access in Settings — this task needs a photo.`
-            : `Allow ${source} access in Settings, or use Text instead.`
-        );
+        setPhotoError(`Allow ${source} access in Settings, or just write something instead.`);
         return;
       }
       const result =
@@ -40,23 +33,21 @@ export default function Capture() {
           : await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
       if (!result.canceled) setPhotoUri(result.assets[0].uri);
     } catch {
-      setPhotoError(
-        kind === 'photo'
-          ? 'Could not open the camera. Try choosing a photo instead.'
-          : 'Could not open the camera. Switch to Text to post.'
-      );
+      setPhotoError('Could not open the camera. Choose a photo, or just write something.');
     }
   };
 
+  const words = text.trim();
+  const canPost = Boolean(photoUri || words);
+
   const post = () => {
+    if (!canPost) return;
     const to = hangout ? 'hangout' : 'task';
-    if (kind !== 'either' && mode !== kind) return;
-    if (mode === 'photo' && !photoUri) return;
-    if (mode === 'text' && !text.trim()) return;
     const { completedGoal } = addPost(
-      mode === 'photo' ? 'photo' : 'text',
-      mode === 'photo' ? photoUri! : text.trim(),
-      to
+      photoUri ? 'photo' : 'text',
+      photoUri ?? words,
+      to,
+      photoUri ? words || undefined : undefined
     );
     if (hangout) {
       router.replace('/(tabs)/hangout');
@@ -87,51 +78,44 @@ export default function Capture() {
         {hangout ? 'Share anything with the family' : task.prompt}
       </Text>
 
-      {kind === 'either' ? (
-        <View style={styles.toggle}>
-          {(['photo', 'text'] as const).map((m) => (
-            <Pressable
-              key={m}
-              onPress={() => setMode(m)}
-              style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]}
-            >
-              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
-                {m === 'photo' ? '📷 Photo' : '✍️ Text'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+      <Pressable style={styles.square} onPress={() => pick(photoUri ? 'library' : 'camera')}>
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
+        ) : (
+          <>
+            <Text style={styles.squareIcon}>📷</Text>
+            <Text style={styles.squareText}>Add a photo</Text>
+          </>
+        )}
+      </Pressable>
 
-      {mode === 'photo' ? (
-        <View style={styles.photoArea}>
-          {photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
-          ) : (
-            <Text style={styles.placeholder}>No photo yet</Text>
-          )}
-          <View style={styles.row}>
-            <Pressable style={styles.secondary} onPress={() => pick('camera')}>
-              <Text style={styles.secondaryText}>Open camera</Text>
-            </Pressable>
-            <Pressable style={styles.secondary} onPress={() => pick('library')}>
-              <Text style={styles.secondaryText}>Choose photo</Text>
-            </Pressable>
-          </View>
-          {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
-        </View>
-      ) : (
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          multiline
-          placeholder={hangout ? 'What\u2019s going on?' : 'Tell them about your day…'}
-          placeholderTextColor={colors.muted}
-        />
-      )}
+      <View style={styles.row}>
+        <Pressable style={styles.secondary} onPress={() => pick('camera')}>
+          <Text style={styles.secondaryText}>Open camera</Text>
+        </Pressable>
+        <Pressable style={styles.secondary} onPress={() => pick('library')}>
+          <Text style={styles.secondaryText}>Choose photo</Text>
+        </Pressable>
+        {photoUri ? (
+          <Pressable style={styles.secondary} onPress={() => setPhotoUri(null)}>
+            <Text style={styles.secondaryText}>Remove</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
 
-      <Pressable style={styles.cta} onPress={post}>
+      <TextInput
+        style={styles.input}
+        value={text}
+        onChangeText={setText}
+        multiline
+        placeholder={
+          photoUri ? 'Add a caption…' : hangout ? 'What\u2019s going on?' : 'Tell them about your day…'
+        }
+        placeholderTextColor={colors.muted}
+      />
+
+      <Pressable style={[styles.cta, !canPost && styles.ctaDisabled]} disabled={!canPost} onPress={post}>
         <Text style={styles.ctaText}>{hangout ? 'Post to hangout' : 'Post to family'}</Text>
       </Pressable>
     </KeyboardAvoidingView>
@@ -142,24 +126,19 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
   prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
   locked: { flex: 1, color: colors.muted, fontSize: 16, lineHeight: 22 },
-  toggle: { flexDirection: 'row', backgroundColor: colors.accentSoft, borderRadius: radius.md, padding: 4 },
-  toggleBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
-  toggleBtnActive: { backgroundColor: colors.card },
-  toggleText: { color: colors.muted, fontWeight: '600' },
-  toggleTextActive: { color: colors.text },
-  photoArea: { flex: 1, gap: spacing.sm },
-  preview: { flex: 1, borderRadius: radius.md },
-  placeholder: {
-    flex: 1,
-    textAlignVertical: 'center',
-    textAlign: 'center',
-    color: colors.muted,
+  square: {
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.card,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: spacing.lg,
+    overflow: 'hidden',
   },
+  squareIcon: { fontSize: 40 },
+  squareText: { color: colors.muted, fontWeight: '600', marginTop: spacing.xs },
+  preview: { width: '100%', height: '100%' },
   row: { flexDirection: 'row', gap: spacing.sm },
   secondary: {
     flex: 1,
@@ -172,7 +151,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: { color: colors.text, fontWeight: '600' },
   input: {
-    flex: 1,
+    minHeight: 90,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -183,6 +162,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   cta: { backgroundColor: colors.accent, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
+  ctaDisabled: { opacity: 0.5 },
   ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   error: { color: '#C62828', fontWeight: '600' },
 });

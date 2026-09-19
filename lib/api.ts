@@ -57,6 +57,7 @@ const toPost = (r: Row): Post => ({
   userId: str(r.user_id),
   kind: r.kind === 'photo' ? 'photo' : 'text',
   content: str(r.content),
+  caption: str(r.caption) || undefined,
   createdAt: str(r.created_at),
 });
 
@@ -318,21 +319,30 @@ export async function getPosts(groupId: string): Promise<Post[]> {
 
 /** A null taskId is a hangout post: it counts for nothing, it's just chat. */
 export async function createPost(
-  input: Pick<Post, 'groupId' | 'userId' | 'kind' | 'content'> & { taskId: string | null }
+  input: Pick<Post, 'groupId' | 'userId' | 'kind' | 'content' | 'caption'> & {
+    taskId: string | null;
+  }
 ): Promise<Post> {
   const sb = getSupabase();
   const content = input.kind === 'photo' ? await uploadPhoto(input.content, input.userId) : input.content;
-  const { data, error } = await sb
-    .from('posts')
-    .insert({
-      task_id: input.taskId,
-      group_id: input.groupId,
-      user_id: input.userId,
-      kind: input.kind,
-      content,
-    })
-    .select()
-    .single();
+  const row: Record<string, unknown> = {
+    task_id: input.taskId,
+    group_id: input.groupId,
+    user_id: input.userId,
+    kind: input.kind,
+    content,
+  };
+  const insert = (withCaption: boolean) =>
+    sb
+      .from('posts')
+      .insert(withCaption ? { ...row, caption: input.caption || null } : row)
+      .select()
+      .single();
+
+  // Databases created before captions existed have no caption column; the post
+  // still matters more than the words under it.
+  let { data, error } = await insert(true);
+  if (error) ({ data, error } = await insert(false));
   if (error) throw error;
   const post = toPost(data);
   const members = await getMembers(input.groupId);

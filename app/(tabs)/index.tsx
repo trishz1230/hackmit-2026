@@ -93,7 +93,12 @@ export default function Home() {
                   <Text style={styles.sheetBody}>{prompt}</Text>
                   {myPost ? (
                     myPost.kind === 'photo' ? (
-                      <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
+                      <>
+                        <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
+                        {myPost.caption ? (
+                          <Text style={styles.postText}>{myPost.caption}</Text>
+                        ) : null}
+                      </>
                     ) : (
                       <Text style={styles.postText}>{myPost.content}</Text>
                     )
@@ -118,7 +123,12 @@ export default function Home() {
                   <Text style={styles.sheetBody}>{prompt ?? 'Cleared — your family posted that day.'}</Text>
                   {myPost ? (
                     myPost.kind === 'photo' ? (
-                      <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
+                      <>
+                        <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
+                        {myPost.caption ? (
+                          <Text style={styles.postText}>{myPost.caption}</Text>
+                        ) : null}
+                      </>
                     ) : (
                       <Text style={styles.postText}>{myPost.content}</Text>
                     )
