@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../../components/Handwriting';
 import { useLocalSearchParams } from 'expo-router';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { firstEmoji, tallyEmoji } from '../../lib/reactions';

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Handwriting';
 import { tallyEmoji } from '../lib/reactions';
 import { colors, radius, spacing } from '../lib/theme';
 import type { Post, Profile, Reaction } from '../lib/types';

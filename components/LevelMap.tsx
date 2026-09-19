@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Handwriting';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing } from '../lib/theme';
 
