@@ -113,6 +113,7 @@ export function LevelMap({
             const isCurrent = n === current && !cleared;
             // Once the current level is done the glow moves on to the locked one.
             const isNext = cleared && n === current + 1;
+            const live = isCurrent || isNext;
             const { x, y } = position(n, goal);
             const milestone = isMilestone(n);
 
@@ -123,17 +124,17 @@ export function LevelMap({
                 disabled={!onSelectLevel}
                 style={[styles.nodeWrap, { marginLeft: x - NODE / 2, bottom: y }]}
               >
-                {(isCurrent || isNext) && <PulsingRing />}
+                {live && <PulsingRing />}
                 <View
                   style={[
                     styles.node,
                     done && styles.nodeDone,
-                    isCurrent && styles.nodeCurrent,
-                    !done && !isCurrent && styles.nodeLocked,
+                    live && styles.nodeCurrent,
+                    !done && !live && styles.nodeLocked,
                     milestone && styles.nodeMilestone,
                   ]}
                 >
-                  <Text style={[styles.nodeLabel, !done && !isCurrent && styles.nodeLabelLocked]}>
+                  <Text style={[styles.nodeLabel, !done && !live && styles.nodeLabelLocked]}>
                     {(isCurrent && locked) || isNext
                       ? '🔒'
                       : milestone
