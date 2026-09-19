@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -9,7 +9,16 @@ import { colors, radius, spacing } from '../../lib/theme';
 
 export default function Home() {
   const router = useRouter();
-  const { group, task, hasPostedThisCycle, missedReset, waitingForPeriod, unlocksAt } = useApp();
+  const {
+    group,
+    task,
+    hasPostedThisCycle,
+    missedReset,
+    waitingForPeriod,
+    unlocksAt,
+    taskForLevel,
+    myPostForLevel,
+  } = useApp();
   const [selected, setSelected] = useState<number | null>(null);
 
   useEffect(() => {
@@ -19,9 +28,12 @@ export default function Home() {
   if (!group) return <Redirect href="/onboarding" />;
 
   const current = Math.min(group.level, group.goal);
-  const isCurrent = selected === current;
-  const isCleared = selected !== null && selected < group.level;
+  const isCurrent = selected === current && !group.awaitingNextGoal;
+  const isCleared = selected !== null && (selected < group.level || group.awaitingNextGoal);
   const isLocked = selected !== null && selected > current;
+  const remembered = selected !== null ? taskForLevel(selected) : undefined;
+  const myPost = selected !== null ? myPostForLevel(selected) : undefined;
+  const prompt = isCurrent ? task.prompt : remembered?.prompt;
 
   return (
     <View style={styles.fill}>
@@ -57,37 +69,56 @@ export default function Home() {
 
       <Modal visible={selected !== null} transparent animationType="fade">
         <Pressable style={styles.backdrop} onPress={() => setSelected(null)}>
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Level {selected}</Text>
-            {isCurrent ? (
-              <>
-                <Text style={styles.taskLabel}>Today&apos;s task</Text>
-                <Text style={styles.sheetBody}>{task.prompt}</Text>
-                <Pressable
-                  style={styles.cta}
-                  onPress={() => {
-                    setSelected(null);
-                    router.push('/capture');
-                  }}
-                >
-                  <Text style={styles.ctaText}>
-                    {hasPostedThisCycle ? 'Post again' : 'Complete task'}
-                  </Text>
-                </Pressable>
-              </>
-            ) : (
-              <Text style={styles.sheetBody}>
-                {isCleared
-                  ? 'Cleared — your family posted that day.'
-                  : isLocked
-                    ? 'Locked. Clear the levels before it first.'
-                    : ''}
-              </Text>
-            )}
-            <Pressable style={styles.close} onPress={() => setSelected(null)}>
-              <Text style={styles.closeText}>Close</Text>
-            </Pressable>
-          </View>
+          <Pressable style={styles.sheet} onPress={() => undefined}>
+            <ScrollView bounces={false}>
+              <Text style={styles.sheetTitle}>Level {selected}</Text>
+              {isCurrent ? (
+                <>
+                  <Text style={styles.taskLabel}>Today&apos;s task</Text>
+                  <Text style={styles.sheetBody}>{prompt}</Text>
+                  {myPost ? (
+                    myPost.kind === 'photo' ? (
+                      <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
+                    ) : (
+                      <Text style={styles.postText}>{myPost.content}</Text>
+                    )
+                  ) : null}
+                  <Pressable
+                    style={styles.cta}
+                    onPress={() => {
+                      setSelected(null);
+                      router.push('/capture');
+                    }}
+                  >
+                    <Text style={styles.ctaText}>
+                      {hasPostedThisCycle ? 'Post again' : 'Complete task'}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : isCleared ? (
+                <>
+                  <Text style={styles.taskLabel}>That day&apos;s task</Text>
+                  <Text style={styles.sheetBody}>{prompt ?? 'Cleared — your family posted that day.'}</Text>
+                  {myPost ? (
+                    myPost.kind === 'photo' ? (
+                      <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
+                    ) : (
+                      <Text style={styles.postText}>{myPost.content}</Text>
+                    )
+                  ) : (
+                    <Text style={styles.sheetBody}>Your post from this level is gone.</Text>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.sheetBody}>
+                  {isLocked ? 'Locked. Clear the levels before it first.' : ''}
+                </Text>
+              )}
+              <Pressable style={styles.close} onPress={() => setSelected(null)}>
+                <Text style={styles.closeText}>Close</Text>
+              </Pressable>
+            </ScrollView>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
@@ -121,16 +152,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     width: 300,
-    gap: spacing.sm,
+    maxHeight: '80%',
   },
-  sheetTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
+  sheetTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
   taskLabel: {
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1,
     color: colors.muted,
+    marginBottom: spacing.xs,
   },
-  sheetBody: { color: colors.muted, lineHeight: 22, fontSize: 16 },
+  sheetBody: { color: colors.muted, lineHeight: 22, fontSize: 16, marginBottom: spacing.sm },
+  postText: { color: colors.text, fontSize: 16, lineHeight: 22, marginBottom: spacing.sm },
+  photo: { width: '100%', height: 180, borderRadius: radius.md, marginBottom: spacing.sm },
   cta: {
     marginTop: spacing.xs,
     backgroundColor: colors.accent,

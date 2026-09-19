@@ -8,7 +8,7 @@ import { colors, spacing } from '../../lib/theme';
 
 export default function Feed() {
   const router = useRouter();
-  const { group, posts, me, reactionsFor, memberById, addReaction } = useApp();
+  const { group, posts, me, reactionsFor, memberById, addReaction, promptFor } = useApp();
 
   if (!group) return <Redirect href="/onboarding" />;
 
@@ -30,6 +30,7 @@ export default function Feed() {
             post={item}
             author={memberById(item.userId)}
             reactions={reactionsFor(item.id)}
+            prompt={promptFor(item.taskId)}
             onPress={() => router.push(`/post/${item.id}`)}
             onLike={() => addReaction(item.id, 'like', me.id)}
           />

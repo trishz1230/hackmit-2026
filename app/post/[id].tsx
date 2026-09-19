@@ -15,7 +15,7 @@ function e164(phone: string) {
 
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, hangoutPosts, memberById, reactionsFor, addReaction, markPostSeen } = useApp();
+  const { posts, hangoutPosts, memberById, reactionsFor, addReaction, markPostSeen, promptFor } = useApp();
   const [comment, setComment] = useState('');
 
   useEffect(() => {
@@ -26,6 +26,7 @@ export default function PostDetail() {
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
 
   const author = memberById(post.userId);
+  const prompt = promptFor(post.taskId);
   const reactions = reactionsFor(post.id);
   const comments = reactions.filter((r) => r.kind === 'comment');
   const likes = reactions.filter((r) => r.kind === 'like').length;
@@ -57,6 +58,7 @@ export default function PostDetail() {
       ) : (
         <Text style={styles.body}>{post.content}</Text>
       )}
+      {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <View style={styles.actions}>
         <Pressable style={styles.action} onPress={() => addReaction(post.id, 'like', '1')}>
@@ -115,6 +117,7 @@ const styles = StyleSheet.create({
   missing: { padding: spacing.lg, color: colors.muted },
   author: { fontSize: 18, fontWeight: '700', color: colors.text },
   photo: { width: '100%', height: 260, borderRadius: radius.md },
+  prompt: { fontSize: 14, color: colors.muted, lineHeight: 20 },
   body: { fontSize: 17, color: colors.text, lineHeight: 24 },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   action: {

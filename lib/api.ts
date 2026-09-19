@@ -218,6 +218,13 @@ export async function getCurrentTask(group: Group): Promise<Task> {
   return toTask(created);
 }
 
+export async function getTasks(groupId: string): Promise<Task[]> {
+  const sb = getSupabase();
+  const { data, error } = await sb.from('tasks').select().eq('group_id', groupId);
+  if (error) throw error;
+  return (data ?? []).map(toTask);
+}
+
 export async function getPosts(groupId: string): Promise<Post[]> {
   const sb = getSupabase();
   const { data, error } = await sb
