@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { KeyboardScreen } from '../components/KeyboardScreen';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../lib/types';
@@ -38,7 +39,7 @@ export default function Settings() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.wrap}>
+    <KeyboardScreen contentContainerStyle={styles.wrap}>
       <Text style={styles.label}>Reminders</Text>
       <Text style={styles.hint}>
         How often the family gets nudged. Changing it asks the rest of the family to approve, and
@@ -84,12 +85,12 @@ export default function Settings() {
       <Pressable style={styles.cta} onPress={save}>
         <Text style={styles.ctaText}>Save</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { padding: spacing.md, gap: spacing.sm, backgroundColor: colors.bg, flexGrow: 1 },
+  wrap: { padding: spacing.md, gap: spacing.sm, backgroundColor: colors.bg },
   label: { fontSize: 13, color: colors.muted, marginTop: spacing.sm },
   hint: { fontSize: 12, color: colors.muted, lineHeight: 17 },
   picker: { flexDirection: 'row', gap: spacing.xs },

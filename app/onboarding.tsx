@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
 import { formatPhone, isValidPhone } from '../lib/phone';
 import { useApp } from '../lib/store';
@@ -11,6 +12,7 @@ const CODE_LENGTH = 6;
 
 export default function Onboarding() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { group, createGroup, joinGroup, isLive, error } = useApp();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [myName, setMyName] = useState('');
@@ -74,7 +76,12 @@ export default function Onboarding() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.wrap}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      automaticallyAdjustKeyboardInsets
+      contentContainerStyle={[styles.wrap, { paddingBottom: spacing.lg + insets.bottom }]}
+    >
       <Text style={styles.logo}>FamStreak</Text>
       <Text style={styles.tagline}>
         One task per level. Everyone posts, or the whole family&apos;s streak resets.

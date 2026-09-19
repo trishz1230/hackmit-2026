@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { KeyboardScreen } from '../components/KeyboardScreen';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
@@ -30,7 +31,7 @@ export default function NextGoal() {
   };
 
   return (
-    <View style={styles.wrap}>
+    <KeyboardScreen contentContainerStyle={styles.wrap}>
       <Text style={styles.kicker}>You earned it</Text>
       <Text style={styles.title}>Next goal</Text>
       <Text style={styles.sub}>
@@ -66,12 +67,12 @@ export default function NextGoal() {
       <Pressable style={styles.cta} onPress={submit}>
         <Text style={styles.ctaText}>Start new map</Text>
       </Pressable>
-    </View>
+    </KeyboardScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, padding: spacing.lg, gap: spacing.sm, backgroundColor: colors.bg },
+  wrap: { padding: spacing.lg, gap: spacing.sm, backgroundColor: colors.bg },
   kicker: { color: colors.accent, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   sub: { color: colors.muted, lineHeight: 21, marginBottom: spacing.md },

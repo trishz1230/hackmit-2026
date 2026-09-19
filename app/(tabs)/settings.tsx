@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { formatPhone, isValidPhone } from '../../lib/phone';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -41,7 +42,7 @@ export default function Settings() {
   if (!group) return <Redirect href="/onboarding" />;
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
+    <KeyboardScreen contentContainerStyle={styles.content}>
       <Text style={styles.title}>Settings</Text>
 
       <View style={styles.card}>
@@ -189,12 +190,11 @@ export default function Settings() {
       >
         <Text style={styles.leaveText}>Leave family</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.md },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
   card: {

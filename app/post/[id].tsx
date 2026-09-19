@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -20,7 +21,7 @@ export default function PostDetail() {
 
   useEffect(() => {
     if (id) markPostSeen(id);
-  }, [id, markPostSeen]);
+  }, [id]);
 
   const post = [...posts, ...hangoutPosts].find((p) => p.id === id);
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
@@ -48,7 +49,7 @@ export default function PostDetail() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.wrap}>
+    <KeyboardScreen contentContainerStyle={styles.wrap}>
       <Text style={styles.author}>
         {author?.avatar} {author?.name}
       </Text>
@@ -108,7 +109,7 @@ export default function PostDetail() {
           <Text style={styles.sendText}>Send</Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </KeyboardScreen>
   );
 }
 

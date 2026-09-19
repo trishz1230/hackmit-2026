@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../lib/store';
@@ -57,7 +57,11 @@ export default function Capture() {
   };
 
   return (
-    <View style={styles.wrap}>
+    <KeyboardAvoidingView
+      style={styles.wrap}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
       <Text style={styles.prompt}>
         {hangout ? 'Share anything with the family' : task.prompt}
       </Text>
@@ -107,7 +111,7 @@ export default function Capture() {
       <Pressable style={styles.cta} onPress={post}>
         <Text style={styles.ctaText}>{hangout ? 'Post to hangout' : 'Post to family'}</Text>
       </Pressable>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

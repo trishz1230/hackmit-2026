@@ -137,6 +137,12 @@ const promptForTasks = (tasks: Task[], taskId: string) => tasks.find((t) => t.id
 const latestTaskForLevel = (tasks: Task[], level: number) =>
   [...tasks].reverse().find((t) => t.level === level);
 
+/** Keep the same array when nothing new was seen so we don't retrigger effects. */
+function mergeSeenIds(prev: string[], extra: string[]) {
+  const next = extra.filter((id) => !prev.includes(id));
+  return next.length === 0 ? prev : [...prev, ...next];
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return isSupabaseConfigured ? (
     <LiveProvider>{children}</LiveProvider>
@@ -394,10 +400,12 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       simulateMissedDay: () => setMissedReset(true),
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
-        setSeenReactionIds((prev) => {
-          const extra = reactions.filter((r) => r.postId === postId).map((r) => r.id);
-          return extra.length === 0 ? prev : [...new Set([...prev, ...extra])];
-        });
+        setSeenReactionIds((prev) =>
+          mergeSeenIds(
+            prev,
+            reactions.filter((r) => r.postId === postId).map((r) => r.id)
+          )
+        );
       },
       restart: () => {
         run(async () => {
@@ -738,10 +746,12 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       },
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
-        setSeenReactionIds((prev) => {
-          const extra = reactions.filter((r) => r.postId === postId).map((r) => r.id);
-          return extra.length === 0 ? prev : [...new Set([...prev, ...extra])];
-        });
+        setSeenReactionIds((prev) =>
+          mergeSeenIds(
+            prev,
+            reactions.filter((r) => r.postId === postId).map((r) => r.id)
+          )
+        );
       },
       restart: () => {
         clearTimers();
