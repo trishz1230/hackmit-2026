@@ -40,6 +40,7 @@ export default function Settings() {
     missedReset,
     periodWaived,
     setPeriodWaived,
+    pending,
     cadencePendingOn,
     proposeCadence,
     approveCadence,
@@ -340,6 +341,11 @@ export default function Settings() {
           on={periodWaived}
           onPress={() => setPeriodWaived(!periodWaived)}
         />
+        <Text style={styles.meta}>
+          {periodWaived && pending.length > 0
+            ? `Waiting on ${pending.map((p) => p.name).join(', ')} to post before the level clears.`
+            : 'Clears the level once everyone has posted, without waiting for the period.'}
+        </Text>
       </View>
 
       <Pressable

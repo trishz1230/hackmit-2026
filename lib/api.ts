@@ -6,7 +6,7 @@
  * Run that file in the Supabase SQL editor, then fill in lib/supabase.ts.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { levelUnlocksAt } from './levels';
+import { levelUnlocksAt, postsForTask } from './levels';
 import { getSupabase } from './supabase';
 import { generatePrompt } from './prompts';
 import { sendExpoPush } from './push';
@@ -332,6 +332,29 @@ export async function getCurrentTask(group: Group): Promise<Task> {
   return toTask(created);
 }
 
+/**
+ * Demo: play out a missed period. The family drops to level 1 with no streak
+ * and level 1 is re-issued with a new prompt, so the restart is a fresh round
+ * rather than the one they already finished.
+ */
+export async function resetForMissedPeriod(group: Group): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update({ level: 1, current_streak: 0 })
+    .eq('id', group.id);
+  if (error) throw error;
+
+  const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
+  const recent = (previous ?? []).map((r: Row) => str(r.prompt));
+  const prompt = await generatePrompt(recent.slice(-5));
+  await sb
+    .from('tasks')
+    .update({ prompt, created_at: new Date().toISOString() })
+    .eq('group_id', group.id)
+    .eq('level', 1);
+}
+
 export async function getTasks(groupId: string): Promise<Task[]> {
   const sb = getSupabase();
   const { data, error } = await sb.from('tasks').select().eq('group_id', groupId);
@@ -478,7 +501,7 @@ export async function clearLevelIfDone(
   posts: Post[],
   ignoreWait = false
 ): Promise<number | null> {
-  const posted = new Set(posts.filter((p) => p.taskId === task.id).map((p) => p.userId));
+  const posted = new Set(postsForTask(posts, task).map((p) => p.userId));
   if (members.length === 0 || !members.every((m) => posted.has(m.id))) return null;
   if (!ignoreWait && Date.now() < levelUnlocksAt(task.createdAt, group.cadence, task.level))
     return null;

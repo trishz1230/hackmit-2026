@@ -1,4 +1,15 @@
-import type { Cadence } from './types';
+import type { Cadence, Post, Task } from './types';
+
+/**
+ * Posts that count towards a task. A re-issued task (the missed-period reset)
+ * keeps its row but moves its start, so earlier posts stop counting.
+ */
+export function postsForTask(posts: Post[], task: Task): Post[] {
+  const from = task.createdAt ? Date.parse(task.createdAt) : 0;
+  return posts.filter(
+    (p) => p.taskId === task.id && Date.parse(p.createdAt) >= from - 60_000
+  );
+}
 
 export const MIN_LEVELS = 3;
 export const MAX_LEVELS = 20;

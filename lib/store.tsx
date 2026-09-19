@@ -8,7 +8,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from './api';
-import { clampLevelCount, levelOpensAt, levelUnlocksAt, todayKey } from './levels';
+import { clampLevelCount, levelOpensAt, levelUnlocksAt, postsForTask, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { nudgeContent, nudgeTargetId } from './nudge';
 import { generatePrompt } from './prompts';
@@ -216,7 +216,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /** Pulls the whole family in one go, then clears the level if everyone posted. */
-  const refresh = useCallback(async (groupId: string, becomeActive = false) => {
+  const refresh = useCallback(async (groupId: string, becomeActive = false, depth = 0) => {
     if (becomeActive) {
       activeId.current = groupId;
       lastLevel.current = null;
@@ -256,8 +256,19 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     }
     lastLevel.current = current.level;
 
-    await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts, waived.current);
+    const cleared = await api.clearLevelIfDone(
+      current,
+      nextMembers,
+      nextTask,
+      nextPosts,
+      waived.current
+    );
+    // Realtime may not carry our own update back, so pick the new level up now.
+    if (cleared !== null && depth === 0) await refreshRef.current(groupId, false, 1);
   }, []);
+
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
 
   useEffect(() => {
     void (async () => {
@@ -283,7 +294,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   }, [group?.id, refresh]);
 
   const me = members.find((m) => m.id === userId) ?? emptyMe(userId, group?.id ?? '');
-  const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
+  const postedIds = postsForTask(posts, task).map((p) => p.userId);
   const hasPostedThisCycle = postedIds.includes(userId);
   const pending = members.filter((m) => !postedIds.includes(m.id));
   const everyonePostedThisCycle =
@@ -488,7 +499,20 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
-      simulateMissedDay: () => setMissedReset((prev) => !prev),
+      simulateMissedDay: () => {
+        if (missedReset) {
+          setMissedReset(false);
+          return;
+        }
+        if (!group) return;
+        setMissedReset(true);
+        run(async () => {
+          await api.resetForMissedPeriod(group);
+          lastLevel.current = 1;
+          setClearedLevel(null);
+          await refresh(group.id);
+        });
+      },
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
         setSeenReactionIds((prev) =>
