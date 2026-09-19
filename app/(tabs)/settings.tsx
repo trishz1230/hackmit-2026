@@ -7,6 +7,9 @@ import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../../lib/types';
 
+const MIN_LEVELS = 3;
+const MAX_LEVELS = 20;
+
 function DemoToggle({
   label,
   on,
@@ -51,7 +54,15 @@ export default function Settings() {
   const [familyName, setFamilyName] = useState(group?.name ?? '');
   const [editingFamily, setEditingFamily] = useState(false);
   const [editingCadence, setEditingCadence] = useState(false);
+  const [editingReward, setEditingReward] = useState(false);
+  const [reward, setReward] = useState(group?.rewardText ?? '');
+  const [levels, setLevels] = useState(String(group?.goal ?? 10));
   const phoneBad = phone.trim().length > 0 && !isValidPhone(phone);
+  // A family can't aim for fewer levels than it has already cleared.
+  const levelFloor = Math.max(MIN_LEVELS, group?.level ?? 1);
+  const goalNumber = Number(levels);
+  const goalBad = !Number.isInteger(goalNumber) || goalNumber < levelFloor || goalNumber > MAX_LEVELS;
+  const rewardBad = !reward.trim() || goalBad;
 
   useEffect(() => {
     setName(me.name);
@@ -62,6 +73,12 @@ export default function Settings() {
     if (group) setFamilyName(group.name);
   }, [group?.name]);
 
+  useEffect(() => {
+    if (!group) return;
+    setReward(group.rewardText);
+    setLevels(String(group.goal));
+  }, [group?.rewardText, group?.goal]);
+
   const saveFamilyName = () => {
     if (!group || !familyName.trim()) return;
     updateSettings({
@@ -70,6 +87,12 @@ export default function Settings() {
       name: familyName.trim(),
     });
     setEditingFamily(false);
+  };
+
+  const saveReward = () => {
+    if (!group || rewardBad) return;
+    updateSettings({ rewardText: reward.trim(), goal: goalNumber });
+    setEditingReward(false);
   };
 
   if (!group) return <Redirect href="/onboarding" />;
@@ -226,9 +249,63 @@ export default function Settings() {
         ))}
       </View>
 
-      <Pressable style={styles.demo} onPress={() => router.push('/settings')}>
-        <Text style={styles.demoText}>Reward & level goal</Text>
-      </Pressable>
+      <View style={styles.card}>
+        <Text style={styles.label}>Reward &amp; level goal</Text>
+        {editingReward ? (
+          <>
+            <TextInput
+              style={styles.input}
+              value={reward}
+              onChangeText={setReward}
+              placeholder="Sunday dumplings"
+              placeholderTextColor={colors.muted}
+            />
+            <Text style={styles.meta}>
+              Levels to the reward ({levelFloor}–{MAX_LEVELS})
+            </Text>
+            <TextInput
+              style={[styles.input, goalBad && styles.inputBad]}
+              value={levels}
+              onChangeText={setLevels}
+              keyboardType="number-pad"
+              placeholder="10"
+              placeholderTextColor={colors.muted}
+            />
+            {goalBad ? (
+              <Text style={styles.error}>
+                Pick between {levelFloor} and {MAX_LEVELS} levels.
+              </Text>
+            ) : null}
+            <View style={styles.row}>
+              <Pressable
+                style={[styles.cta, styles.grow, rewardBad && styles.ctaDisabled]}
+                disabled={rewardBad}
+                onPress={saveReward}
+              >
+                <Text style={styles.ctaText}>Save</Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondary}
+                onPress={() => {
+                  setReward(group.rewardText);
+                  setLevels(String(group.goal));
+                  setEditingReward(false);
+                }}
+              >
+                <Text style={styles.secondaryText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.family}>{group.rewardText}</Text>
+            <Text style={styles.meta}>after {group.goal} levels</Text>
+            <Pressable onPress={() => setEditingReward(true)}>
+              <Text style={styles.edit}>Edit</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Demo switches</Text>
@@ -328,8 +405,6 @@ const styles = StyleSheet.create({
   cancel: { textAlign: 'center', color: colors.muted, fontWeight: '700', paddingTop: spacing.xs },
   leave: { alignItems: 'center', paddingVertical: spacing.sm },
   leaveText: { color: colors.accent, fontWeight: '700' },
-  demo: { alignItems: 'center', paddingVertical: spacing.sm },
-  demoText: { color: colors.muted, fontWeight: '700' },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
