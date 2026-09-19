@@ -5,6 +5,7 @@ import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../lib/types';
 
+const CODE_LENGTH = 6;
 const MIN_LEVELS = 3;
 const MAX_LEVELS = 20;
 
@@ -42,14 +43,15 @@ export default function Onboarding() {
     );
   }
 
+  const trimmedCode = code.trim();
   const nameMissing = submitted && !myName.trim();
+  const codeMissing = submitted && mode === 'join' && !trimmedCode;
+  const codeTooShort = submitted && mode === 'join' && trimmedCode.length > 0 && trimmedCode.length !== CODE_LENGTH;
 
   const submit = () => {
-    if (!myName.trim()) {
-      setSubmitted(true);
-      return;
-    }
     setSubmitted(true);
+    if (!myName.trim()) return;
+    if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
     const who = myName.trim();
     const tel = phone.trim() || undefined;
     if (mode === 'create') {
@@ -62,7 +64,7 @@ export default function Onboarding() {
         goal: clamped,
       });
     } else {
-      joinGroup({ myName: who, phone: tel, code: code.trim().toUpperCase() });
+      joinGroup({ myName: who, phone: tel, code: trimmedCode.toUpperCase() });
     }
   };
 
@@ -147,13 +149,18 @@ export default function Onboarding() {
         <>
           <Text style={styles.label}>Group code</Text>
           <TextInput
-            style={[styles.input, styles.code]}
+            style={[styles.input, styles.code, (codeMissing || codeTooShort) && styles.inputBad]}
             value={code}
             onChangeText={setCode}
             autoCapitalize="characters"
+            maxLength={CODE_LENGTH}
             placeholder="FAM123"
             placeholderTextColor={colors.muted}
           />
+          {codeMissing && <Text style={styles.error}>Enter the family&apos;s code to join.</Text>}
+          {codeTooShort && (
+            <Text style={styles.error}>Codes are {CODE_LENGTH} characters.</Text>
+          )}
         </>
       )}
 
