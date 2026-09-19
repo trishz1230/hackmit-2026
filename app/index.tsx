@@ -34,6 +34,7 @@ export default function Feed() {
         goal={group.goal}
         reward={group.rewardText}
         streak={group.currentStreak}
+        onPress={() => router.push('/levels')}
       />
 
       <FlatList

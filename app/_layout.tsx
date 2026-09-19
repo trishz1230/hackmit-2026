@@ -21,6 +21,7 @@ export default function RootLayout() {
           >
             <Stack.Screen name="index" options={{ title: 'FamStreak' }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="levels" options={{ title: 'Level map' }} />
             <Stack.Screen name="capture" options={{ title: "Today's task", presentation: 'modal' }} />
             <Stack.Screen name="post/[id]" options={{ title: 'Reactions' }} />
           </Stack>

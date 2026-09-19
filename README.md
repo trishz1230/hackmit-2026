@@ -21,8 +21,8 @@ It runs with mock data out of the box — no accounts or keys needed.
 
 | Path | Owner | What's in it |
 | --- | --- | --- |
-| `app/` | UI | Screens: `onboarding`, `index` (feed), `capture`, `post/[id]` (reactions) |
-| `components/` | UI | `NagBanner`, `PostCard`, `ProgressBar`, `PhoneFrame` |
+| `app/` | UI | Screens: `onboarding`, `index` (feed), `levels` (level map), `capture`, `post/[id]` (reactions) |
+| `components/` | UI | `NagBanner`, `PostCard`, `ProgressBar`, `PhoneFrame`, `LevelMap` |
 | `lib/store.tsx` | shared | App state, currently backed by mock data |
 | `lib/api.ts` | backend | Every Supabase read/write |
 | `lib/schema.sql` | backend | Database tables to run in the Supabase SQL editor |
@@ -40,6 +40,15 @@ The split is by layer, not by screen: one person works in `lib/`, the other in
 4. Put your project URL and anon key in the `extra` block of `app.json`.
 5. Replace the bodies in `lib/store.tsx` with the matching calls from `lib/api.ts`,
    one screen at a time — the feed first.
+
+## Level map art
+
+`components/LevelMap.tsx` draws the Wonderland level path with placeholder art:
+milestone nodes use the emoji in `MILESTONE_ICONS`, and every node is a styled
+circle. To drop in real graphics, replace those emoji with `<Image>` and restyle
+`styles.node` / `styles.nodeDone` / `styles.nodeCurrent` / `styles.nodeLocked`.
+Path geometry lives in `position()` — `STEP` is vertical spacing, `AMPLITUDE` is
+how far the path swings sideways.
 
 ## The reminder
 

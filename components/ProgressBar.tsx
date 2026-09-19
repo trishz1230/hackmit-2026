@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '../lib/theme';
 
 export function ProgressBar({
@@ -7,15 +7,17 @@ export function ProgressBar({
   goal,
   reward,
   streak,
+  onPress,
 }: {
   level: number;
   goal: number;
   reward: string;
   streak: number;
+  onPress?: () => void;
 }) {
   const pct = Math.max(0, Math.min(1, goal === 0 ? 0 : level / goal));
   return (
-    <View style={styles.wrap}>
+    <Pressable style={styles.wrap} onPress={onPress} disabled={!onPress}>
       <View style={styles.row}>
         <Text style={styles.level}>Level {level}</Text>
         <Text style={styles.streak}>🔥 {streak} day streak</Text>
@@ -26,7 +28,8 @@ export function ProgressBar({
       <Text style={styles.reward}>
         {goal - level} more to go → {reward}
       </Text>
-    </View>
+      {onPress && <Text style={styles.link}>See the level map →</Text>}
+    </Pressable>
   );
 }
 
@@ -49,4 +52,5 @@ const styles = StyleSheet.create({
   },
   fill: { height: '100%', backgroundColor: colors.accent },
   reward: { marginTop: spacing.xs, fontSize: 13, color: colors.muted },
+  link: { marginTop: spacing.xs, fontSize: 13, color: colors.accent, fontWeight: '600' },
 });
