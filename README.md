@@ -46,15 +46,23 @@ in `lib/store.tsx` once real members are posting through Supabase.
 
 ## Generated prompts
 
-New prompts come from the OpenAI API when a key is present:
+New prompts come from `api/prompt.ts`, a serverless function that calls OpenAI.
+The key lives on the server, so nobody has to configure anything locally — clone
+and run. If the endpoint is unset or fails, the app falls back to `taskPrompts`
+in `lib/mockData.ts`, so it never breaks.
+
+Deploy it once (one person, then everyone benefits):
 
 ```bash
-cp .env.example .env    # then paste your key into EXPO_PUBLIC_OPENAI_API_KEY
+npx vercel --prod                       # "Other" framework if it asks
+npx vercel env add OPENAI_API_KEY production
+npx vercel --prod                       # redeploy so the key is picked up
 ```
 
-Without a key it falls back to `taskPrompts` in `lib/mockData.ts`, so the app
-works with no setup. The key is bundled into the client, which is fine for a
-demo but should move behind a Supabase Edge Function before this ships.
+Then paste the resulting URL into `DEPLOYED_PROMPT_API` in `lib/prompts.ts`
+(e.g. `https://famstreak.vercel.app/api/prompt`) and commit it — that URL is not
+a secret. To point at a different endpoint on one machine only, set
+`EXPO_PUBLIC_PROMPT_API` in `.env`.
 
 ## Connecting the real backend
 
