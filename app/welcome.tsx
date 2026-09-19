@@ -72,7 +72,7 @@ export default function Welcome() {
         Animated.spring(squish, { toValue: 1.07, friction: 4, useNativeDriver: true }),
         Animated.spring(squish, { toValue: 1, friction: 5, useNativeDriver: true }),
       ]).start();
-      setTimeout(() => router.replace('/onboarding'), SETTLE_MS);
+      setTimeout(() => router.replace('/avatar'), SETTLE_MS);
     });
   }, [fill, router, squish]);
 
