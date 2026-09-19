@@ -11,7 +11,7 @@ import * as api from './api';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask } from './mockData';
 import { generatePrompt } from './prompts';
 import { isSupabaseConfigured } from './supabase';
-import type { Group, Post, Profile, Reaction, Task } from './types';
+import type { CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
 
 const CURRENT_USER_ID = 'user-1';
 
@@ -35,11 +35,13 @@ type State = {
   clearedLevel: number | null;
   /** True once every member is real rather than scripted. */
   isLive: boolean;
+  /** True while the saved family is still being fetched on boot. */
+  loading: boolean;
   /** Last thing the backend refused to do, for the onboarding screen. */
   error: string | null;
   dismissCelebration: () => void;
-  createGroup: (name: string, goal: number, myName: string) => void;
-  joinGroup: (code: string, myName: string) => void;
+  createGroup: (opts: CreateOptions) => void;
+  joinGroup: (opts: JoinOptions) => void;
   addPost: (kind: Post['kind'], content: string) => void;
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   reactionsFor: (postId: string) => Reaction[];
@@ -68,6 +70,9 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [clearedLevel, setClearedLevel] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  /** Last level this browser saw, so every member gets the celebration. */
+  const lastLevel = useRef<number | null>(null);
 
   /** Fire-and-forget a backend call, surfacing whatever it refuses to do. */
   const run = useCallback((fn: () => Promise<void>) => {
@@ -83,6 +88,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     if (!current) {
       await api.rememberGroup(null);
       setGroup(null);
+      lastLevel.current = null;
       return;
     }
     const [nextMembers, nextTask, nextPosts, nextReactions] = await Promise.all([
@@ -97,8 +103,12 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     setPosts(nextPosts);
     setReactions(nextReactions);
 
-    const cleared = await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts);
-    if (cleared !== null) setClearedLevel(cleared);
+    if (lastLevel.current !== null && current.level > lastLevel.current) {
+      setClearedLevel(current.level - 1);
+    }
+    lastLevel.current = current.level;
+
+    await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts);
   }, []);
 
   // Restore this device's identity and last family on boot.
@@ -107,6 +117,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       setUserId(await api.identity());
       const saved = await api.savedGroupId();
       if (saved) await refresh(saved);
+      setLoading(false);
     })();
   }, [refresh]);
 
@@ -136,17 +147,18 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       pending,
       clearedLevel,
       isLive: true,
+      loading,
       error,
       dismissCelebration: () => setClearedLevel(null),
-      createGroup: (name, goal, myName) => {
+      createGroup: (opts) => {
         run(async () => {
-          const created = await api.createGroup(userId, myName, name, goal);
+          const created = await api.createGroup(userId, opts);
           await refresh(created.id);
         });
       },
-      joinGroup: (code, myName) => {
+      joinGroup: (opts) => {
         run(async () => {
-          const joined = await api.joinGroup(userId, myName, code);
+          const joined = await api.joinGroup(userId, opts);
           await refresh(joined.id);
         });
       },
@@ -170,6 +182,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
         run(async () => {
           await api.saveProfile(userId, me.name, null);
           await api.rememberGroup(null);
+          lastLevel.current = null;
           setGroup(null);
           setMembers([]);
           setPosts([]);
@@ -178,7 +191,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
         });
       },
     }),
-    [group, members, me, task, posts, reactions, hasPostedThisCycle, pending, clearedLevel, error, run, userId, refresh]
+    [group, members, me, task, posts, reactions, hasPostedThisCycle, pending, clearedLevel, loading, error, run, userId, refresh]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -256,13 +269,20 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       pending,
       clearedLevel,
       isLive: false,
+      loading: false,
       error: null,
       dismissCelebration: () => setClearedLevel(null),
-      createGroup: (name, goal, myName) => {
-        setGroup({ ...mockGroup, name, goal });
+      createGroup: ({ myName, goal, cadence, rewardText }) => {
+        setGroup({
+          ...mockGroup,
+          name: `${myName}'s family`,
+          goal,
+          cadence,
+          rewardText: rewardText || mockGroup.rewardText,
+        });
         setMembers(withMyName(myName));
       },
-      joinGroup: (_code, myName) => {
+      joinGroup: ({ myName }) => {
         setGroup(mockGroup);
         setMembers(withMyName(myName));
       },

@@ -1,33 +1,76 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
+import { CADENCE_LABELS, type Cadence } from '../lib/types';
+
+const MIN_LEVELS = 3;
+const MAX_LEVELS = 20;
 
 export default function Onboarding() {
   const router = useRouter();
-  const { createGroup, joinGroup, isLive, error } = useApp();
+  const { group, createGroup, joinGroup, isLive, error } = useApp();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [myName, setMyName] = useState('');
-  const [familyName, setFamilyName] = useState('');
-  const [goal, setGoal] = useState('50');
+  const [phone, setPhone] = useState('');
+  const [cadence, setCadence] = useState<Cadence>('daily');
+  const [reward, setReward] = useState('');
+  const [levels, setLevels] = useState('10');
   const [code, setCode] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  // The family only exists once the backend answers, so the invite code screen
+  // (and the hop to the feed) waits for it rather than navigating optimistically.
+  useEffect(() => {
+    if (submitted && mode === 'join' && group) router.replace('/');
+  }, [submitted, mode, group, router]);
+
+  if (submitted && mode === 'create' && group) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.logo}>You&apos;re in</Text>
+        <Text style={styles.tagline}>Share this code with the family — they pick “Join a family”.</Text>
+        <Text style={styles.bigCode}>{group.joinCode}</Text>
+        <Text style={styles.summary}>
+          {group.goal} levels to “{group.rewardText}” · one level every {CADENCE_LABELS[group.cadence]}
+        </Text>
+        <Pressable style={styles.cta} onPress={() => router.replace('/')}>
+          <Text style={styles.ctaText}>Go to the feed</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const nameMissing = submitted && !myName.trim();
 
   const submit = () => {
-    const who = myName.trim() || 'Me';
-    if (mode === 'create') {
-      createGroup(familyName.trim() || 'My family', Number(goal) || 50, who);
-    } else {
-      joinGroup(code.trim().toUpperCase(), who);
+    if (!myName.trim()) {
+      setSubmitted(true);
+      return;
     }
-    router.replace('/');
+    setSubmitted(true);
+    const who = myName.trim();
+    const tel = phone.trim() || undefined;
+    if (mode === 'create') {
+      const clamped = Math.min(MAX_LEVELS, Math.max(MIN_LEVELS, Number(levels) || MIN_LEVELS));
+      createGroup({
+        myName: who,
+        phone: tel,
+        cadence,
+        rewardText: reward.trim() || 'a family treat',
+        goal: clamped,
+      });
+    } else {
+      joinGroup({ myName: who, phone: tel, code: code.trim().toUpperCase() });
+    }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
       <Text style={styles.logo}>FamStreak</Text>
       <Text style={styles.tagline}>
-        One task a day. Everyone posts, or the whole family&apos;s streak resets.
+        One task per level. Everyone posts, or the whole family&apos;s streak resets.
       </Text>
 
       <View style={styles.toggle}>
@@ -46,36 +89,63 @@ export default function Onboarding() {
 
       <Text style={styles.label}>Your name</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, nameMissing && styles.inputBad]}
         value={myName}
         onChangeText={setMyName}
         placeholder="Trish"
         placeholderTextColor={colors.muted}
       />
+      {nameMissing && <Text style={styles.error}>Your name is required.</Text>}
+
+      <Text style={styles.label}>Phone (optional, for the call button)</Text>
+      <TextInput
+        style={styles.input}
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+        placeholder="555 123 4567"
+        placeholderTextColor={colors.muted}
+      />
 
       {mode === 'create' ? (
         <>
-          <Text style={styles.label}>Family name</Text>
+          <Text style={styles.label}>What does one level equal?</Text>
+          <View style={styles.picker}>
+            {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setCadence(c)}
+                style={[styles.pickerBtn, cadence === c && styles.pickerBtnActive]}
+              >
+                <Text style={[styles.pickerText, cadence === c && styles.pickerTextActive]}>
+                  {CADENCE_LABELS[c]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Reward</Text>
           <TextInput
             style={styles.input}
-            value={familyName}
-            onChangeText={setFamilyName}
-            placeholder="The Zhangs"
+            value={reward}
+            onChangeText={setReward}
+            placeholder="Sunday dumplings"
             placeholderTextColor={colors.muted}
           />
-          <Text style={styles.label}>Level goal</Text>
+
+          <Text style={styles.label}>Levels to the reward ({MIN_LEVELS}–{MAX_LEVELS})</Text>
           <TextInput
             style={styles.input}
-            value={goal}
-            onChangeText={setGoal}
+            value={levels}
+            onChangeText={setLevels}
             keyboardType="number-pad"
-            placeholder="50"
+            placeholder="10"
             placeholderTextColor={colors.muted}
           />
         </>
       ) : (
         <>
-          <Text style={styles.label}>Join code</Text>
+          <Text style={styles.label}>Group code</Text>
           <TextInput
             style={[styles.input, styles.code]}
             value={code}
@@ -128,7 +198,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
+  inputBad: { borderColor: '#b3261e' },
+  picker: { flexDirection: 'row', gap: spacing.xs },
+  pickerBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+  },
+  pickerBtnActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+  pickerText: { color: colors.muted, fontWeight: '600' },
+  pickerTextActive: { color: colors.text },
   code: { letterSpacing: 4, fontSize: 20, fontWeight: '700' },
+  bigCode: {
+    fontSize: 40,
+    fontWeight: '800',
+    letterSpacing: 8,
+    color: colors.accent,
+    textAlign: 'center',
+    marginVertical: spacing.lg,
+  },
+  summary: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20 },
   cta: {
     marginTop: spacing.lg,
     backgroundColor: colors.accent,

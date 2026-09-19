@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { NagBanner } from '../components/NagBanner';
 import { PostCard } from '../components/PostCard';
@@ -24,6 +24,7 @@ export default function Feed() {
     addReaction,
     restart,
     isLive,
+    loading,
   } = useApp();
 
   useEffect(() => {
@@ -34,6 +35,14 @@ export default function Feed() {
       void startNagging(task.prompt);
     }
   }, [group, hasPostedThisCycle, task.prompt]);
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
 
   if (!group) return <Redirect href="/onboarding" />;
 
@@ -56,7 +65,9 @@ export default function Feed() {
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View style={styles.taskCard}>
-            <Text style={styles.taskLabel}>Today&apos;s task · {group.name}</Text>
+            <Text style={styles.taskLabel}>
+              Level {group.level} task · {group.name}
+            </Text>
             <Text style={styles.taskPrompt}>{task.prompt}</Text>
             <Pressable style={styles.taskCta} onPress={() => router.push('/capture')}>
               <Text style={styles.taskCtaText}>
@@ -107,6 +118,7 @@ export default function Feed() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
+  loading: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   taskCard: {
     margin: spacing.md,
     marginBottom: 0,

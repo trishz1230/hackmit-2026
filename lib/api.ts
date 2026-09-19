@@ -8,7 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabase } from './supabase';
 import { generatePrompt } from './prompts';
-import type { Cadence, Group, Post, Profile, Reaction, Task } from './types';
+import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
 
 type Row = Record<string, unknown>;
 
@@ -97,7 +97,12 @@ function randomCode(): string {
 
 const AVATARS = ['🙂', '👩', '👨', '🧑', '👵', '👴', '🧒', '🐣'];
 
-export async function saveProfile(userId: string, name: string, groupId: string | null): Promise<Profile> {
+export async function saveProfile(
+  userId: string,
+  name: string,
+  groupId: string | null,
+  phone?: string
+): Promise<Profile> {
   const sb = getSupabase();
   const { data, error } = await sb
     .from('profiles')
@@ -105,6 +110,7 @@ export async function saveProfile(userId: string, name: string, groupId: string 
       id: userId,
       name,
       group_id: groupId,
+      phone: phone || null,
       avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
     })
     .select()
@@ -113,30 +119,37 @@ export async function saveProfile(userId: string, name: string, groupId: string 
   return toProfile(data);
 }
 
-export async function createGroup(userId: string, userName: string, name: string, goal: number): Promise<Group> {
+export async function createGroup(userId: string, opts: CreateOptions): Promise<Group> {
   const sb = getSupabase();
   const { data, error } = await sb
     .from('groups')
-    .insert({ name, join_code: randomCode(), goal, level: 1 })
+    .insert({
+      name: `${opts.myName}'s family`,
+      join_code: randomCode(),
+      goal: opts.goal,
+      level: 1,
+      cadence: opts.cadence,
+      reward_text: opts.rewardText,
+    })
     .select()
     .single();
   if (error) throw error;
   const group = toGroup(data);
-  await saveProfile(userId, userName, group.id);
+  await saveProfile(userId, opts.myName, group.id, opts.phone);
   await rememberGroup(group.id);
   return group;
 }
 
-export async function joinGroup(userId: string, userName: string, joinCode: string): Promise<Group> {
+export async function joinGroup(userId: string, opts: JoinOptions): Promise<Group> {
   const sb = getSupabase();
   const { data, error } = await sb
     .from('groups')
     .select()
-    .eq('join_code', joinCode.trim().toUpperCase())
+    .eq('join_code', opts.code.trim().toUpperCase())
     .maybeSingle();
   if (error || !data) throw new Error('No family found with that code');
   const group = toGroup(data);
-  await saveProfile(userId, userName, group.id);
+  await saveProfile(userId, opts.myName, group.id, opts.phone);
   await rememberGroup(group.id);
   return group;
 }

@@ -1,4 +1,27 @@
-export type Cadence = 'daily' | 'twice_weekly' | 'weekly';
+/** How long the family gets to clear one level. */
+export type Cadence = 'daily' | 'every_3_days' | 'weekly';
+
+export const CADENCE_LABELS: Record<Cadence, string> = {
+  daily: '1 day',
+  every_3_days: '3 days',
+  weekly: 'a week',
+};
+
+/** Everything the create-a-family form collects. */
+export type CreateOptions = {
+  myName: string;
+  phone?: string;
+  cadence: Cadence;
+  rewardText: string;
+  /** Levels between here and the reward. */
+  goal: number;
+};
+
+export type JoinOptions = {
+  myName: string;
+  phone?: string;
+  code: string;
+};
 
 export type Group = {
   id: string;
