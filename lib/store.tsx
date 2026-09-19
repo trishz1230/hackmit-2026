@@ -53,8 +53,10 @@ type State = {
   opensAt: number;
   /** The next conversation hasn't started yet, so the prompt stays hidden. */
   taskLocked: boolean;
-  /** Demo escape hatch: treat the period as over right now. */
-  endPeriodNow: () => void;
+  /** Demo escape hatch: true while the period is being treated as over. */
+  periodWaived: boolean;
+  /** Turns the period-end escape hatch on or off. */
+  setPeriodWaived: (on: boolean) => void;
   missedReset: boolean;
   dismissMissedReset: () => void;
   unseenPosts: Post[];
@@ -179,6 +181,11 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const lastLevel = useRef<number | null>(null);
   /** Set by the demo button to clear the level without waiting for midnight. */
   const waived = useRef(false);
+  const [periodWaived, setPeriodWaivedState] = useState(false);
+  const setPeriodWaived = useCallback((on: boolean) => {
+    waived.current = on;
+    setPeriodWaivedState(on);
+  }, []);
 
   /** Fire-and-forget a backend call, surfacing whatever it refuses to do. */
   const run = useCallback((fn: () => Promise<void>) => {
@@ -214,6 +221,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     if (lastLevel.current !== null && current.level > lastLevel.current) {
       setClearedLevel(current.level - 1);
       waived.current = false;
+      setPeriodWaivedState(false);
     }
     lastLevel.current = current.level;
 
@@ -304,10 +312,10 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       unlocksAt,
       opensAt,
       taskLocked,
-      endPeriodNow: () => {
-        if (!group) return;
-        waived.current = true;
-        run(() => refresh(group.id));
+      periodWaived,
+      setPeriodWaived: (on) => {
+        setPeriodWaived(on);
+        if (on && group) run(() => refresh(group.id));
       },
       missedReset,
       dismissMissedReset: () => setMissedReset(false),
@@ -424,7 +432,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
-      simulateMissedDay: () => setMissedReset(true),
+      simulateMissedDay: () => setMissedReset((prev) => !prev),
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
         setSeenReactionIds((prev) =>
@@ -461,6 +469,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       unlocksAt,
       opensAt,
       taskLocked,
+      periodWaived,
+      setPeriodWaived,
       cadencePendingOn,
       missedReset,
       unseenPosts,
@@ -655,9 +665,10 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       unlocksAt,
       opensAt,
       taskLocked,
-      endPeriodNow: () => {
-        setWaived(true);
-        if (everyonePostedThisCycle) void completeLevel();
+      periodWaived: waived,
+      setPeriodWaived: (on) => {
+        setWaived(on);
+        if (on && everyonePostedThisCycle) void completeLevel();
       },
       missedReset,
       dismissMissedReset: () => setMissedReset(false),
@@ -796,6 +807,10 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       },
       simulateMissedDay: () => {
         if (!group) return;
+        if (missedReset) {
+          setMissedReset(false);
+          return;
+        }
         clearTimers();
         setMissedReset(true);
         setGroup({ ...group, level: 1, currentStreak: 0, awaitingNextGoal: false });

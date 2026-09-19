@@ -7,6 +7,25 @@ import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../../lib/types';
 
+function DemoToggle({
+  label,
+  on,
+  onPress,
+}: {
+  label: string;
+  on: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.toggleRow} onPress={onPress}>
+      <Text style={styles.toggleLabel}>{label}</Text>
+      <View style={[styles.pill, on && styles.pillOn]}>
+        <Text style={[styles.pillText, on && styles.pillTextOn]}>{on ? 'ON' : 'OFF'}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function Settings() {
   const router = useRouter();
   const {
@@ -17,7 +36,9 @@ export default function Settings() {
     updateSettings,
     leaveGroup,
     simulateMissedDay,
-    endPeriodNow,
+    missedReset,
+    periodWaived,
+    setPeriodWaived,
     cadencePendingOn,
     proposeCadence,
     approveCadence,
@@ -188,13 +209,19 @@ export default function Settings() {
         <Text style={styles.demoText}>Reward & level goal</Text>
       </Pressable>
 
-      <Pressable style={styles.demo} onPress={simulateMissedDay}>
-        <Text style={styles.demoText}>Demo: someone missed a day</Text>
-      </Pressable>
-
-      <Pressable style={styles.demo} onPress={endPeriodNow}>
-        <Text style={styles.demoText}>Demo: end this period now</Text>
-      </Pressable>
+      <View style={styles.card}>
+        <Text style={styles.label}>Demo switches</Text>
+        <DemoToggle
+          label="Someone missed a day"
+          on={missedReset}
+          onPress={simulateMissedDay}
+        />
+        <DemoToggle
+          label="End this period now"
+          on={periodWaived}
+          onPress={() => setPeriodWaived(!periodWaived)}
+        />
+      </View>
 
       <Pressable
         style={styles.leave}
@@ -282,4 +309,22 @@ const styles = StyleSheet.create({
   leaveText: { color: colors.accent, fontWeight: '700' },
   demo: { alignItems: 'center', paddingVertical: spacing.sm },
   demoText: { color: colors.muted, fontWeight: '700' },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  toggleLabel: { color: colors.text, fontWeight: '600', flex: 1, paddingRight: spacing.sm },
+  pill: {
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pillOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  pillText: { color: colors.muted, fontWeight: '800' },
+  pillTextOn: { color: '#fff' },
 });
