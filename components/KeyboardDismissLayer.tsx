@@ -54,7 +54,11 @@ export function KeyboardDismissLayer({ armed }: { armed?: boolean }) {
 
 const styles = StyleSheet.create({
   layer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     zIndex: 9999,
     elevation: 9999,
     // Transparent views often ignore taps; this still looks clear.

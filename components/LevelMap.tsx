@@ -8,9 +8,11 @@ const STEP = 108;
 const AMPLITUDE = 92;
 const MILESTONE_EVERY = 5;
 const TRAIL_DOTS = 4;
+/** Room under the last level for the reward card. */
+const FOOT = 132;
 
 /** Placeholder art — swap each entry for the designer's illustration. */
-const MILESTONE_ICONS = ['🫖', '🍄', '🐇', '🃏', '🗝️', '🌹', '🎩', '🐛', '⏰', '👑'];
+const MILESTONE_ICONS = ['🫖', '🍄', '🐇', '🧁', '🗝️', '🌹', '🎩', '🐛', '⏰', '👑'];
 
 export type LevelMapProps = {
   level: number;
@@ -31,7 +33,7 @@ function position(n: number, goal: number) {
   const index = n - 1;
   return {
     x: AMPLITUDE * Math.sin(index * 0.85),
-    y: (goal - n) * STEP + spacing.lg,
+    y: (goal - n) * STEP + FOOT,
   };
 }
 
@@ -85,7 +87,7 @@ export function LevelMap({
   const scrollRef = useRef<ScrollView>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const current = Math.min(level, goal);
-  const contentHeight = goal * STEP + spacing.lg * 4;
+  const contentHeight = goal * STEP + FOOT + spacing.lg;
 
   useEffect(() => {
     if (!viewportHeight) return;
@@ -149,12 +151,7 @@ export function LevelMap({
             );
           })}
 
-          <View
-            style={[
-              styles.goalFlag,
-              { marginLeft: position(goal, goal).x - 90, bottom: position(goal, goal).y + NODE + spacing.md },
-            ]}
-          >
+          <View style={[styles.goalFlag, { bottom: position(goal, goal).y - FOOT + spacing.md }]}>
             <Text style={styles.goalIcon}>👑</Text>
             <Text style={styles.goalText}>{reward}</Text>
           </View>
@@ -205,13 +202,14 @@ const styles = StyleSheet.create({
   goalFlag: {
     position: 'absolute',
     left: '50%',
-    width: 180,
+    width: 200,
+    marginLeft: -100,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   goalIcon: { fontSize: 30 },
-  goalText: { color: '#fff', fontWeight: '700' },
+  goalText: { color: '#fff', fontWeight: '700', textAlign: 'center' },
 });
