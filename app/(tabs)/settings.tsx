@@ -63,7 +63,7 @@ export default function Settings() {
               style={styles.input}
               value={familyName}
               onChangeText={setFamilyName}
-              placeholder="The Zhengs"
+              placeholder="No.1 Family"
               placeholderTextColor={colors.muted}
               autoFocus
               onSubmitEditing={saveFamilyName}
@@ -117,7 +117,7 @@ export default function Settings() {
             setSaved(false);
           }}
           keyboardType="phone-pad"
-          placeholder="For Call on posts"
+          placeholder="123 456 7890"
           placeholderTextColor={colors.muted}
         />
         {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}

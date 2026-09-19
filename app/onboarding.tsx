@@ -106,7 +106,7 @@ export default function Onboarding() {
         style={[styles.input, nameMissing && styles.inputBad]}
         value={myName}
         onChangeText={setMyName}
-        placeholder="Trish"
+        placeholder="Alex"
         placeholderTextColor={colors.muted}
       />
       {nameMissing && <Text style={styles.error}>Your name is required.</Text>}
@@ -117,7 +117,7 @@ export default function Onboarding() {
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
-        placeholder="555 123 4567"
+        placeholder="123 456 7890"
         placeholderTextColor={colors.muted}
       />
       {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}
@@ -129,7 +129,7 @@ export default function Onboarding() {
             style={styles.input}
             value={familyName}
             onChangeText={setFamilyName}
-            placeholder={myName.trim() ? `${myName.trim()}'s family` : 'The Zhengs'}
+            placeholder="No.1 Family"
             placeholderTextColor={colors.muted}
           />
 
@@ -153,7 +153,7 @@ export default function Onboarding() {
             style={[styles.input, rewardMissing && styles.inputBad]}
             value={reward}
             onChangeText={setReward}
-            placeholder="Sunday dumplings"
+            placeholder="Pizza Night"
             placeholderTextColor={colors.muted}
           />
           {rewardMissing && (

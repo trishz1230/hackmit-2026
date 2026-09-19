@@ -64,7 +64,7 @@ export default function Settings() {
         style={styles.input}
         value={reward}
         onChangeText={setReward}
-        placeholder="Sunday dumplings"
+        placeholder="Pizza Night"
         placeholderTextColor={colors.muted}
       />
 

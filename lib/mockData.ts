@@ -2,20 +2,20 @@ import type { Group, Post, Profile, Reaction, Task } from './types';
 
 export const mockGroup: Group = {
   id: 'group-1',
-  name: 'The Zhangs',
+  name: 'No.1 Family',
   joinCode: 'FAM123',
   goal: 50,
   level: 1,
   cadence: 'daily',
-  rewardText: 'Pizza night, on Dad',
+  rewardText: 'Pizza Night',
   currentStreak: 0,
   awaitingNextGoal: false,
   cadenceApprovals: [],
 };
 
 export const mockProfiles: Profile[] = [
-  { id: 'user-1', name: 'You', groupId: 'group-1', avatar: '🙂', phone: '5551234567' },
-  { id: 'user-2', name: 'Mom', groupId: 'group-1', avatar: '👩', phone: '6786876636' },
+  { id: 'user-1', name: 'Alex', groupId: 'group-1', avatar: '🙂', phone: '1234567890' },
+  { id: 'user-2', name: 'Mom', groupId: 'group-1', avatar: '👩', phone: '5552345678' },
   { id: 'user-3', name: 'Dad', groupId: 'group-1', avatar: '👨', phone: '5553456789' },
   { id: 'user-4', name: 'Kevin', groupId: 'group-1', avatar: '🧑', phone: '5554567890' },
 ];
@@ -40,7 +40,7 @@ export const mockReactions: Reaction[] = [];
 export const familyReplies: Record<string, { kind: Post['kind']; content: string }[]> = {
   'user-2': [
     { kind: 'photo', content: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=60' },
-    { kind: 'text', content: 'Leftover dumplings again. No regrets.' },
+    { kind: 'text', content: 'Leftovers again. No regrets.' },
   ],
   'user-3': [
     { kind: 'photo', content: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=60' },

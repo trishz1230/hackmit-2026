@@ -47,7 +47,7 @@ export default function NextGoal() {
           setReward(t);
           setError('');
         }}
-        placeholder="Sunday dumplings"
+        placeholder="Pizza Night"
         placeholderTextColor={colors.muted}
       />
 
