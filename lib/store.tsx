@@ -191,6 +191,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const [missedReset, setMissedReset] = useState(false);
   /** Last level this browser saw, so every member gets the celebration. */
   const lastLevel = useRef<number | null>(null);
+  /** The family on screen, so a late reply for an old one can't overwrite it. */
+  const activeId = useRef<string | null>(null);
   /** Set by the demo button to clear the level without waiting for midnight. */
   const waived = useRef(false);
   const [periodWaived, setPeriodWaivedState] = useState(false);
@@ -208,8 +210,18 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /** Pulls the whole family in one go, then clears the level if everyone posted. */
-  const refresh = useCallback(async (groupId: string) => {
+  const refresh = useCallback(async (groupId: string, becomeActive = false) => {
+    if (becomeActive) {
+      activeId.current = groupId;
+      lastLevel.current = null;
+      setPosts([]);
+      setReactions([]);
+      setMembers([]);
+      setClearedLevel(null);
+    }
+    const stale = () => activeId.current !== null && activeId.current !== groupId;
     const current = await api.getGroup(groupId);
+    if (stale()) return;
     if (!current) {
       await api.rememberGroup(null);
       setGroup(null);
@@ -223,6 +235,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       api.getPosts(groupId),
       api.getReactions(groupId),
     ]);
+    if (stale()) return;
     setGroup(current);
     setMembers(nextMembers);
     setTask(nextTask);
@@ -244,7 +257,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       setUserId(await api.identity());
       const saved = await api.savedGroupId();
-      if (saved) await refresh(saved);
+      if (saved) await refresh(saved, true);
       setLoading(false);
     })();
   }, [refresh]);
@@ -342,13 +355,13 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       createGroup: (opts) => {
         run(async () => {
           const created = await api.createGroup(userId, opts);
-          await refresh(created.id);
+          await refresh(created.id, true);
         });
       },
       joinGroup: (opts) => {
         run(async () => {
           const joined = await api.joinGroup(userId, opts);
-          await refresh(joined.id);
+          await refresh(joined.id, true);
         });
       },
       updateSettings: (patch) => {
@@ -428,6 +441,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await api.saveProfile(userId, me.name, null);
           await api.rememberGroup(null);
           lastLevel.current = null;
+          activeId.current = null;
           setGroup(null);
           setMembers([]);
           setPosts([]);
@@ -460,6 +474,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await api.saveProfile(userId, me.name, null);
           await api.rememberGroup(null);
           lastLevel.current = null;
+          activeId.current = null;
           setGroup(null);
           setMembers([]);
           setPosts([]);
