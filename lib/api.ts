@@ -24,6 +24,7 @@ const toGroup = (r: Row): Group => ({
   cadence: (str(r.cadence) || 'daily') as Cadence,
   rewardText: str(r.reward_text),
   currentStreak: num(r.current_streak),
+  awaitingNextGoal: Boolean(r.awaiting_next_goal),
 });
 
 const toProfile = (r: Row): Profile => ({
@@ -39,6 +40,7 @@ const toTask = (r: Row): Task => ({
   groupId: str(r.group_id),
   prompt: str(r.prompt),
   level: num(r.level),
+  cycleDate: str(r.cycle_date) || undefined,
 });
 
 const toPost = (r: Row): Post => ({

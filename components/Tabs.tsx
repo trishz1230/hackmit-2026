@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { colors, radius, spacing } from '../lib/theme';
 
 const TABS = [
-  { key: 'family', label: 'Family task', href: '/' },
+  { key: 'family', label: 'Family task', href: '/(tabs)/feed' },
   { key: 'hangout', label: 'Hangout', href: '/hangout' },
 ] as const;
 

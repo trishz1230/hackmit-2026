@@ -9,11 +9,12 @@ export const mockGroup: Group = {
   cadence: 'daily',
   rewardText: 'Pizza night, on Dad',
   currentStreak: 0,
+  awaitingNextGoal: false,
 };
 
 export const mockProfiles: Profile[] = [
   { id: 'user-1', name: 'You', groupId: 'group-1', avatar: '🙂', phone: '5551234567' },
-  { id: 'user-2', name: 'Mom', groupId: 'group-1', avatar: '👩', phone: '5552345678' },
+  { id: 'user-2', name: 'Mom', groupId: 'group-1', avatar: '👩', phone: '6786876636' },
   { id: 'user-3', name: 'Dad', groupId: 'group-1', avatar: '👨', phone: '5553456789' },
   { id: 'user-4', name: 'Kevin', groupId: 'group-1', avatar: '🧑', phone: '5554567890' },
 ];

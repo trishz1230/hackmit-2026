@@ -8,7 +8,8 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from './api';
-import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask } from './mockData';
+import { clampLevelCount, todayKey } from './levels';
+import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { generatePrompt } from './prompts';
 import { isSupabaseConfigured } from './supabase';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
@@ -19,8 +20,10 @@ export type Channel = 'task' | 'hangout';
 const CURRENT_USER_ID = 'user-1';
 
 /** Mock family with the person at this browser renamed. */
-const withMyName = (myName: string): Profile[] =>
-  mockProfiles.map((p) => (p.id === CURRENT_USER_ID ? { ...p, name: myName } : p));
+const withMe = (myName: string, phone?: string): Profile[] =>
+  mockProfiles.map((p) =>
+    p.id === CURRENT_USER_ID ? { ...p, name: myName, phone: phone ?? p.phone } : p
+  );
 /** How long each simulated family member takes to answer the task (mock only). */
 const REPLY_DELAY_MS = 2500;
 
@@ -35,6 +38,9 @@ type State = {
   hangoutPosts: Post[];
   reactions: Reaction[];
   hasPostedThisCycle: boolean;
+  everyonePostedThisCycle: boolean;
+  missedReset: boolean;
+  unseenPosts: Post[];
   /** Members who still owe a post for the current task. */
   pending: Profile[];
   /** Level just cleared, for the celebration overlay; null once dismissed. */
@@ -49,14 +55,26 @@ type State = {
   createGroup: (opts: CreateOptions) => void;
   joinGroup: (opts: JoinOptions) => void;
   updateSettings: (patch: { cadence: Cadence; rewardText: string; goal: number }) => void;
-  addPost: (kind: Post['kind'], content: string, channel?: Channel) => void;
+  addPost: (kind: Post['kind'], content: string, channel?: Channel) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   reactionsFor: (postId: string) => Reaction[];
   memberById: (id: string) => Profile | undefined;
+  updateProfile: (input: { name: string; phone?: string }) => void;
+  leaveGroup: () => void;
+  startNextGoal: (reward: string, levelCount: number) => void;
+  simulateMissedDay: () => void;
+  markPostSeen: (postId: string) => void;
   restart: () => void;
 };
 
 const AppContext = createContext<State | null>(null);
+
+const emptyMe = (userId: string, groupId = ''): Profile => ({
+  id: userId,
+  name: 'You',
+  groupId,
+  avatar: '🙂',
+});
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return isSupabaseConfigured ? (
@@ -78,6 +96,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const [clearedLevel, setClearedLevel] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seenPostIds, setSeenPostIds] = useState<string[]>([]);
+  const [missedReset, setMissedReset] = useState(false);
   /** Last level this browser saw, so every member gets the celebration. */
   const lastLevel = useRef<number | null>(null);
 
@@ -118,7 +138,6 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     await api.clearLevelIfDone(current, nextMembers, nextTask, nextPosts);
   }, []);
 
-  // Restore this device's identity and last family on boot.
   useEffect(() => {
     void (async () => {
       setUserId(await api.identity());
@@ -128,21 +147,23 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [refresh]);
 
-  // Realtime: any change anyone makes re-pulls the family.
   useEffect(() => {
     if (!group) return;
     const groupId = group.id;
     return api.subscribeToGroup(groupId, () => void refresh(groupId));
   }, [group?.id, refresh]);
 
-  const me =
-    members.find((m) => m.id === userId) ??
-    { id: userId, name: 'You', groupId: group?.id ?? '', avatar: '🙂' };
+  const me = members.find((m) => m.id === userId) ?? emptyMe(userId, group?.id ?? '');
   const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
   const hasPostedThisCycle = postedIds.includes(userId);
   const pending = members.filter((m) => !postedIds.includes(m.id));
+  const everyonePostedThisCycle =
+    members.length > 0 && members.every((m) => postedIds.includes(m.id));
   const taskPosts = posts.filter((p) => p.taskId !== '');
   const hangoutPosts = posts.filter((p) => p.taskId === '');
+  const unseenPosts = posts.filter(
+    (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
+  );
 
   const value = useMemo<State>(
     () => ({
@@ -154,6 +175,9 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       hangoutPosts,
       reactions,
       hasPostedThisCycle,
+      everyonePostedThisCycle,
+      missedReset,
+      unseenPosts,
       pending,
       clearedLevel,
       isLive: true,
@@ -180,7 +204,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
         });
       },
       addPost: (kind, content, channel = 'task') => {
-        if (!group) return;
+        if (!group) return { completedGoal: false };
         run(async () => {
           await api.createPost({
             taskId: channel === 'hangout' ? null : task.id,
@@ -191,6 +215,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           });
           await refresh(group.id);
         });
+        return { completedGoal: false };
       },
       addReaction: (postId, kind, val) => {
         if (!group) return;
@@ -201,6 +226,39 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       },
       reactionsFor: (postId) => reactions.filter((r) => r.postId === postId),
       memberById: (id) => members.find((m) => m.id === id),
+      updateProfile: ({ name, phone }) => {
+        run(async () => {
+          await api.saveProfile(userId, name.trim() || me.name, group?.id ?? null, phone);
+          if (group) await refresh(group.id);
+        });
+      },
+      leaveGroup: () => {
+        run(async () => {
+          await api.saveProfile(userId, me.name, null);
+          await api.rememberGroup(null);
+          lastLevel.current = null;
+          setGroup(null);
+          setMembers([]);
+          setPosts([]);
+          setReactions([]);
+          setClearedLevel(null);
+        });
+      },
+      startNextGoal: (reward, levelCount) => {
+        if (!group) return;
+        run(async () => {
+          await api.updateGroup(group.id, {
+            cadence: group.cadence,
+            rewardText: reward.trim(),
+            goal: clampLevelCount(levelCount),
+          });
+          await refresh(group.id);
+        });
+      },
+      simulateMissedDay: () => setMissedReset(true),
+      markPostSeen: (postId) => {
+        setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
+      },
       restart: () => {
         run(async () => {
           await api.saveProfile(userId, me.name, null);
@@ -223,6 +281,9 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       hangoutPosts,
       reactions,
       hasPostedThisCycle,
+      everyonePostedThisCycle,
+      missedReset,
+      unseenPosts,
       pending,
       clearedLevel,
       loading,
@@ -243,6 +304,7 @@ const newTask = (prompt: string, level: number): Task => ({
   groupId: mockGroup.id,
   prompt,
   level,
+  cycleDate: todayKey(),
 });
 
 function MockProvider({ children }: { children: React.ReactNode }) {
@@ -252,8 +314,11 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [reactions, setReactions] = useState<Reaction[]>(mockReactions);
   const [clearedLevel, setClearedLevel] = useState<number | null>(null);
+  const [missedReset, setMissedReset] = useState(false);
+  const [seenPostIds, setSeenPostIds] = useState<string[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const seenPrompts = useRef<string[]>([mockTask.prompt]);
+  const missChecked = useRef<string | null>(null);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -263,30 +328,62 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => clearTimers, [clearTimers]);
 
   const me = members.find((m) => m.id === CURRENT_USER_ID) ?? mockProfiles[0];
-  const postedIds = posts.filter((p) => p.taskId === task.id).map((p) => p.userId);
+  const cyclePosts = posts.filter((p) => p.taskId === task.id);
+  const postedIds = cyclePosts.map((p) => p.userId);
   const hasPostedThisCycle = postedIds.includes(me.id);
   const pending = members.filter((m) => !postedIds.includes(m.id));
+  const everyonePostedThisCycle =
+    members.length > 0 && members.every((m) => postedIds.includes(m.id));
   const taskPosts = posts.filter((p) => p.taskId !== '');
   const hangoutPosts = posts.filter((p) => p.taskId === '');
+  const unseenPosts = posts.filter(
+    (p) => p.userId !== me.id && !seenPostIds.includes(p.id) && !p.id.startsWith('stub-')
+  );
 
-  /** Everyone answered, so the family clears the level and draws a new task. */
+  useEffect(() => {
+    if (!group || group.awaitingNextGoal) return;
+    const today = todayKey();
+    const cycleDate = task.cycleDate ?? today;
+    if (cycleDate >= today) return;
+    const key = `${task.id}:${cycleDate}`;
+    if (missChecked.current === key) return;
+    missChecked.current = key;
+
+    if (everyonePostedThisCycle) {
+      setTask(newTask(task.prompt, task.level));
+      return;
+    }
+
+    setMissedReset(true);
+    setGroup({ ...group, level: 1, currentStreak: 0, awaitingNextGoal: false });
+    setTask(newTask(taskPrompts[0], 1));
+  }, [group, task, everyonePostedThisCycle]);
+
   const completeLevel = useCallback(async () => {
     const prompt = await generatePrompt(seenPrompts.current.slice(-5));
     seenPrompts.current.push(prompt);
-    let nextLevel = 1;
+    let completedGoal = false;
+    let nextLevel = 0;
     setGroup((g) => {
-      if (!g) return g;
+      if (!g || g.awaitingNextGoal) return g;
       setClearedLevel(g.level);
-      nextLevel = Math.min(g.level + 1, g.goal);
-      return { ...g, level: nextLevel, currentStreak: g.currentStreak + 1 };
+      nextLevel = g.level + 1;
+      completedGoal = nextLevel > g.goal;
+      return {
+        ...g,
+        level: completedGoal ? g.goal : nextLevel,
+        currentStreak: g.currentStreak + 1,
+        awaitingNextGoal: completedGoal,
+      };
     });
-    setTask(newTask(prompt, nextLevel));
+    if (!completedGoal) setTask(newTask(prompt, nextLevel));
   }, []);
 
   const appendPost = useCallback((userId: string, kind: Post['kind'], content: string, taskId: string) => {
+    const id = `post-${userId}-${Date.now()}`;
     setPosts((prev) => [
       {
-        id: `post-${userId}-${Date.now()}`,
+        id,
         taskId,
         groupId: mockGroup.id,
         userId,
@@ -296,6 +393,9 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       },
       ...prev,
     ]);
+    if (userId === CURRENT_USER_ID) {
+      setSeenPostIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    }
   }, []);
 
   const value = useMemo<State>(
@@ -308,41 +408,51 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       hangoutPosts,
       reactions,
       hasPostedThisCycle,
+      everyonePostedThisCycle,
+      missedReset,
+      unseenPosts,
       pending,
       clearedLevel,
       isLive: false,
       loading: false,
       error: null,
       dismissCelebration: () => setClearedLevel(null),
-      createGroup: ({ myName, goal, cadence, rewardText }) => {
+      createGroup: ({ myName, phone, goal, cadence, rewardText }) => {
         setGroup({
           ...mockGroup,
           name: `${myName}'s family`,
-          goal,
+          goal: clampLevelCount(goal),
           cadence,
           rewardText: rewardText || mockGroup.rewardText,
+          level: 1,
+          currentStreak: 0,
+          awaitingNextGoal: false,
         });
-        setMembers(withMyName(myName));
+        setMembers(withMe(myName, phone));
+        setMissedReset(false);
+        setPosts([]);
+        setSeenPostIds([]);
+        setTask(newTask(mockTask.prompt, 1));
       },
-      joinGroup: ({ myName }) => {
-        setGroup(mockGroup);
-        setMembers(withMyName(myName));
+      joinGroup: ({ myName, phone }) => {
+        setGroup({ ...mockGroup, awaitingNextGoal: false });
+        setMembers(withMe(myName, phone));
+        setMissedReset(false);
+        setSeenPostIds(mockPosts.map((p) => p.id));
       },
       updateSettings: ({ cadence, rewardText, goal }) => {
-        setGroup((g) => (g ? { ...g, cadence, rewardText, goal } : g));
+        setGroup((g) => (g ? { ...g, cadence, rewardText, goal: clampLevelCount(goal) } : g));
       },
       addPost: (kind, content, channel = 'task') => {
         if (channel === 'hangout') {
           appendPost(me.id, kind, content, '');
-          return;
-        }
-        if (hasPostedThisCycle) {
-          appendPost(me.id, kind, content, task.id);
-          return;
+          return { completedGoal: false };
         }
         appendPost(me.id, kind, content, task.id);
+        setMissedReset(false);
 
-        // The rest of the family answers the same task, then the level clears.
+        if (hasPostedThisCycle) return { completedGoal: false };
+
         const others = members.filter((m) => m.id !== me.id);
         const cycleTaskId = task.id;
         others.forEach((member, i) => {
@@ -353,13 +463,48 @@ function MockProvider({ children }: { children: React.ReactNode }) {
             setTimeout(() => appendPost(member.id, reply.kind, reply.content, cycleTaskId), REPLY_DELAY_MS * (i + 1))
           );
         });
+        const willComplete = Boolean(group && !group.awaitingNextGoal && group.level >= group.goal);
         timers.current.push(setTimeout(() => void completeLevel(), REPLY_DELAY_MS * (others.length + 1)));
+        return { completedGoal: willComplete };
       },
       addReaction: (postId, kind, val) => {
         setReactions((prev) => [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind, value: val }]);
       },
       reactionsFor: (postId) => reactions.filter((r) => r.postId === postId),
       memberById: (id) => members.find((m) => m.id === id),
+      updateProfile: ({ name, phone }) => {
+        setMembers((prev) =>
+          prev.map((m) => (m.id === CURRENT_USER_ID ? { ...m, name: name.trim() || m.name, phone } : m))
+        );
+      },
+      leaveGroup: () => {
+        clearTimers();
+        setGroup(null);
+        setMissedReset(false);
+      },
+      startNextGoal: (reward, levelCount) => {
+        if (!group) return;
+        setGroup({
+          ...group,
+          rewardText: reward.trim(),
+          goal: clampLevelCount(levelCount),
+          level: 1,
+          currentStreak: 0,
+          awaitingNextGoal: false,
+        });
+        setMissedReset(false);
+        setTask(newTask(taskPrompts[0], 1));
+      },
+      simulateMissedDay: () => {
+        if (!group) return;
+        clearTimers();
+        setMissedReset(true);
+        setGroup({ ...group, level: 1, currentStreak: 0, awaitingNextGoal: false });
+        setTask(newTask(taskPrompts[0], 1));
+      },
+      markPostSeen: (postId) => {
+        setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
+      },
       restart: () => {
         clearTimers();
         seenPrompts.current = [mockTask.prompt];
@@ -369,6 +514,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setPosts(mockPosts);
         setReactions(mockReactions);
         setClearedLevel(null);
+        setMissedReset(false);
       },
     }),
     [
@@ -380,6 +526,9 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       hangoutPosts,
       reactions,
       hasPostedThisCycle,
+      everyonePostedThisCycle,
+      missedReset,
+      unseenPosts,
       pending,
       clearedLevel,
       appendPost,

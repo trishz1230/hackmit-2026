@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../lib/types';
 
 const CODE_LENGTH = 6;
-const MIN_LEVELS = 3;
-const MAX_LEVELS = 20;
 
 export default function Onboarding() {
   const router = useRouter();
@@ -37,7 +36,7 @@ export default function Onboarding() {
           {group.goal} levels to “{group.rewardText}” · one level every {CADENCE_LABELS[group.cadence]}
         </Text>
         <Pressable style={styles.cta} onPress={() => router.replace('/')}>
-          <Text style={styles.ctaText}>Go to the feed</Text>
+          <Text style={styles.ctaText}>Go to the map</Text>
         </Pressable>
       </View>
     );
@@ -55,13 +54,12 @@ export default function Onboarding() {
     const who = myName.trim();
     const tel = phone.trim() || undefined;
     if (mode === 'create') {
-      const clamped = Math.min(MAX_LEVELS, Math.max(MIN_LEVELS, Number(levels) || MIN_LEVELS));
       createGroup({
         myName: who,
         phone: tel,
         cadence,
         rewardText: reward.trim() || 'a family treat',
-        goal: clamped,
+        goal: clampLevelCount(Number(levels)),
       });
     } else {
       joinGroup({ myName: who, phone: tel, code: trimmedCode.toUpperCase() });
@@ -134,7 +132,6 @@ export default function Onboarding() {
             placeholder="Sunday dumplings"
             placeholderTextColor={colors.muted}
           />
-
           <Text style={styles.label}>Levels to the reward ({MIN_LEVELS}–{MAX_LEVELS})</Text>
           <TextInput
             style={styles.input}

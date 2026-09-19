@@ -32,6 +32,7 @@ export type Group = {
   cadence: Cadence;
   rewardText: string;
   currentStreak: number;
+  awaitingNextGoal: boolean;
 };
 
 export type Profile = {
@@ -48,6 +49,8 @@ export type Task = {
   prompt: string;
   /** The level this task clears. */
   level: number;
+  /** Calendar day this cycle started (YYYY-MM-DD). Used to detect a missed day. */
+  cycleDate?: string;
 };
 
 export type Post = {
