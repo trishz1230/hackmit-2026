@@ -3,10 +3,11 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { Redirect, useRouter } from 'expo-router';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
+import { CADENCE_LABELS, type Cadence } from '../../lib/types';
 
 export default function Settings() {
   const router = useRouter();
-  const { group, members, me, updateProfile, leaveGroup, simulateMissedDay } = useApp();
+  const { group, members, me, updateProfile, updateSettings, leaveGroup, simulateMissedDay } = useApp();
   const [name, setName] = useState(me.name);
   const [phone, setPhone] = useState(me.phone ?? '');
   const [saved, setSaved] = useState(false);
@@ -66,6 +67,30 @@ export default function Settings() {
       </View>
 
       <View style={styles.card}>
+        <Text style={styles.label}>Reminder frequency</Text>
+        <Text style={styles.meta}>
+          How often the family gets nudged about the current task. It never blocks posting.
+        </Text>
+        <View style={styles.picker}>
+          {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (
+            <Pressable
+              key={c}
+              onPress={() =>
+                updateSettings({ cadence: c, rewardText: group.rewardText, goal: group.goal })
+              }
+              style={[styles.pickerBtn, group.cadence === c && styles.pickerBtnActive]}
+            >
+              <Text
+                style={[styles.pickerText, group.cadence === c && styles.pickerTextActive]}
+              >
+                {CADENCE_LABELS[c]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.card}>
         <Text style={styles.label}>Members</Text>
         {members.map((m) => (
           <Text key={m.id} style={styles.member}>
@@ -77,7 +102,7 @@ export default function Settings() {
       </View>
 
       <Pressable style={styles.demo} onPress={() => router.push('/settings')}>
-        <Text style={styles.demoText}>Family goal & reminders</Text>
+        <Text style={styles.demoText}>Reward & level goal</Text>
       </Pressable>
 
       <Pressable style={styles.demo} onPress={simulateMissedDay}>
@@ -138,6 +163,19 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: '#fff', fontWeight: '700' },
   member: { fontSize: 16, color: colors.text, paddingVertical: 2 },
+  picker: { flexDirection: 'row', gap: spacing.xs },
+  pickerBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+  },
+  pickerBtnActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+  pickerText: { color: colors.muted, fontWeight: '600' },
+  pickerTextActive: { color: colors.text },
   leave: { alignItems: 'center', paddingVertical: spacing.sm },
   leaveText: { color: colors.accent, fontWeight: '700' },
   demo: { alignItems: 'center', paddingVertical: spacing.sm },
