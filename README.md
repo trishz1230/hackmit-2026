@@ -27,10 +27,34 @@ It runs with mock data out of the box — no accounts or keys needed.
 | `lib/api.ts` | backend | Every Supabase read/write |
 | `lib/schema.sql` | backend | Database tables to run in the Supabase SQL editor |
 | `lib/nag.ts` | shared | Repeating, non-dismissable Android reminder |
-| `lib/mockData.ts` | shared | Seed data for the demo feed |
+| `lib/mockData.ts` | shared | Seed data, fallback prompts, scripted family replies |
+| `lib/prompts.ts` | shared | Next task prompt, from OpenAI or the fallback list |
 
 The split is by layer, not by screen: one person works in `lib/`, the other in
 `app/` + `components/`, so you rarely touch the same file.
+
+## The game loop
+
+The family starts at level 1 with an empty feed. Everyone has to post for the
+current task; when the last member posts, the level and the streak both go up, a
+new prompt is drawn, and the feed clears. The feed shows who it's still waiting
+on, and "Restart game" wipes everything back to onboarding.
+
+For the demo, the other family members are scripted: after you post, they reply
+one by one on a timer (`REPLY_DELAY_MS` and `familyReplies`). Delete that block
+in `lib/store.tsx` once real members are posting through Supabase.
+
+## Generated prompts
+
+New prompts come from the OpenAI API when a key is present:
+
+```bash
+cp .env.example .env    # then paste your key into EXPO_PUBLIC_OPENAI_API_KEY
+```
+
+Without a key it falls back to `taskPrompts` in `lib/mockData.ts`, so the app
+works with no setup. The key is bundled into the client, which is fine for a
+demo but should move behind a Supabase Edge Function before this ships.
 
 ## Connecting the real backend
 

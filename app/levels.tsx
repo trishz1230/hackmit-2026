@@ -14,9 +14,9 @@ export default function Levels() {
   const status =
     selected === null
       ? ''
-      : selected <= group.level
+      : selected < group.level
         ? 'Cleared — your family posted that day.'
-        : selected === group.level + 1
+        : selected === group.level
           ? "You're here. Everyone has to post to clear it."
           : 'Locked. Clear the levels before it first.';
 
