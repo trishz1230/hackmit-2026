@@ -14,6 +14,9 @@ const ANON_KEY = 'sb_publishable_4httacI9cXrsOtIWTY6Xvw_3ohO834I';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL || PROJECT_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ANON_KEY;
 
+export const supabaseUrl = url;
+export const supabaseAnonKey = anonKey;
+
 /** When false the app runs entirely on mock data, so it always boots. */
 export const isSupabaseConfigured = Boolean(url && anonKey);
 

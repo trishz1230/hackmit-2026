@@ -6,9 +6,7 @@ import type { Cadence, Post, Task } from './types';
  */
 export function postsForTask(posts: Post[], task: Task): Post[] {
   const from = task.createdAt ? Date.parse(task.createdAt) : 0;
-  return posts.filter(
-    (p) => p.taskId === task.id && Date.parse(p.createdAt) >= from - 60_000
-  );
+  return posts.filter((p) => p.taskId === task.id && Date.parse(p.createdAt) >= from);
 }
 
 export const MIN_LEVELS = 3;

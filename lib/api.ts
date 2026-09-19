@@ -7,7 +7,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { levelUnlocksAt, postsForTask } from './levels';
-import { getSupabase } from './supabase';
+import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabase';
 import { generatePrompt } from './prompts';
 import { sendExpoPush } from './push';
 import { nudgeContent } from './nudge';
@@ -392,6 +392,25 @@ export async function getCurrentTask(group: Group): Promise<Task> {
  * and level 1 is re-issued with a new prompt, so the restart is a fresh round
  * rather than the one they already finished.
  */
+/**
+ * The database's clock, since post timestamps are written by it. A device
+ * running fast would otherwise re-issue a task "in the future" and refuse the
+ * answers posted right after it.
+ */
+async function serverNow(): Promise<string> {
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+      method: 'HEAD',
+      headers: { apikey: supabaseAnonKey },
+    });
+    const stamp = res.headers.get('date');
+    if (stamp) return new Date(stamp).toISOString();
+  } catch {
+    // Offline or a proxy that strips the header: the device clock will do.
+  }
+  return new Date().toISOString();
+}
+
 export async function resetForMissedPeriod(group: Group): Promise<void> {
   const sb = getSupabase();
   const { error } = await sb
@@ -405,7 +424,7 @@ export async function resetForMissedPeriod(group: Group): Promise<void> {
   const prompt = await generatePrompt(recent.slice(-5));
   await sb
     .from('tasks')
-    .update({ prompt, created_at: new Date().toISOString() })
+    .update({ prompt, created_at: await serverNow() })
     .eq('group_id', group.id)
     .eq('level', 1);
 }
