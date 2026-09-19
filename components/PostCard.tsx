@@ -17,6 +17,7 @@ export function PostCard({
   prompt,
   onPress,
   onLike,
+  liked,
 }: {
   post: Post;
   author?: Profile;
@@ -24,6 +25,7 @@ export function PostCard({
   prompt?: string;
   onPress: () => void;
   onLike: () => void;
+  liked: boolean;
 }) {
   const likes = reactions.filter((r) => r.kind === 'like').length;
   const emojis = reactions.filter((r) => r.kind === 'emoji').map((r) => r.value);
@@ -46,7 +48,9 @@ export function PostCard({
 
       <View style={styles.footer}>
         <Pressable onPress={onLike} hitSlop={8}>
-          <Text style={styles.action}>❤️ {likes}</Text>
+          <Text style={[styles.action, liked && styles.liked]}>
+            {liked ? '❤️' : '🤍'} {likes}
+          </Text>
         </Pressable>
         <Text style={styles.action}>💬 {comments}</Text>
         {emojis.length > 0 && <Text style={styles.action}>{emojis.join(' ')}</Text>}
@@ -74,4 +78,5 @@ const styles = StyleSheet.create({
   prompt: { marginTop: spacing.sm, fontSize: 13, color: colors.muted, lineHeight: 18 },
   footer: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
   action: { color: colors.muted, fontSize: 14 },
+  liked: { color: colors.accent, fontWeight: '700' },
 });

@@ -75,6 +75,9 @@ type State = {
   cancelCadenceChange: () => void;
   addPost: (kind: Post['kind'], content: string, channel?: Channel) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
+  /** Likes are one per member: liking again takes it back. */
+  toggleLike: (postId: string) => void;
+  likedByMe: (postId: string) => boolean;
   reactionsFor: (postId: string) => Reaction[];
   memberById: (id: string) => Profile | undefined;
   updateProfile: (input: { name: string; phone?: string }) => void;
@@ -361,6 +364,19 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
+      toggleLike: (postId) => {
+        if (!group) return;
+        const mine = reactions.some(
+          (r) => r.postId === postId && r.kind === 'like' && r.userId === userId
+        );
+        run(async () => {
+          if (mine) await api.removeReaction(postId, userId, 'like');
+          else await api.addReaction({ postId, userId, kind: 'like', value: '1' });
+          await refresh(group.id);
+        });
+      },
+      likedByMe: (postId) =>
+        reactions.some((r) => r.postId === postId && r.kind === 'like' && r.userId === userId),
       reactionsFor: (postId) => reactions.filter((r) => r.postId === postId),
       memberById: (id) => members.find((m) => m.id === id),
       updateProfile: ({ name, phone }) => {
@@ -704,6 +720,17 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       addReaction: (postId, kind, val) => {
         setReactions((prev) => [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind, value: val }]);
       },
+      toggleLike: (postId) => {
+        setReactions((prev) => {
+          const mine = prev.find(
+            (r) => r.postId === postId && r.kind === 'like' && r.userId === me.id
+          );
+          if (mine) return prev.filter((r) => r !== mine);
+          return [...prev, { id: `r-${Date.now()}`, postId, userId: me.id, kind: 'like', value: '1' }];
+        });
+      },
+      likedByMe: (postId) =>
+        reactions.some((r) => r.postId === postId && r.kind === 'like' && r.userId === me.id),
       reactionsFor: (postId) => reactions.filter((r) => r.postId === postId),
       memberById: (id) => members.find((m) => m.id === id),
       updateProfile: ({ name, phone }) => {

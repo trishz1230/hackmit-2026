@@ -377,6 +377,21 @@ export async function getReactions(groupId: string): Promise<Reaction[]> {
   return (data ?? []).map(toReaction);
 }
 
+export async function removeReaction(
+  postId: string,
+  userId: string,
+  kind: Reaction['kind']
+): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('reactions')
+    .delete()
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+    .eq('kind', kind);
+  if (error) throw error;
+}
+
 export async function addReaction(input: Omit<Reaction, 'id'>): Promise<void> {
   const sb = getSupabase();
   const { error } = await sb

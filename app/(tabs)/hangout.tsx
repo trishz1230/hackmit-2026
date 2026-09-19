@@ -9,7 +9,8 @@ import { colors, radius, spacing } from '../../lib/theme';
 /** Anything-goes feed: posts here never count toward a level. */
 export default function Hangout() {
   const router = useRouter();
-  const { group, hangoutPosts, me, reactionsFor, memberById, addReaction, loading } = useApp();
+  const { group, hangoutPosts, reactionsFor, memberById, toggleLike, likedByMe, loading } =
+    useApp();
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
@@ -42,7 +43,8 @@ export default function Hangout() {
             author={memberById(item.userId)}
             reactions={reactionsFor(item.id)}
             onPress={() => router.push(`/post/${item.id}`)}
-            onLike={() => addReaction(item.id, 'like', me.id)}
+            onLike={() => toggleLike(item.id)}
+            liked={likedByMe(item.id)}
           />
         )}
         contentContainerStyle={{ paddingBottom: spacing.lg }}

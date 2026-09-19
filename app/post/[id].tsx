@@ -15,7 +15,7 @@ function e164(phone: string) {
 
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, hangoutPosts, memberById, reactionsFor, addReaction, markPostSeen, promptFor } = useApp();
+  const { posts, hangoutPosts, memberById, reactionsFor, addReaction, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
   const [comment, setComment] = useState('');
 
   useEffect(() => {
@@ -30,6 +30,7 @@ export default function PostDetail() {
   const reactions = reactionsFor(post.id);
   const comments = reactions.filter((r) => r.kind === 'comment');
   const likes = reactions.filter((r) => r.kind === 'like').length;
+  const liked = likedByMe(post.id);
   const emojis = reactions.filter((r) => r.kind === 'emoji');
 
   const call = () => {
@@ -61,8 +62,13 @@ export default function PostDetail() {
       {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <View style={styles.actions}>
-        <Pressable style={styles.action} onPress={() => addReaction(post.id, 'like', '1')}>
-          <Text style={styles.actionText}>❤️ Like ({likes})</Text>
+        <Pressable
+          style={[styles.action, liked && styles.actionOn]}
+          onPress={() => toggleLike(post.id)}
+        >
+          <Text style={[styles.actionText, liked && styles.actionTextOn]}>
+            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'} ({likes})
+          </Text>
         </Pressable>
         <Pressable style={styles.action} onPress={call} disabled={!author?.phone}>
           <Text style={styles.actionText}>📞 Call</Text>
@@ -129,7 +135,9 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     alignItems: 'center',
   },
+  actionOn: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
   actionText: { color: colors.text, fontWeight: '600', fontSize: 13, textAlign: 'center' },
+  actionTextOn: { color: colors.accent, fontWeight: '700' },
   emojiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   emoji: {
     backgroundColor: colors.accentSoft,
