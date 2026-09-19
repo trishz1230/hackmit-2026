@@ -32,6 +32,11 @@ type State = {
   members: Profile[];
   me: Profile;
   task: Task;
+  /** Every task this family has had, so cleared levels and the feed still show the prompt. */
+  tasks: Task[];
+  promptFor: (taskId: string) => string | undefined;
+  taskForLevel: (level: number) => Task | undefined;
+  myPostForLevel: (level: number) => Post | undefined;
   /** Answers to the current level's task. */
   posts: Post[];
   /** Free posts that don't count toward the level. */
@@ -76,6 +81,11 @@ const emptyMe = (userId: string, groupId = ''): Profile => ({
   avatar: '🙂',
 });
 
+const promptForTasks = (tasks: Task[], taskId: string) => tasks.find((t) => t.id === taskId)?.prompt;
+
+const latestTaskForLevel = (tasks: Task[], level: number) =>
+  [...tasks].reverse().find((t) => t.level === level);
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return isSupabaseConfigured ? (
     <LiveProvider>{children}</LiveProvider>
@@ -91,6 +101,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Profile[]>([]);
   const [task, setTask] = useState<Task>(mockTask);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [clearedLevel, setClearedLevel] = useState<number | null>(null);
@@ -118,15 +129,17 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       lastLevel.current = null;
       return;
     }
-    const [nextMembers, nextTask, nextPosts, nextReactions] = await Promise.all([
+    const [nextMembers, nextTask, nextTasks, nextPosts, nextReactions] = await Promise.all([
       api.getMembers(groupId),
       api.getCurrentTask(current),
+      api.getTasks(groupId),
       api.getPosts(groupId),
       api.getReactions(groupId),
     ]);
     setGroup(current);
     setMembers(nextMembers);
     setTask(nextTask);
+    setTasks(nextTasks.some((t) => t.id === nextTask.id) ? nextTasks : [...nextTasks, nextTask]);
     setPosts(nextPosts);
     setReactions(nextReactions);
 
@@ -171,6 +184,14 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
+      tasks,
+      promptFor: (taskId) => promptForTasks(tasks, taskId),
+      taskForLevel: (level) => latestTaskForLevel(tasks, level),
+      myPostForLevel: (level) => {
+        const remembered = latestTaskForLevel(tasks, level);
+        if (!remembered) return undefined;
+        return taskPosts.find((p) => p.taskId === remembered.id && p.userId === me.id);
+      },
       posts: taskPosts,
       hangoutPosts,
       reactions,
@@ -311,6 +332,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Profile[]>(mockProfiles);
   const [task, setTask] = useState<Task>(mockTask);
+  const [tasks, setTasks] = useState<Task[]>([mockTask]);
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [reactions, setReactions] = useState<Reaction[]>(mockReactions);
   const [clearedLevel, setClearedLevel] = useState<number | null>(null);
@@ -319,6 +341,11 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const seenPrompts = useRef<string[]>([mockTask.prompt]);
   const missChecked = useRef<string | null>(null);
+
+  const rememberTask = useCallback((next: Task, resetHistory = false) => {
+    setTask(next);
+    setTasks((prev) => (resetHistory ? [next] : [...prev.filter((t) => t.id !== next.id), next]));
+  }, []);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -350,14 +377,14 @@ function MockProvider({ children }: { children: React.ReactNode }) {
     missChecked.current = key;
 
     if (everyonePostedThisCycle) {
-      setTask(newTask(task.prompt, task.level));
+      rememberTask(newTask(task.prompt, task.level));
       return;
     }
 
     setMissedReset(true);
     setGroup({ ...group, level: 1, currentStreak: 0, awaitingNextGoal: false });
-    setTask(newTask(taskPrompts[0], 1));
-  }, [group, task, everyonePostedThisCycle]);
+    rememberTask(newTask(taskPrompts[0], 1));
+  }, [group, task, everyonePostedThisCycle, rememberTask]);
 
   const completeLevel = useCallback(async () => {
     const prompt = await generatePrompt(seenPrompts.current.slice(-5));
@@ -376,8 +403,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         awaitingNextGoal: completedGoal,
       };
     });
-    if (!completedGoal) setTask(newTask(prompt, nextLevel));
-  }, []);
+    if (!completedGoal) rememberTask(newTask(prompt, nextLevel));
+  }, [rememberTask]);
 
   const appendPost = useCallback((userId: string, kind: Post['kind'], content: string, taskId: string) => {
     const id = `post-${userId}-${Date.now()}`;
@@ -404,6 +431,14 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
+      tasks,
+      promptFor: (taskId) => promptForTasks(tasks, taskId),
+      taskForLevel: (level) => latestTaskForLevel(tasks, level),
+      myPostForLevel: (level) => {
+        const remembered = latestTaskForLevel(tasks, level);
+        if (!remembered) return undefined;
+        return taskPosts.find((p) => p.taskId === remembered.id && p.userId === me.id);
+      },
       posts: taskPosts,
       hangoutPosts,
       reactions,
@@ -432,13 +467,14 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setMissedReset(false);
         setPosts([]);
         setSeenPostIds([]);
-        setTask(newTask(mockTask.prompt, 1));
+        rememberTask(newTask(mockTask.prompt, 1), true);
       },
       joinGroup: ({ myName, phone }) => {
         setGroup({ ...mockGroup, awaitingNextGoal: false });
         setMembers(withMe(myName, phone));
         setMissedReset(false);
         setSeenPostIds(mockPosts.map((p) => p.id));
+        rememberTask(mockTask, true);
       },
       updateSettings: ({ cadence, rewardText, goal }) => {
         setGroup((g) => (g ? { ...g, cadence, rewardText, goal: clampLevelCount(goal) } : g));
@@ -493,14 +529,14 @@ function MockProvider({ children }: { children: React.ReactNode }) {
           awaitingNextGoal: false,
         });
         setMissedReset(false);
-        setTask(newTask(taskPrompts[0], 1));
+        rememberTask(newTask(taskPrompts[0], 1));
       },
       simulateMissedDay: () => {
         if (!group) return;
         clearTimers();
         setMissedReset(true);
         setGroup({ ...group, level: 1, currentStreak: 0, awaitingNextGoal: false });
-        setTask(newTask(taskPrompts[0], 1));
+        rememberTask(newTask(taskPrompts[0], 1));
       },
       markPostSeen: (postId) => {
         setSeenPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
@@ -510,7 +546,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         seenPrompts.current = [mockTask.prompt];
         setGroup(null);
         setMembers(mockProfiles);
-        setTask(mockTask);
+        rememberTask(mockTask, true);
         setPosts(mockPosts);
         setReactions(mockReactions);
         setClearedLevel(null);
@@ -522,6 +558,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       members,
       me,
       task,
+      tasks,
       taskPosts,
       hangoutPosts,
       reactions,
@@ -534,6 +571,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       appendPost,
       completeLevel,
       clearTimers,
+      rememberTask,
     ]
   );
 

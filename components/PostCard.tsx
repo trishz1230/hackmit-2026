@@ -14,12 +14,14 @@ export function PostCard({
   post,
   author,
   reactions,
+  prompt,
   onPress,
   onLike,
 }: {
   post: Post;
   author?: Profile;
   reactions: Reaction[];
+  prompt?: string;
   onPress: () => void;
   onLike: () => void;
 }) {
@@ -40,6 +42,7 @@ export function PostCard({
       ) : (
         <Text style={styles.body}>{post.content}</Text>
       )}
+      {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <View style={styles.footer}>
         <Pressable onPress={onLike} hitSlop={8}>
@@ -68,6 +71,7 @@ const styles = StyleSheet.create({
   time: { color: colors.muted, fontSize: 12 },
   body: { marginTop: spacing.sm, fontSize: 15, color: colors.text, lineHeight: 21 },
   photo: { marginTop: spacing.sm, width: '100%', height: 200, borderRadius: radius.sm },
+  prompt: { marginTop: spacing.sm, fontSize: 13, color: colors.muted, lineHeight: 18 },
   footer: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
   action: { color: colors.muted, fontSize: 14 },
 });
