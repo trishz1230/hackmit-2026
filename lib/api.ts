@@ -254,7 +254,15 @@ async function recordCadenceVote(
         : { pending_cadence: cadence, cadence_approvals: approvals }
     )
     .eq('id', groupId);
-  if (error) throw error;
+  if (!error) return;
+
+  // Databases created before the vote columns existed can still change the
+  // frequency outright, which is all a family of one ever needs.
+  if (everyone) {
+    const retry = await sb.from('groups').update({ cadence }).eq('id', groupId);
+    if (!retry.error) return;
+  }
+  throw error;
 }
 
 export async function getGroup(groupId: string): Promise<Group | null> {

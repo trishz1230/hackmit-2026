@@ -158,6 +158,13 @@ function mergeSeenIds(prev: string[], extra: string[]) {
   return next.length === 0 ? prev : [...prev, ...next];
 }
 
+/** Supabase rejects with plain objects, which stringify to [object Object]. */
+function describeError(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
+  return String(e);
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return isSupabaseConfigured ? (
     <LiveProvider>{children}</LiveProvider>
@@ -196,7 +203,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const run = useCallback((fn: () => Promise<void>) => {
     void fn().then(
       () => setError(null),
-      (e: unknown) => setError(e instanceof Error ? e.message : String(e))
+      (e: unknown) => setError(describeError(e))
     );
   }, []);
 

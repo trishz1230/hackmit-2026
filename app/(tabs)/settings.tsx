@@ -43,6 +43,7 @@ export default function Settings() {
     proposeCadence,
     approveCadence,
     cancelCadenceChange,
+    error,
   } = useApp();
   const [name, setName] = useState(me.name);
   const [phone, setPhone] = useState(me.phone ?? '');
@@ -211,6 +212,7 @@ export default function Settings() {
             </Pressable>
           </View>
         ) : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
       <View style={styles.card}>
