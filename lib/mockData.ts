@@ -31,8 +31,8 @@ export const mockPosts: Post[] = [
     taskId: 'task-1',
     groupId: 'group-1',
     userId: 'user-2',
-    kind: 'text',
-    content: 'Leftover dumplings again. No regrets.',
+    kind: 'photo',
+    content: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=60',
     createdAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
   },
   {
@@ -40,8 +40,8 @@ export const mockPosts: Post[] = [
     taskId: 'task-1',
     groupId: 'group-1',
     userId: 'user-3',
-    kind: 'text',
-    content: 'Grilled fish + too much rice 🍚',
+    kind: 'photo',
+    content: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=60',
     createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
   },
   {
