@@ -133,12 +133,7 @@ export default function Settings() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Level length &amp; reminders</Text>
-        <Text style={styles.meta}>
-          How long one level lasts and how often the family gets nudged. Everyone can post any
-          time, but the level only clears at midnight once the period is up. Changing it needs
-          every member&apos;s approval.
-        </Text>
+        <Text style={styles.label}>Level frequency</Text>
         <View style={styles.picker}>
           {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => {
             const active = (group.pendingCadence ?? group.cadence) === c;
