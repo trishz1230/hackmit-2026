@@ -10,11 +10,16 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
+        // The web phone frame clips its rounded bottom corners, so the bar is
+        // taller than default and the label sits clear of the curve.
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
+          height: 86,
+          paddingTop: 6,
+          paddingBottom: 22,
         },
-        tabBarLabelStyle: { fontWeight: '700', fontSize: 12 },
+        tabBarLabelStyle: { fontWeight: '700', fontSize: 12, marginTop: 2 },
       }}
     >
       <Tabs.Screen
