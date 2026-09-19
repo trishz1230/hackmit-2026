@@ -31,6 +31,20 @@ create table if not exists profiles (
 
 alter table profiles add column if not exists expo_push_token text;
 
+-- `profiles.group_id` is only the family a device currently has open. Joining
+-- another family used to erase the old membership, so past members vanished
+-- from the member list and their posts lost their name.
+create table if not exists memberships (
+  group_id uuid references groups(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (group_id, user_id)
+);
+
+insert into memberships (group_id, user_id)
+select group_id, id from profiles where group_id is not null
+on conflict do nothing;
+
 -- One task per level, so a family can clear several levels in one demo.
 create table if not exists tasks (
   id uuid primary key default gen_random_uuid(),
