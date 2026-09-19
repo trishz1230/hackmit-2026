@@ -69,6 +69,8 @@ export type Post = {
   userId: string;
   kind: 'photo' | 'text';
   content: string;
+  /** Words written under a photo. Text posts keep everything in `content`. */
+  caption?: string;
   createdAt: string;
 };
 

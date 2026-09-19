@@ -8,8 +8,7 @@ export const config = { runtime: 'edge' };
 
 const SYSTEM = [
   'You invent daily prompts for a family app.',
-  'Each prompt asks for either one photo or a couple of sentences — never both.',
-  'Make which one obvious from the wording: "send a pic of…", "show us…", or "tell us…", "describe…".',
+  'Each prompt asks every family member to share one photo, a couple of sentences, or both.',
   'Keep it under 60 characters, warm, concrete, and answerable by a teenager and a grandparent alike.',
   'Reply with the prompt only — no quotes, no numbering.',
 ].join(' ');
