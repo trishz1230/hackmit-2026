@@ -11,7 +11,7 @@ const MAX_LEVELS = 20;
 /** The family can retune cadence, reward and goal at any point. */
 export default function Settings() {
   const router = useRouter();
-  const { group, updateSettings, loading } = useApp();
+  const { group, updateSettings, proposeCadence, loading } = useApp();
   const [cadence, setCadence] = useState<Cadence>(group?.cadence ?? 'daily');
   const [reward, setReward] = useState(group?.rewardText ?? '');
   const [levels, setLevels] = useState(String(group?.goal ?? 10));
@@ -30,10 +30,10 @@ export default function Settings() {
   const save = () => {
     const floor = Math.max(MIN_LEVELS, group.level);
     updateSettings({
-      cadence,
       rewardText: reward.trim() || group.rewardText,
       goal: Math.min(MAX_LEVELS, Math.max(floor, Number(levels) || floor)),
     });
+    if (cadence !== group.cadence) proposeCadence(cadence);
     router.replace('/');
   };
 
@@ -41,8 +41,8 @@ export default function Settings() {
     <ScrollView contentContainerStyle={styles.wrap}>
       <Text style={styles.label}>Reminders</Text>
       <Text style={styles.hint}>
-        How often the family gets nudged. It never blocks posting — you can always clear the level
-        early.
+        How often the family gets nudged. Changing it asks the rest of the family to approve, and
+        only takes effect once everyone has.
       </Text>
       <View style={styles.picker}>
         {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (

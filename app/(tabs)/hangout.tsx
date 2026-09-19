@@ -1,10 +1,10 @@
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
-import { PostCard } from '../components/PostCard';
-import { Tabs } from '../components/Tabs';
-import { useApp } from '../lib/store';
-import { colors, radius, spacing } from '../lib/theme';
+import { PostCard } from '../../components/PostCard';
+import { Tabs } from '../../components/Tabs';
+import { useApp } from '../../lib/store';
+import { colors, radius, spacing } from '../../lib/theme';
 
 /** Anything-goes feed: posts here never count toward a level. */
 export default function Hangout() {

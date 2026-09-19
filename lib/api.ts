@@ -6,6 +6,7 @@
  * Run that file in the Supabase SQL editor, then fill in lib/supabase.ts.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { levelUnlocksAt } from './levels';
 import { getSupabase } from './supabase';
 import { generatePrompt } from './prompts';
 import { sendExpoPush } from './push';
@@ -15,6 +16,7 @@ type Row = Record<string, unknown>;
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
 const toGroup = (r: Row): Group => ({
   id: str(r.id),
@@ -26,6 +28,8 @@ const toGroup = (r: Row): Group => ({
   rewardText: str(r.reward_text),
   currentStreak: num(r.current_streak),
   awaitingNextGoal: Boolean(r.awaiting_next_goal),
+  pendingCadence: (str(r.pending_cadence) || undefined) as Cadence | undefined,
+  cadenceApprovals: strs(r.cadence_approvals),
 });
 
 const toProfile = (r: Row): Profile => ({
@@ -43,6 +47,7 @@ const toTask = (r: Row): Task => ({
   prompt: str(r.prompt),
   level: num(r.level),
   cycleDate: str(r.cycle_date) || undefined,
+  createdAt: str(r.created_at) || undefined,
 });
 
 const toPost = (r: Row): Post => ({
@@ -144,7 +149,7 @@ export async function createGroup(userId: string, opts: CreateOptions): Promise<
   const { data, error } = await sb
     .from('groups')
     .insert({
-      name: `${opts.myName}'s family`,
+      name: opts.familyName?.trim() || `${opts.myName}'s family`,
       join_code: randomCode(),
       goal: opts.goal,
       level: 1,
@@ -174,15 +179,79 @@ export async function joinGroup(userId: string, opts: JoinOptions): Promise<Grou
   return group;
 }
 
-/** Settings screen: cadence, reward and level goal can change any time. */
+/**
+ * Settings screen: name, reward and level goal can change any time. Cadence
+ * cannot — it goes through proposeCadence/approveCadence instead.
+ */
 export async function updateGroup(
   groupId: string,
-  patch: { cadence: Cadence; rewardText: string; goal: number }
+  patch: { rewardText: string; goal: number; name?: string }
 ): Promise<void> {
   const sb = getSupabase();
   const { error } = await sb
     .from('groups')
-    .update({ cadence: patch.cadence, reward_text: patch.rewardText, goal: patch.goal })
+    .update({
+      reward_text: patch.rewardText,
+      goal: patch.goal,
+      ...(patch.name ? { name: patch.name } : {}),
+    })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
+/**
+ * Reminder frequency is a family decision: proposing one starts a vote that the
+ * proposer has already cast. In a family of one it applies immediately.
+ */
+export async function proposeCadence(
+  group: Group,
+  members: Profile[],
+  userId: string,
+  cadence: Cadence
+): Promise<void> {
+  if (cadence === group.cadence) return cancelCadenceChange(group.id);
+  await recordCadenceVote(group.id, cadence, [userId], members);
+}
+
+export async function approveCadence(
+  group: Group,
+  members: Profile[],
+  userId: string
+): Promise<void> {
+  if (!group.pendingCadence || group.cadenceApprovals.includes(userId)) return;
+  await recordCadenceVote(
+    group.id,
+    group.pendingCadence,
+    [...group.cadenceApprovals, userId],
+    members
+  );
+}
+
+export async function cancelCadenceChange(groupId: string): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update({ pending_cadence: null, cadence_approvals: [] })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
+/** Writes the tally, or applies the cadence once every member is in it. */
+async function recordCadenceVote(
+  groupId: string,
+  cadence: Cadence,
+  approvals: string[],
+  members: Profile[]
+): Promise<void> {
+  const everyone = members.length > 0 && members.every((m) => approvals.includes(m.id));
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update(
+      everyone
+        ? { cadence, pending_cadence: null, cadence_approvals: [] }
+        : { pending_cadence: cadence, cadence_approvals: approvals }
+    )
     .eq('id', groupId);
   if (error) throw error;
 }
@@ -338,14 +407,22 @@ export async function addReaction(input: Omit<Reaction, 'id'>): Promise<void> {
 }
 
 /**
- * All-or-nothing rule: once every member has posted for the current task the
- * family levels up. The `eq('level', group.level)` guard means only the first
- * client to get there wins, so two browsers can't double-increment.
+ * All-or-nothing rule: once every member has posted for the current task AND
+ * the level's period has run out at midnight, the family levels up. The
+ * `eq('level', group.level)` guard means only the first client to get there
+ * wins, so two browsers can't double-increment.
  * Returns the cleared level, or null if nothing changed.
  */
-export async function clearLevelIfDone(group: Group, members: Profile[], task: Task, posts: Post[]): Promise<number | null> {
+export async function clearLevelIfDone(
+  group: Group,
+  members: Profile[],
+  task: Task,
+  posts: Post[],
+  ignoreWait = false
+): Promise<number | null> {
   const posted = new Set(posts.filter((p) => p.taskId === task.id).map((p) => p.userId));
   if (members.length === 0 || !members.every((m) => posted.has(m.id))) return null;
+  if (!ignoreWait && Date.now() < levelUnlocksAt(task.createdAt, group.cadence)) return null;
 
   const sb = getSupabase();
   const { data } = await sb

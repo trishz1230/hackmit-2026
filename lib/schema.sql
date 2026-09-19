@@ -15,6 +15,10 @@ create table if not exists groups (
   created_at timestamptz default now()
 );
 
+-- A cadence change is a vote: it only applies once every member approves.
+alter table groups add column if not exists pending_cadence text;
+alter table groups add column if not exists cadence_approvals text[] not null default '{}';
+
 create table if not exists profiles (
   id uuid primary key,
   name text not null,

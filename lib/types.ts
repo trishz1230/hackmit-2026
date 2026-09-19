@@ -10,6 +10,8 @@ export const CADENCE_LABELS: Record<Cadence, string> = {
 /** Everything the create-a-family form collects. */
 export type CreateOptions = {
   myName: string;
+  /** What the family calls itself; defaults to "<myName>'s family". */
+  familyName?: string;
   phone?: string;
   cadence: Cadence;
   rewardText: string;
@@ -33,6 +35,10 @@ export type Group = {
   rewardText: string;
   currentStreak: number;
   awaitingNextGoal: boolean;
+  /** Cadence the family has been asked to switch to, until everyone approves. */
+  pendingCadence?: Cadence;
+  /** Ids of the members who approved the pending cadence. */
+  cadenceApprovals: string[];
 };
 
 export type Profile = {
@@ -52,6 +58,8 @@ export type Task = {
   level: number;
   /** Calendar day this cycle started (YYYY-MM-DD). Used to detect a missed day. */
   cycleDate?: string;
+  /** When the level started, i.e. when this level's wait is measured from. */
+  createdAt?: string;
 };
 
 export type Post = {

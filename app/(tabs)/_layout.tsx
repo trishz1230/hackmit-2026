@@ -36,6 +36,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▣</Text>,
         }}
       />
+      {/* Reached from the Family task / Hangout switcher, not the bottom bar. */}
+      <Tabs.Screen name="hangout" options={{ href: null }} />
       <Tabs.Screen
         name="settings"
         options={{

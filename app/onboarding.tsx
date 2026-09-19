@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
+import { formatPhone, isValidPhone } from '../lib/phone';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../lib/types';
@@ -15,6 +16,7 @@ export default function Onboarding() {
   const [myName, setMyName] = useState('');
   const [phone, setPhone] = useState('');
   const [cadence, setCadence] = useState<Cadence>('daily');
+  const [familyName, setFamilyName] = useState('');
   const [reward, setReward] = useState('');
   const [levels, setLevels] = useState('10');
   const [code, setCode] = useState('');
@@ -47,17 +49,20 @@ export default function Onboarding() {
   const codeMissing = submitted && mode === 'join' && !trimmedCode;
   const codeTooShort = submitted && mode === 'join' && trimmedCode.length > 0 && trimmedCode.length !== CODE_LENGTH;
   const rewardMissing = submitted && mode === 'create' && !reward.trim();
+  const phoneBad = submitted && phone.trim().length > 0 && !isValidPhone(phone);
 
   const submit = () => {
     setSubmitted(true);
     if (!myName.trim()) return;
+    if (phone.trim() && !isValidPhone(phone)) return;
     if (mode === 'create' && !reward.trim()) return;
     if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
     const who = myName.trim();
-    const tel = phone.trim() || undefined;
+    const tel = phone.trim() ? formatPhone(phone) : undefined;
     if (mode === 'create') {
       createGroup({
         myName: who,
+        familyName: familyName.trim() || undefined,
         phone: tel,
         cadence,
         rewardText: reward.trim(),
@@ -101,16 +106,26 @@ export default function Onboarding() {
 
       <Text style={styles.label}>Phone (optional, for the call button)</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, phoneBad && styles.inputBad]}
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
         placeholder="555 123 4567"
         placeholderTextColor={colors.muted}
       />
+      {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}
 
       {mode === 'create' ? (
         <>
+          <Text style={styles.label}>Family name (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={familyName}
+            onChangeText={setFamilyName}
+            placeholder={myName.trim() ? `${myName.trim()}'s family` : 'The Zhengs'}
+            placeholderTextColor={colors.muted}
+          />
+
           <Text style={styles.label}>What does one level equal?</Text>
           <View style={styles.picker}>
             {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (
