@@ -18,6 +18,8 @@ export type LevelMapProps = {
   reward: string;
   /** The level you're on hasn't opened yet, so it wears a padlock. */
   locked?: boolean;
+  /** Everyone posted, so the current level is done but hasn't cleared yet. */
+  cleared?: boolean;
   onSelectLevel?: (level: number) => void;
 };
 
@@ -72,7 +74,14 @@ function Trail({ from, to }: { from: { x: number; y: number }; to: { x: number; 
   );
 }
 
-export function LevelMap({ level, goal, reward, locked = false, onSelectLevel }: LevelMapProps) {
+export function LevelMap({
+  level,
+  goal,
+  reward,
+  locked = false,
+  cleared = false,
+  onSelectLevel,
+}: LevelMapProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const current = Math.min(level, goal);
@@ -100,8 +109,10 @@ export function LevelMap({ level, goal, reward, locked = false, onSelectLevel }:
           ))}
 
           {levels.map((n) => {
-            const done = n < level;
-            const isCurrent = n === current;
+            const done = n < level || (cleared && n === current);
+            const isCurrent = n === current && !cleared;
+            // Once the current level is done the glow moves on to the locked one.
+            const isNext = cleared && n === current + 1;
             const { x, y } = position(n, goal);
             const milestone = isMilestone(n);
 
@@ -112,7 +123,7 @@ export function LevelMap({ level, goal, reward, locked = false, onSelectLevel }:
                 disabled={!onSelectLevel}
                 style={[styles.nodeWrap, { marginLeft: x - NODE / 2, bottom: y }]}
               >
-                {isCurrent && <PulsingRing />}
+                {(isCurrent || isNext) && <PulsingRing />}
                 <View
                   style={[
                     styles.node,
@@ -123,7 +134,13 @@ export function LevelMap({ level, goal, reward, locked = false, onSelectLevel }:
                   ]}
                 >
                   <Text style={[styles.nodeLabel, !done && !isCurrent && styles.nodeLabelLocked]}>
-                    {isCurrent && locked ? '🔒' : milestone ? iconFor(n) : done ? '✓' : n}
+                    {(isCurrent && locked) || isNext
+                      ? '🔒'
+                      : milestone
+                        ? iconFor(n)
+                        : done
+                          ? '✓'
+                          : n}
                   </Text>
                 </View>
                 {milestone && <Text style={styles.milestoneCaption}>Level {n}</Text>}

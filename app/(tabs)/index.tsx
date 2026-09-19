@@ -71,6 +71,7 @@ export default function Home() {
         goal={group.goal}
         reward={group.rewardText}
         locked={taskLocked}
+        cleared={waitingForPeriod}
         onSelectLevel={setSelected}
       />
 
@@ -135,6 +136,14 @@ export default function Home() {
                   ) : (
                     <Text style={styles.sheetBody}>Your post from this level is gone.</Text>
                   )}
+                </>
+              ) : isLocked && selected === current + 1 && waitingForPeriod ? (
+                <>
+                  <Text style={styles.taskLabel}>🔒 Locked</Text>
+                  <Text style={styles.sheetBody}>
+                    Wait till the next notification for a new conversation :)
+                  </Text>
+                  <Text style={styles.sheetMeta}>Opens {describeWait(unlocksAt)}.</Text>
                 </>
               ) : (
                 <Text style={styles.sheetBody}>
