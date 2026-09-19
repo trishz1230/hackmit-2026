@@ -2,13 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
+import { MAX_LEVELS, MIN_LEVELS } from '../../lib/levels';
 import { formatPhone, isValidPhone } from '../../lib/phone';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../../lib/types';
-
-const MIN_LEVELS = 3;
-const MAX_LEVELS = 20;
 
 function DemoToggle({
   label,
@@ -46,11 +44,12 @@ export default function Settings() {
     proposeCadence,
     approveCadence,
     cancelCadenceChange,
+    loading,
     error,
   } = useApp();
   const [name, setName] = useState(me.name);
   const [phone, setPhone] = useState(me.phone ?? '');
-  const [saved, setSaved] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
   const [familyName, setFamilyName] = useState(group?.name ?? '');
   const [editingFamily, setEditingFamily] = useState(false);
   const [editingCadence, setEditingCadence] = useState(false);
@@ -95,6 +94,13 @@ export default function Settings() {
     setEditingReward(false);
   };
 
+  const saveProfile = () => {
+    if (phoneBad || !name.trim()) return;
+    updateProfile({ name: name.trim(), phone: phone.trim() ? formatPhone(phone) : undefined });
+    setEditingProfile(false);
+  };
+
+  if (loading) return <View style={styles.blank} />;
   if (!group) return <Redirect href="/onboarding" />;
 
   return (
@@ -146,37 +152,49 @@ export default function Settings() {
 
       <View style={styles.card}>
         <Text style={styles.label}>Your name</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={(t) => {
-            setName(t);
-            setSaved(false);
-          }}
-        />
-        <Text style={styles.label}>Phone (optional)</Text>
-        <TextInput
-          style={[styles.input, phoneBad && styles.inputBad]}
-          value={phone}
-          onChangeText={(t) => {
-            setPhone(t);
-            setSaved(false);
-          }}
-          keyboardType="phone-pad"
-          placeholder="123 456 7890"
-          placeholderTextColor={colors.muted}
-        />
-        {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}
-        <Pressable
-          style={[styles.cta, phoneBad && styles.ctaDisabled]}
-          disabled={phoneBad}
-          onPress={() => {
-            updateProfile({ name, phone: phone.trim() ? formatPhone(phone) : undefined });
-            setSaved(true);
-          }}
-        >
-          <Text style={styles.ctaText}>{saved ? 'Saved' : 'Save profile'}</Text>
-        </Pressable>
+        {editingProfile ? (
+          <>
+            <TextInput style={styles.input} value={name} onChangeText={setName} autoFocus />
+            {!name.trim() ? <Text style={styles.error}>Your name can&apos;t be blank.</Text> : null}
+            <Text style={styles.label}>Phone (optional)</Text>
+            <TextInput
+              style={[styles.input, phoneBad && styles.inputBad]}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              placeholder="123 456 7890"
+              placeholderTextColor={colors.muted}
+            />
+            {phoneBad ? <Text style={styles.error}>Enter a 10-digit phone number.</Text> : null}
+            <View style={styles.row}>
+              <Pressable
+                style={[styles.cta, styles.grow, (phoneBad || !name.trim()) && styles.ctaDisabled]}
+                disabled={phoneBad || !name.trim()}
+                onPress={saveProfile}
+              >
+                <Text style={styles.ctaText}>Save</Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondary}
+                onPress={() => {
+                  setName(me.name);
+                  setPhone(me.phone ?? '');
+                  setEditingProfile(false);
+                }}
+              >
+                <Text style={styles.secondaryText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.family}>{me.name}</Text>
+            <Text style={styles.meta}>{me.phone ? me.phone : 'No phone yet'}</Text>
+            <Pressable onPress={() => setEditingProfile(true)}>
+              <Text style={styles.edit}>Edit</Text>
+            </Pressable>
+          </>
+        )}
       </View>
 
       <View style={styles.card}>
@@ -276,6 +294,9 @@ export default function Settings() {
                 Pick between {levelFloor} and {MAX_LEVELS} levels.
               </Text>
             ) : null}
+            {!reward.trim() ? (
+              <Text style={styles.error}>Give the family something to aim for.</Text>
+            ) : null}
             <View style={styles.row}>
               <Pressable
                 style={[styles.cta, styles.grow, rewardBad && styles.ctaDisabled]}
@@ -336,6 +357,7 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.md },
+  blank: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
   card: {
     backgroundColor: colors.card,
