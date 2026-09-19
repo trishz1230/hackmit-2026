@@ -15,7 +15,8 @@ export function ProgressBar({
   streak: number;
   onPress?: () => void;
 }) {
-  const pct = Math.max(0, Math.min(1, goal === 0 ? 0 : level / goal));
+  const cleared = Math.max(0, level - 1);
+  const pct = Math.max(0, Math.min(1, goal === 0 ? 0 : cleared / goal));
   return (
     <Pressable style={styles.wrap} onPress={onPress} disabled={!onPress}>
       <View style={styles.row}>
@@ -26,7 +27,7 @@ export function ProgressBar({
         <View style={[styles.fill, { width: `${pct * 100}%` }]} />
       </View>
       <Text style={styles.reward}>
-        {goal - level} more to go → {reward}
+        {goal - cleared} more to go → {reward}
       </Text>
       {onPress && <Text style={styles.link}>See the level map →</Text>}
     </Pressable>

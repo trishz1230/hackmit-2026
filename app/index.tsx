@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { NagBanner } from '../components/NagBanner';
 import { PostCard } from '../components/PostCard';
@@ -10,7 +10,20 @@ import { colors, radius, spacing } from '../lib/theme';
 
 export default function Feed() {
   const router = useRouter();
-  const { group, task, posts, me, hasPostedThisCycle, reactionsFor, memberById, addReaction } = useApp();
+  const {
+    group,
+    task,
+    posts,
+    me,
+    hasPostedThisCycle,
+    pending,
+    clearedLevel,
+    dismissCelebration,
+    reactionsFor,
+    memberById,
+    addReaction,
+    restart,
+  } = useApp();
 
   useEffect(() => {
     if (!group) return;
@@ -49,6 +62,11 @@ export default function Feed() {
                 {hasPostedThisCycle ? 'Post again' : 'Complete task'}
               </Text>
             </Pressable>
+            <Text style={styles.waiting}>
+              {pending.length === 0
+                ? 'Everyone posted — clearing the level…'
+                : `Waiting on ${pending.map((m) => m.name).join(', ')}`}
+            </Text>
             <Text style={styles.joinCode}>Invite code: {group.joinCode}</Text>
           </View>
         }
@@ -63,6 +81,25 @@ export default function Feed() {
         )}
         contentContainerStyle={{ paddingBottom: spacing.lg }}
       />
+
+      <Pressable style={styles.restart} onPress={restart}>
+        <Text style={styles.restartText}>Restart game</Text>
+      </Pressable>
+
+      <Modal visible={clearedLevel !== null} transparent animationType="fade">
+        <Pressable style={styles.backdrop} onPress={dismissCelebration}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetIcon}>🎉</Text>
+            <Text style={styles.sheetTitle}>Level {clearedLevel} cleared!</Text>
+            <Text style={styles.sheetBody}>
+              Everyone posted. Streak is {group.currentStreak} — on to level {group.level}.
+            </Text>
+            <Pressable style={styles.sheetCta} onPress={dismissCelebration}>
+              <Text style={styles.taskCtaText}>Keep going</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -86,5 +123,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   taskCtaText: { color: '#fff', fontWeight: '700' },
-  joinCode: { marginTop: spacing.sm, fontSize: 12, color: colors.muted },
+  waiting: { marginTop: spacing.sm, fontSize: 13, color: colors.text },
+  joinCode: { marginTop: spacing.xs, fontSize: 12, color: colors.muted },
+  restart: {
+    alignSelf: 'center',
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  restartText: { color: colors.muted, fontSize: 13, textDecorationLine: 'underline' },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,10,35,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheet: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    width: 280,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  sheetIcon: { fontSize: 40 },
+  sheetTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
+  sheetBody: { color: colors.muted, textAlign: 'center', lineHeight: 20 },
+  sheetCta: {
+    marginTop: spacing.sm,
+    alignSelf: 'stretch',
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
 });

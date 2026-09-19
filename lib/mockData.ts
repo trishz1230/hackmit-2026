@@ -5,10 +5,10 @@ export const mockGroup: Group = {
   name: 'The Zhangs',
   joinCode: 'FAM123',
   goal: 50,
-  level: 12,
+  level: 1,
   cadence: 'daily',
   rewardText: 'Pizza night, on Dad',
-  currentStreak: 12,
+  currentStreak: 0,
 };
 
 export const mockProfiles: Profile[] = [
@@ -25,41 +25,30 @@ export const mockTask: Task = {
   cycleDate: new Date().toISOString().slice(0, 10),
 };
 
-export const mockPosts: Post[] = [
-  {
-    id: 'post-1',
-    taskId: 'task-1',
-    groupId: 'group-1',
-    userId: 'user-2',
-    kind: 'photo',
-    content: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=60',
-    createdAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
-  },
-  {
-    id: 'post-2',
-    taskId: 'task-1',
-    groupId: 'group-1',
-    userId: 'user-3',
-    kind: 'photo',
-    content: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=60',
-    createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-  },
-  {
-    id: 'post-3',
-    taskId: 'task-1',
-    groupId: 'group-1',
-    userId: 'user-4',
-    kind: 'text',
-    content: 'Dining hall pasta. 3/10, would not recommend.',
-    createdAt: new Date(Date.now() - 1000 * 60 * 200).toISOString(),
-  },
-];
+/** A fresh family starts with an empty feed and clears level 1 together. */
+export const mockPosts: Post[] = [];
 
-export const mockReactions: Reaction[] = [
-  { id: 'r-1', postId: 'post-1', userId: 'user-3', kind: 'like', value: '1' },
-  { id: 'r-2', postId: 'post-1', userId: 'user-4', kind: 'emoji', value: '😂' },
-  { id: 'r-3', postId: 'post-2', userId: 'user-2', kind: 'comment', value: 'looks good!' },
-];
+export const mockReactions: Reaction[] = [];
+
+/**
+ * Canned replies from the rest of the family. Nobody else is really using the
+ * demo, so once you post, they answer the same task a few seconds later and the
+ * level clears.
+ */
+export const familyReplies: Record<string, { kind: Post['kind']; content: string }[]> = {
+  'user-2': [
+    { kind: 'photo', content: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=60' },
+    { kind: 'text', content: 'Leftover dumplings again. No regrets.' },
+  ],
+  'user-3': [
+    { kind: 'photo', content: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=60' },
+    { kind: 'text', content: 'Grilled fish + too much rice 🍚' },
+  ],
+  'user-4': [
+    { kind: 'text', content: 'Dining hall pasta. 3/10, would not recommend.' },
+    { kind: 'photo', content: 'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=800&q=60' },
+  ],
+};
 
 export const taskPrompts = [
   'Send a pic of what you ate today',

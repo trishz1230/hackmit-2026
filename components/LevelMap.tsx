@@ -73,7 +73,7 @@ function Trail({ from, to }: { from: { x: number; y: number }; to: { x: number; 
 export function LevelMap({ level, goal, reward, onSelectLevel }: LevelMapProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
-  const current = Math.min(level + 1, goal);
+  const current = Math.min(level, goal);
   const contentHeight = goal * STEP + spacing.lg * 4;
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export function LevelMap({ level, goal, reward, onSelectLevel }: LevelMapProps) 
           ))}
 
           {levels.map((n) => {
-            const done = n <= level;
+            const done = n < level;
             const isCurrent = n === current;
             const { x, y } = position(n, goal);
             const milestone = isMilestone(n);
