@@ -2,15 +2,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Easing,
+  Image,
   ImageBackground,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
-import { EYES, FaceLayers, HAIR, MOUTHS, encodeFace } from '../components/AvatarFace';
+import { EYES, FaceLayers, HAIR, HEAD, MOUTHS, encodeFace } from '../components/AvatarFace';
 import { savePendingAvatar } from '../lib/api';
 
 const paper = require('../assets/welcome/paper.png');
@@ -141,6 +143,11 @@ export default function MakeAYou() {
 
       {!started ? null : current ? (
         <View style={styles.footer}>
+          <OptionStrip
+            options={current === 'eyes' ? EYES : current === 'mouth' ? MOUTHS : HAIR}
+            selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
+            onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
+          />
           <Text style={styles.hint}>swipe up or down to switch {LABEL[current]}</Text>
           <Text style={styles.hint}>double tap to lock it in.</Text>
           <Text style={styles.steps}>
@@ -151,6 +158,37 @@ export default function MakeAYou() {
         <Text style={styles.hint}>that's you!</Text>
       )}
     </ImageBackground>
+  );
+}
+
+/** Every choice for the feature being picked, so nothing is a surprise. */
+function OptionStrip({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: (number | null)[];
+  selected: number;
+  onSelect: (i: number) => void;
+}) {
+  return (
+    <View style={styles.stripWrap}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.strip}
+      >
+        {options.map((option, i) => (
+          <Pressable
+            key={i}
+            onPress={() => onSelect(i)}
+            style={[styles.option, i === selected && styles.optionOn]}
+          >
+            <Image source={option ?? HEAD} resizeMode="contain" style={styles.optionArt} />
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -212,7 +250,37 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 32,
+    alignSelf: 'stretch',
     alignItems: 'center',
+  },
+  stripWrap: {
+    width: '100%',
+    maxHeight: 76,
+  },
+  strip: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 14,
+    gap: 8,
+  },
+  option: {
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  optionOn: {
+    borderColor: '#2F2A26',
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
+  optionArt: {
+    width: 40,
+    height: 40,
   },
   hint: {
     fontSize: 16,

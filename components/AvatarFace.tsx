@@ -24,23 +24,15 @@ export const MOUTHS = [
   require('../assets/avatar/mouth-teeth.png'),
 ];
 
-/**
- * Hair sits on top of the head outline. Each style is placed by its own width
- * (as a fraction of the face) and the amount it rises above the head, because
- * a bun is tall and a bob is wide.
- */
-type Hair = { src: number; width: number; aspect: number; top: number };
-
-export const HAIR: (Hair | null)[] = [
+/** Hair variants are drawn with their own head outline, so they replace it. */
+export const HAIR: (number | null)[] = [
   null,
-  { src: require('../assets/avatar/hair-curls.png'), width: 1.14, aspect: 549 / 700, top: -0.16 },
-  { src: require('../assets/avatar/hair-short.png'), width: 1.06, aspect: 556 / 700, top: -0.13 },
-  { src: require('../assets/avatar/hair-bob.png'), width: 1.08, aspect: 653 / 700, top: -0.13 },
-  { src: require('../assets/avatar/hair-buzz.png'), width: 1.02, aspect: 501 / 700, top: -0.1 },
-  { src: require('../assets/avatar/hair-braids.png'), width: 1.04, aspect: 700 / 462, top: -0.14 },
-  { src: require('../assets/avatar/hair-afro.png'), width: 1.24, aspect: 545 / 700, top: -0.2 },
-  { src: require('../assets/avatar/hair-bun.png'), width: 1.02, aspect: 700 / 591, top: -0.28 },
-  { src: require('../assets/avatar/hair-long.png'), width: 1.0, aspect: 700 / 415, top: -0.12 },
+  require('../assets/avatar/hair-curls.png'),
+  require('../assets/avatar/hair-short.png'),
+  require('../assets/avatar/hair-bob.png'),
+  require('../assets/avatar/hair-buzz.png'),
+  require('../assets/avatar/hair-braids.png'),
+  require('../assets/avatar/hair-afro.png'),
 ];
 
 export const HEAD = require('../assets/avatar/head.png');
@@ -84,21 +76,11 @@ export function FaceLayers({
   const hair = upTo === 'hair' ? HAIR[face.hair] : null;
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>
-      <Image source={HEAD} resizeMode="contain" style={[styles.layer, { width: size, height: size }]} />
-      {hair ? (
-        <Image
-          source={hair.src}
-          resizeMode="contain"
-          style={[
-            styles.layer,
-            {
-              top: size * hair.top,
-              width: size * hair.width,
-              height: size * hair.width * hair.aspect,
-            },
-          ]}
-        />
-      ) : null}
+      <Image
+        source={hair ?? HEAD}
+        resizeMode="contain"
+        style={[styles.layer, { width: size, height: size }]}
+      />
       <Image
         source={EYES[face.eyes]}
         resizeMode="contain"
