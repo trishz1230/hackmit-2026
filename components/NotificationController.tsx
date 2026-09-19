@@ -6,7 +6,8 @@ import { useApp } from '../lib/store';
 /** Schedules OS notifications and handles taps. Renders nothing. */
 export function NotificationController() {
   const router = useRouter();
-  const { group, task, hasPostedThisCycle, unseenPosts, unseenReactions, memberById } = useApp();
+  const { group, task, hasPostedThisCycle, taskLocked, unseenPosts, unseenReactions, memberById } =
+    useApp();
   const unseen = unseenPosts[0];
   const unseenAuthor = unseen ? memberById(unseen.userId) : undefined;
   const reactionNag = unseenReactions[0];
@@ -27,8 +28,8 @@ export function NotificationController() {
       void startReactionNag(reactionNag, group.cadence);
       return;
     }
-    if (!hasPostedThisCycle) {
-      void startTaskNag(task.prompt, group.cadence);
+    if (!hasPostedThisCycle && !taskLocked) {
+      void startTaskNag(task.prompt);
       return;
     }
     void stopNags();
@@ -38,6 +39,7 @@ export function NotificationController() {
   }, [
     group,
     hasPostedThisCycle,
+    taskLocked,
     task.prompt,
     reactionNag?.id,
     unseen?.id,

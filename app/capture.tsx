@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { describeWait } from '../lib/levels';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -9,7 +10,7 @@ export default function Capture() {
   const router = useRouter();
   const { channel } = useLocalSearchParams<{ channel?: string }>();
   const hangout = channel === 'hangout';
-  const { task, addPost } = useApp();
+  const { task, addPost, taskLocked, opensAt } = useApp();
   const [mode, setMode] = useState<'photo' | 'text'>('photo');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
@@ -55,6 +56,18 @@ export default function Capture() {
     }
     router.replace(completedGoal ? '/next-goal' : '/(tabs)/feed');
   };
+
+  if (!hangout && taskLocked) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.prompt}>Wait till the next time for a new conversation!</Text>
+        <Text style={styles.locked}>This level starts {describeWait(opensAt)}.</Text>
+        <Pressable style={styles.cta} onPress={() => router.replace('/(tabs)/feed')}>
+          <Text style={styles.ctaText}>Back to the family</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.wrap}>
@@ -114,6 +127,7 @@ export default function Capture() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
   prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
+  locked: { flex: 1, color: colors.muted, fontSize: 16, lineHeight: 22 },
   toggle: { flexDirection: 'row', backgroundColor: colors.accentSoft, borderRadius: radius.md, padding: 4 },
   toggleBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
   toggleBtnActive: { backgroundColor: colors.card },

@@ -44,6 +44,27 @@ async function ensurePermission() {
   return status === 'granted';
 }
 
+/** Waking hours the task reminder is allowed to land in, on the member's own clock. */
+const NAG_WINDOW = { startHour: 9, endHour: 21 };
+
+/**
+ * Seconds until a random moment inside today's waking window, or tomorrow's if
+ * the window has already closed. Each member's device rolls its own time, so a
+ * family isn't pinged in unison every day at the same hour.
+ */
+export function secondsUntilRandomNag(now = new Date()): number {
+  const at = (hour: number, day = now) =>
+    new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour).getTime();
+  let from = Math.max(now.getTime() + 60_000, at(NAG_WINDOW.startHour));
+  let until = at(NAG_WINDOW.endHour);
+  if (from >= until) {
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    from = at(NAG_WINDOW.startHour, tomorrow);
+    until = at(NAG_WINDOW.endHour, tomorrow);
+  }
+  return Math.round((from + Math.random() * (until - from) - now.getTime()) / 1000);
+}
+
 async function fire(content: Notifications.NotificationContentInput, cadence: Cadence = 'daily') {
   if (!(await ensurePermission())) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
@@ -72,15 +93,30 @@ async function fire(content: Notifications.NotificationContentInput, cadence: Ca
   });
 }
 
-export async function startTaskNag(prompt: string, cadence: Cadence = 'daily') {
-  await fire(
-    {
+/**
+ * Unlike the post and reaction pings, the task reminder doesn't fire straight
+ * away: it lands once at an unpredictable time of day so the nudge feels like
+ * a person remembering rather than an alarm clock.
+ */
+export async function startTaskNag(prompt: string) {
+  if (!(await ensurePermission())) return;
+  await Notifications.cancelAllScheduledNotificationsAsync();
+  await Notifications.dismissAllNotificationsAsync();
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
       title: 'Your family is waiting 👀',
       body: prompt,
       data: { type: 'capture' },
+      sound: true,
     },
-    cadence
-  );
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: secondsUntilRandomNag(),
+      repeats: false,
+      ...(Platform.OS === 'android' ? { channelId: 'nags' } : {}),
+    },
+  });
 }
 
 export async function startPostNag(authorName: string, postId: string, cadence: Cadence = 'daily') {

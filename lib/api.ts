@@ -437,7 +437,8 @@ export async function clearLevelIfDone(
 ): Promise<number | null> {
   const posted = new Set(posts.filter((p) => p.taskId === task.id).map((p) => p.userId));
   if (members.length === 0 || !members.every((m) => posted.has(m.id))) return null;
-  if (!ignoreWait && Date.now() < levelUnlocksAt(task.createdAt, group.cadence)) return null;
+  if (!ignoreWait && Date.now() < levelUnlocksAt(task.createdAt, group.cadence, task.level))
+    return null;
 
   const sb = getSupabase();
   const { data } = await sb

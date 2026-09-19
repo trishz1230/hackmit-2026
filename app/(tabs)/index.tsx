@@ -14,8 +14,11 @@ export default function Home() {
     task,
     hasPostedThisCycle,
     missedReset,
+    dismissMissedReset,
     waitingForPeriod,
     unlocksAt,
+    taskLocked,
+    opensAt,
     taskForLevel,
     myPostForLevel,
   } = useApp();
@@ -57,6 +60,9 @@ export default function Home() {
         <View style={styles.resetBanner}>
           <Text style={styles.resetTitle}>Family streak reset</Text>
           <Text style={styles.resetBody}>Someone missed a day, so everyone is back at level 1.</Text>
+          <Pressable onPress={dismissMissedReset} hitSlop={8}>
+            <Text style={styles.dismiss}>Dismiss</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -72,7 +78,15 @@ export default function Home() {
           <Pressable style={styles.sheet} onPress={() => undefined}>
             <ScrollView bounces={false}>
               <Text style={styles.sheetTitle}>Level {selected}</Text>
-              {isCurrent ? (
+              {isCurrent && taskLocked ? (
+                <>
+                  <Text style={styles.taskLabel}>Not open yet</Text>
+                  <Text style={styles.sheetBody}>
+                    Wait till the next time for a new conversation! This level starts{' '}
+                    {describeWait(opensAt)}.
+                  </Text>
+                </>
+              ) : isCurrent ? (
                 <>
                   <Text style={styles.taskLabel}>Today&apos;s task</Text>
                   <Text style={styles.sheetBody}>{prompt}</Text>
@@ -141,6 +155,7 @@ const styles = StyleSheet.create({
   waitBody: { color: colors.muted, marginTop: 2 },
   resetTitle: { fontWeight: '800', color: colors.text },
   resetBody: { color: colors.muted, marginTop: 2 },
+  dismiss: { marginTop: spacing.xs, color: colors.accent, fontWeight: '700' },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(20,10,35,0.6)',
