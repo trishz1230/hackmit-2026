@@ -8,7 +8,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from './api';
-import { clampLevelCount, levelUnlocksAt, todayKey } from './levels';
+import { clampLevelCount, levelOpensAt, levelUnlocksAt, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { generatePrompt } from './prompts';
 import { getPushToken } from './push';
@@ -49,9 +49,14 @@ type State = {
   waitingForPeriod: boolean;
   /** Epoch ms when the current level's period ends (local midnight). */
   unlocksAt: number;
+  /** Epoch ms when the current level's task becomes readable. */
+  opensAt: number;
+  /** The next conversation hasn't started yet, so the prompt stays hidden. */
+  taskLocked: boolean;
   /** Demo escape hatch: treat the period as over right now. */
   endPeriodNow: () => void;
   missedReset: boolean;
+  dismissMissedReset: () => void;
   unseenPosts: Post[];
   unseenReactions: ReactionNag[];
   /** Members who still owe a post for the current task. */
@@ -256,22 +261,25 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
     me.id,
     seenReactionIds
   );
-  const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily');
-  const waitingForPeriod = everyonePostedThisCycle && Date.now() < unlocksAt;
+  const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily', task.level);
+  const opensAt = levelOpensAt(task.createdAt, task.level);
+  const taskLocked = !waived.current && Date.now() < opensAt;
+  const waitingForPeriod = !taskLocked && everyonePostedThisCycle && Date.now() < unlocksAt;
   const cadencePendingOn = group?.pendingCadence
     ? members.filter((m) => !group.cadenceApprovals.includes(m.id))
     : [];
 
   // Nothing pushes an event when midnight arrives, so poll while we're waiting.
   useEffect(() => {
-    if (!group || !waitingForPeriod) return;
+    if (!group || (!waitingForPeriod && !taskLocked)) return;
     const groupId = group.id;
+    const target = taskLocked ? opensAt : unlocksAt;
     const timer = setTimeout(
       () => void refresh(groupId),
-      Math.min(Math.max(unlocksAt - Date.now(), 1000), 60_000)
+      Math.min(Math.max(target - Date.now(), 1000), 60_000)
     );
     return () => clearTimeout(timer);
-  }, [group?.id, waitingForPeriod, unlocksAt, refresh]);
+  }, [group?.id, waitingForPeriod, taskLocked, opensAt, unlocksAt, refresh]);
 
   const value = useMemo<State>(
     () => ({
@@ -294,12 +302,15 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       waitingForPeriod,
       unlocksAt,
+      opensAt,
+      taskLocked,
       endPeriodNow: () => {
         if (!group) return;
         waived.current = true;
         run(() => refresh(group.id));
       },
       missedReset,
+      dismissMissedReset: () => setMissedReset(false),
       unseenPosts,
       unseenReactions,
       pending,
@@ -448,6 +459,8 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       waitingForPeriod,
       unlocksAt,
+      opensAt,
+      taskLocked,
       cadencePendingOn,
       missedReset,
       unseenPosts,
@@ -523,11 +536,25 @@ function MockProvider({ children }: { children: React.ReactNode }) {
     me.id,
     seenReactionIds
   );
-  const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily');
-  const waitingForPeriod = everyonePostedThisCycle && !waived && Date.now() < unlocksAt;
+  const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily', task.level);
+  const opensAt = levelOpensAt(task.createdAt, task.level);
+  const taskLocked = !waived && Date.now() < opensAt;
+  const waitingForPeriod =
+    !taskLocked && everyonePostedThisCycle && !waived && Date.now() < unlocksAt;
   const cadencePendingOn = group?.pendingCadence
     ? members.filter((m) => !group.cadenceApprovals.includes(m.id))
     : [];
+
+  // Nothing re-renders the mock family when the next period starts.
+  const [, setClock] = useState(0);
+  useEffect(() => {
+    if (!taskLocked) return;
+    const timer = setTimeout(
+      () => setClock(Date.now()),
+      Math.min(Math.max(opensAt - Date.now(), 1000), 60_000)
+    );
+    return () => clearTimeout(timer);
+  }, [taskLocked, opensAt]);
 
   /** Tallies a vote, applying the cadence once every member has approved. */
   const castVote = useCallback(
@@ -626,11 +653,14 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       waitingForPeriod,
       unlocksAt,
+      opensAt,
+      taskLocked,
       endPeriodNow: () => {
         setWaived(true);
         if (everyonePostedThisCycle) void completeLevel();
       },
       missedReset,
+      dismissMissedReset: () => setMissedReset(false),
       unseenPosts,
       unseenReactions,
       pending,
@@ -805,6 +835,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       everyonePostedThisCycle,
       waitingForPeriod,
       unlocksAt,
+      opensAt,
+      taskLocked,
       cadencePendingOn,
       castVote,
       waived,

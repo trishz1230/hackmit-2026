@@ -3,13 +3,25 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
+import { describeWait } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
 export default function Feed() {
   const router = useRouter();
-  const { group, posts, task, hasPostedThisCycle, reactionsFor, memberById, toggleLike, likedByMe, promptFor } =
-    useApp();
+  const {
+    group,
+    posts,
+    task,
+    hasPostedThisCycle,
+    taskLocked,
+    opensAt,
+    reactionsFor,
+    memberById,
+    toggleLike,
+    likedByMe,
+    promptFor,
+  } = useApp();
 
   if (!group) return <Redirect href="/onboarding" />;
 
@@ -22,10 +34,20 @@ export default function Feed() {
       </View>
       <View style={styles.task}>
         <Text style={styles.taskLabel}>Level {group.level} task</Text>
-        <Text style={styles.taskPrompt}>{task.prompt}</Text>
-        <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
-          <Text style={styles.ctaText}>{hasPostedThisCycle ? 'Post again' : 'Complete task'}</Text>
-        </Pressable>
+        {taskLocked ? (
+          <Text style={styles.taskPrompt}>
+            Wait till the next time for a new conversation! Starts {describeWait(opensAt)}.
+          </Text>
+        ) : (
+          <>
+            <Text style={styles.taskPrompt}>{task.prompt}</Text>
+            <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
+              <Text style={styles.ctaText}>
+                {hasPostedThisCycle ? 'Post again' : 'Complete task'}
+              </Text>
+            </Pressable>
+          </>
+        )}
       </View>
       <FlatList
         data={posts}

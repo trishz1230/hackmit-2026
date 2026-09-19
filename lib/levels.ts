@@ -14,13 +14,38 @@ export function todayKey(d = new Date()) {
 
 const CADENCE_DAYS: Record<Cadence, number> = { daily: 1, every_3_days: 3, weekly: 7 };
 
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+/** A task created this soon after midnight belongs to the period that just began. */
+const OPEN_GRACE_MS = 10 * 60_000;
+
 /**
- * A level runs until local midnight `cadence` days after it started, so a
- * family that posts everything in one evening still waits for the turnover.
+ * When the level's task becomes readable and postable, on the member's own
+ * device clock. A level that is created at the turnover opens straight away;
+ * one created mid-day (a family catching up on an overdue level) waits for the
+ * next local midnight, so nobody sees the next conversation early. Level 1 is
+ * always open: a family that just signed up shouldn't be told to come back.
  */
-export function levelUnlocksAt(startedAt: string | undefined, cadence: Cadence): number {
+export function levelOpensAt(startedAt: string | undefined, level = 1): number {
   const start = startedAt ? new Date(startedAt) : new Date();
-  const at = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  if (level <= 1) return startOfDay(start).getTime();
+  const midnight = startOfDay(start);
+  if (start.getTime() - midnight.getTime() <= OPEN_GRACE_MS) return midnight.getTime();
+  const next = new Date(midnight);
+  next.setDate(next.getDate() + 1);
+  return next.getTime();
+}
+
+/**
+ * A level runs until local midnight `cadence` days after its period opened, so
+ * a family that posts everything in one evening still waits for the turnover.
+ */
+export function levelUnlocksAt(
+  startedAt: string | undefined,
+  cadence: Cadence,
+  level = 1
+): number {
+  const at = startOfDay(new Date(levelOpensAt(startedAt, level)));
   at.setDate(at.getDate() + CADENCE_DAYS[cadence]);
   return at.getTime();
 }
