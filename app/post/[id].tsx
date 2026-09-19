@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
 import { useLocalSearchParams } from 'expo-router';
+import { AvatarFace } from '../../components/AvatarFace';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { firstEmoji, tallyEmoji } from '../../lib/reactions';
 import { useApp } from '../../lib/store';
@@ -62,9 +63,10 @@ export default function PostDetail() {
 
   return (
     <KeyboardScreen contentContainerStyle={styles.wrap}>
-      <Text style={styles.author}>
-        {author?.avatar} {author?.name}
-      </Text>
+      <View style={styles.authorRow}>
+        <AvatarFace value={author?.avatar} size={30} />
+        <Text style={styles.author}>{author?.name}</Text>
+      </View>
 
       {post.kind === 'photo' ? (
         <>
@@ -167,6 +169,7 @@ export default function PostDetail() {
 const styles = StyleSheet.create({
   wrap: { padding: spacing.md, gap: spacing.sm },
   missing: { padding: spacing.lg, color: colors.muted },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   author: { fontSize: 18, fontWeight: '700', color: colors.text },
   photo: { width: '100%', height: 260, borderRadius: radius.md },
   prompt: { fontSize: 14, color: colors.muted, lineHeight: 20 },

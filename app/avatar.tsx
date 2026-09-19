@@ -8,44 +8,15 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
+import { EYES, FaceLayers, HAIR, MOUTHS, encodeFace } from '../components/AvatarFace';
+import { savePendingAvatar } from '../lib/api';
 
 const paper = require('../assets/welcome/paper.png');
 const sparkleBig = require('../assets/welcome/sparkle-big.png');
 const sparklePair = require('../assets/welcome/sparkle-pair.png');
 const starArt = require('../assets/welcome/star.png');
-const head = require('../assets/avatar/head.png');
-
-/** Each layer is drawn on the face at a fixed spot, so options stay swappable. */
-const EYES = [
-  require('../assets/avatar/eyes-dots.png'),
-  require('../assets/avatar/eyes-hearts.png'),
-  require('../assets/avatar/eyes-squiggle.png'),
-  require('../assets/avatar/eyes-diamonds.png'),
-  require('../assets/avatar/eyes-tears.png'),
-];
-
-const MOUTHS = [
-  require('../assets/avatar/mouth-smile.png'),
-  require('../assets/avatar/mouth-grin.png'),
-  require('../assets/avatar/mouth-oh.png'),
-  require('../assets/avatar/mouth-squiggle.png'),
-  require('../assets/avatar/mouth-blob.png'),
-  require('../assets/avatar/mouth-teeth.png'),
-];
-
-/** Hair is drawn with its own head outline, so it replaces the bare circle. */
-const HAIR = [
-  null,
-  require('../assets/avatar/hair-curls.png'),
-  require('../assets/avatar/hair-short.png'),
-  require('../assets/avatar/hair-bob.png'),
-  require('../assets/avatar/hair-buzz.png'),
-  require('../assets/avatar/hair-braids.png'),
-  require('../assets/avatar/hair-afro.png'),
-];
 
 const FACE = 230;
 const STEPS = ['eyes', 'mouth', 'hair'] as const;
@@ -57,7 +28,6 @@ const LABEL: Record<Step, string> = {
   hair: 'hair',
 };
 
-const AVATAR_KEY = 'famstreak.avatar';
 const SWIPE = 24;
 const DOUBLE_TAP_MS = 320;
 
@@ -69,7 +39,6 @@ export default function MakeAYou() {
   const [hair, setHair] = useState(0);
   const [done, setDone] = useState(false);
 
-  const pop = useRef(new Animated.Value(0)).current;
   const finish = useRef(new Animated.Value(0)).current;
   const lastTap = useRef(0);
   const leaving = useRef(false);
@@ -81,14 +50,12 @@ export default function MakeAYou() {
   const cycle = useCallback(
     (dir: 1 | -1) => {
       if (!current) return;
-      pop.setValue(0);
-      Animated.timing(pop, { toValue: 1, duration: 180, useNativeDriver: true }).start();
       const next = (v: number, len: number) => (v + dir + len) % len;
       if (current === 'eyes') setEyes((v) => next(v, counts.eyes));
       if (current === 'mouth') setMouth((v) => next(v, counts.mouth));
       if (current === 'hair') setHair((v) => next(v, counts.hair));
     },
-    [counts, current, pop],
+    [counts, current],
   );
 
   const lockIn = useCallback(() => {
@@ -122,7 +89,7 @@ export default function MakeAYou() {
     if (step < STEPS.length || leaving.current) return;
     leaving.current = true;
     setDone(true);
-    AsyncStorage.setItem(AVATAR_KEY, JSON.stringify({ eyes, mouth, hair })).catch(() => {});
+    savePendingAvatar(encodeFace({ eyes, mouth, hair })).catch(() => {});
     Animated.sequence([
       Animated.spring(finish, { toValue: 1.12, friction: 4, useNativeDriver: true }),
       Animated.spring(finish, { toValue: 1, friction: 5, useNativeDriver: true }),
@@ -130,8 +97,6 @@ export default function MakeAYou() {
     const t = setTimeout(() => router.replace('/onboarding'), 1600);
     return () => clearTimeout(t);
   }, [eyes, finish, hair, mouth, router, step]);
-
-  const hairSource = HAIR[hair];
 
   return (
     <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
@@ -142,13 +107,7 @@ export default function MakeAYou() {
         {...pan.panHandlers}
       >
         <Pressable onPress={onTap} style={styles.face}>
-          {hairSource ? (
-            <Animated.Image source={hairSource} resizeMode="contain" style={styles.head} />
-          ) : (
-            <Animated.Image source={head} resizeMode="contain" style={styles.head} />
-          )}
-          <Animated.Image source={EYES[eyes]} resizeMode="contain" style={styles.eyes} />
-          <Animated.Image source={MOUTHS[mouth]} resizeMode="contain" style={styles.mouth} />
+          <FaceLayers face={{ eyes, mouth, hair }} size={FACE} />
         </Pressable>
 
         {done ? (
@@ -227,23 +186,6 @@ const styles = StyleSheet.create({
     height: FACE,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  head: {
-    position: 'absolute',
-    width: FACE,
-    height: FACE,
-  },
-  eyes: {
-    position: 'absolute',
-    top: FACE * 0.36,
-    width: FACE * 0.46,
-    height: FACE * 0.14,
-  },
-  mouth: {
-    position: 'absolute',
-    top: FACE * 0.56,
-    width: FACE * 0.34,
-    height: FACE * 0.18,
   },
   spark: {
     position: 'absolute',
