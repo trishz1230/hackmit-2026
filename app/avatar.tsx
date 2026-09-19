@@ -2,50 +2,23 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Easing,
+  Image,
   ImageBackground,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
+import { EYES, FaceLayers, HAIR, HEAD, MOUTHS, encodeFace } from '../components/AvatarFace';
+import { savePendingAvatar } from '../lib/api';
 
 const paper = require('../assets/welcome/paper.png');
 const sparkleBig = require('../assets/welcome/sparkle-big.png');
 const sparklePair = require('../assets/welcome/sparkle-pair.png');
 const starArt = require('../assets/welcome/star.png');
-const head = require('../assets/avatar/head.png');
-
-/** Each layer is drawn on the face at a fixed spot, so options stay swappable. */
-const EYES = [
-  require('../assets/avatar/eyes-dots.png'),
-  require('../assets/avatar/eyes-hearts.png'),
-  require('../assets/avatar/eyes-squiggle.png'),
-  require('../assets/avatar/eyes-diamonds.png'),
-  require('../assets/avatar/eyes-tears.png'),
-];
-
-const MOUTHS = [
-  require('../assets/avatar/mouth-smile.png'),
-  require('../assets/avatar/mouth-grin.png'),
-  require('../assets/avatar/mouth-oh.png'),
-  require('../assets/avatar/mouth-squiggle.png'),
-  require('../assets/avatar/mouth-blob.png'),
-  require('../assets/avatar/mouth-teeth.png'),
-];
-
-/** Hair is drawn with its own head outline, so it replaces the bare circle. */
-const HAIR = [
-  null,
-  require('../assets/avatar/hair-curls.png'),
-  require('../assets/avatar/hair-short.png'),
-  require('../assets/avatar/hair-bob.png'),
-  require('../assets/avatar/hair-buzz.png'),
-  require('../assets/avatar/hair-braids.png'),
-  require('../assets/avatar/hair-afro.png'),
-];
 
 const FACE = 230;
 const STEPS = ['eyes', 'mouth', 'hair'] as const;
@@ -57,9 +30,10 @@ const LABEL: Record<Step, string> = {
   hair: 'hair',
 };
 
-const AVATAR_KEY = 'famstreak.avatar';
 const SWIPE = 24;
 const DOUBLE_TAP_MS = 320;
+/** The title sits alone on the paper before the face appears. */
+const INTRO_MS = 2000;
 
 export default function MakeAYou() {
   const router = useRouter();
@@ -68,27 +42,41 @@ export default function MakeAYou() {
   const [mouth, setMouth] = useState(0);
   const [hair, setHair] = useState(0);
   const [done, setDone] = useState(false);
+  const [started, setStarted] = useState(false);
+  const reveal = useRef(new Animated.Value(0)).current;
 
-  const pop = useRef(new Animated.Value(0)).current;
-  const finish = useRef(new Animated.Value(0)).current;
+  const finish = useRef(new Animated.Value(1)).current;
   const lastTap = useRef(0);
   const leaving = useRef(false);
 
   const current: Step | undefined = STEPS[step];
+  // Only the features already chosen (plus the one being chosen) are drawn.
+  const upTo = STEPS[Math.min(step, STEPS.length - 1)];
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setStarted(true);
+      Animated.timing(reveal, {
+        toValue: 1,
+        duration: 420,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    }, INTRO_MS);
+    return () => clearTimeout(t);
+  }, [reveal]);
 
   const counts = useMemo(() => ({ eyes: EYES.length, mouth: MOUTHS.length, hair: HAIR.length }), []);
 
   const cycle = useCallback(
     (dir: 1 | -1) => {
       if (!current) return;
-      pop.setValue(0);
-      Animated.timing(pop, { toValue: 1, duration: 180, useNativeDriver: true }).start();
       const next = (v: number, len: number) => (v + dir + len) % len;
       if (current === 'eyes') setEyes((v) => next(v, counts.eyes));
       if (current === 'mouth') setMouth((v) => next(v, counts.mouth));
       if (current === 'hair') setHair((v) => next(v, counts.hair));
     },
-    [counts, current, pop],
+    [counts, current],
   );
 
   const lockIn = useCallback(() => {
@@ -119,36 +107,29 @@ export default function MakeAYou() {
   cycleRef.current = cycle;
 
   useEffect(() => {
-    if (step < STEPS.length || leaving.current) return;
+    if (!started || step < STEPS.length || leaving.current) return;
     leaving.current = true;
     setDone(true);
-    AsyncStorage.setItem(AVATAR_KEY, JSON.stringify({ eyes, mouth, hair })).catch(() => {});
+    savePendingAvatar(encodeFace({ eyes, mouth, hair })).catch(() => {});
     Animated.sequence([
       Animated.spring(finish, { toValue: 1.12, friction: 4, useNativeDriver: true }),
       Animated.spring(finish, { toValue: 1, friction: 5, useNativeDriver: true }),
     ]).start();
     const t = setTimeout(() => router.replace('/onboarding'), 1600);
     return () => clearTimeout(t);
-  }, [eyes, finish, hair, mouth, router, step]);
-
-  const hairSource = HAIR[hair];
+  }, [eyes, finish, hair, mouth, router, started, step]);
 
   return (
     <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
       <Text style={styles.title}>make a you...</Text>
 
       <Animated.View
-        style={[styles.stage, done && { transform: [{ scale: finish }] }]}
+        style={[styles.stage, { opacity: reveal }, done && { transform: [{ scale: finish }] }]}
+        pointerEvents={started ? 'auto' : 'none'}
         {...pan.panHandlers}
       >
         <Pressable onPress={onTap} style={styles.face}>
-          {hairSource ? (
-            <Animated.Image source={hairSource} resizeMode="contain" style={styles.head} />
-          ) : (
-            <Animated.Image source={head} resizeMode="contain" style={styles.head} />
-          )}
-          <Animated.Image source={EYES[eyes]} resizeMode="contain" style={styles.eyes} />
-          <Animated.Image source={MOUTHS[mouth]} resizeMode="contain" style={styles.mouth} />
+          <FaceLayers face={{ eyes, mouth, hair }} size={FACE} upTo={upTo} />
         </Pressable>
 
         {done ? (
@@ -160,8 +141,13 @@ export default function MakeAYou() {
         ) : null}
       </Animated.View>
 
-      {current ? (
+      {!started ? null : current ? (
         <View style={styles.footer}>
+          <OptionStrip
+            options={current === 'eyes' ? EYES : current === 'mouth' ? MOUTHS : HAIR}
+            selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
+            onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
+          />
           <Text style={styles.hint}>swipe up or down to switch {LABEL[current]}</Text>
           <Text style={styles.hint}>double tap to lock it in.</Text>
           <Text style={styles.steps}>
@@ -172,6 +158,37 @@ export default function MakeAYou() {
         <Text style={styles.hint}>that's you!</Text>
       )}
     </ImageBackground>
+  );
+}
+
+/** Every choice for the feature being picked, so nothing is a surprise. */
+function OptionStrip({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: (number | null)[];
+  selected: number;
+  onSelect: (i: number) => void;
+}) {
+  return (
+    <View style={styles.stripWrap}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.strip}
+      >
+        {options.map((option, i) => (
+          <Pressable
+            key={i}
+            onPress={() => onSelect(i)}
+            style={[styles.option, i === selected && styles.optionOn]}
+          >
+            <Image source={option ?? HEAD} resizeMode="contain" style={styles.optionArt} />
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -228,29 +245,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  head: {
-    position: 'absolute',
-    width: FACE,
-    height: FACE,
-  },
-  eyes: {
-    position: 'absolute',
-    top: FACE * 0.36,
-    width: FACE * 0.46,
-    height: FACE * 0.14,
-  },
-  mouth: {
-    position: 'absolute',
-    top: FACE * 0.56,
-    width: FACE * 0.34,
-    height: FACE * 0.18,
-  },
   spark: {
     position: 'absolute',
   },
   footer: {
     marginTop: 32,
+    alignSelf: 'stretch',
     alignItems: 'center',
+  },
+  stripWrap: {
+    width: '100%',
+    maxHeight: 76,
+  },
+  strip: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 14,
+    gap: 8,
+  },
+  option: {
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  optionOn: {
+    borderColor: '#2F2A26',
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
+  optionArt: {
+    width: 40,
+    height: 40,
   },
   hint: {
     fontSize: 16,

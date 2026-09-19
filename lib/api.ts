@@ -72,6 +72,7 @@ const toReaction = (r: Row): Reaction => ({
 
 const USER_ID_KEY = 'famstreak.userId';
 const GROUP_ID_KEY = 'famstreak.groupId';
+const AVATAR_KEY = 'famstreak.avatar';
 
 function uuid(): string {
   const c = globalThis.crypto;
@@ -108,6 +109,15 @@ function randomCode(): string {
 
 const AVATARS = ['🙂', '👩', '👨', '🧑', '👵', '👴', '🧒', '🐣'];
 
+/** The face drawn on /avatar, kept until there is a profile row to put it on. */
+export async function savePendingAvatar(avatar: string): Promise<void> {
+  await AsyncStorage.setItem(AVATAR_KEY, avatar);
+}
+
+export async function pendingAvatar(): Promise<string | null> {
+  return AsyncStorage.getItem(AVATAR_KEY);
+}
+
 export async function saveProfile(
   userId: string,
   name: string,
@@ -115,6 +125,7 @@ export async function saveProfile(
   phone?: string
 ): Promise<Profile> {
   const sb = getSupabase();
+  const drawn = await pendingAvatar();
   const { data, error } = await sb
     .from('profiles')
     .upsert({
@@ -122,7 +133,7 @@ export async function saveProfile(
       name,
       group_id: groupId,
       phone: phone || null,
-      avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
+      avatar: drawn || AVATARS[Math.floor(Math.random() * AVATARS.length)],
     })
     .select()
     .single();

@@ -32,7 +32,7 @@ export default function Onboarding() {
   const fresh = group && group.id !== priorGroupId ? group : null;
 
   useEffect(() => {
-    if (working && mode === 'join' && fresh) router.replace('/');
+    if (working && mode === 'join' && fresh) router.replace('/family');
   }, [working, mode, fresh, router]);
 
   useEffect(() => {
@@ -59,8 +59,8 @@ export default function Onboarding() {
           {created.goal} levels to “{created.rewardText}” · one level every{' '}
           {CADENCE_LABELS[created.cadence]}
         </Text>
-        <Pressable style={styles.cta} onPress={() => router.replace('/')}>
-          <Text style={styles.ctaText}>Go to the map</Text>
+        <Pressable style={styles.cta} onPress={() => router.replace('/family')}>
+          <Text style={styles.ctaText}>Meet the family</Text>
         </Pressable>
       </View>
     );

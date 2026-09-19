@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
+import { AvatarFace } from '../../components/AvatarFace';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { MAX_LEVELS, MIN_LEVELS } from '../../lib/levels';
 import { formatPhone, isValidPhone } from '../../lib/phone';
@@ -261,11 +262,14 @@ export default function Settings() {
       <View style={styles.card}>
         <Text style={styles.label}>Members</Text>
         {members.map((m) => (
-          <Text key={m.id} style={styles.member}>
-            {m.avatar} {m.name}
-            {m.id === me.id ? ' (you)' : ''}
-            {m.phone ? ` · ${m.phone}` : ''}
-          </Text>
+          <View key={m.id} style={styles.memberRow}>
+            <AvatarFace value={m.avatar} size={28} />
+            <Text style={styles.member}>
+              {m.name}
+              {m.id === me.id ? ' (you)' : ''}
+              {m.phone ? ` · ${m.phone}` : ''}
+            </Text>
+          </View>
         ))}
       </View>
 
@@ -410,7 +414,8 @@ const styles = StyleSheet.create({
   ctaText: { color: '#fff', fontWeight: '700' },
   inputBad: { borderColor: '#D64545' },
   error: { color: '#D64545', fontSize: 13 },
-  member: { fontSize: 16, color: colors.text, paddingVertical: 2 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 2 },
+  member: { fontSize: 16, color: colors.text },
   picker: { flexDirection: 'row', gap: spacing.xs },
   pickerBtn: {
     flex: 1,

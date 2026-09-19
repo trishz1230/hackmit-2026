@@ -8,7 +8,10 @@ const NODE = 64;
 const STEP = 108;
 const AMPLITUDE = 92;
 const MILESTONE_EVERY = 5;
-const TRAIL_DOTS = 4;
+const MAX_TRAIL_DOTS = 4;
+const DOT = 8;
+/** Clearance between a dot and the circle it runs from. */
+const DOT_GAP = 10;
 /** Room under the last level for the reward card. */
 const FOOT = 132;
 
@@ -55,19 +58,33 @@ function PulsingRing() {
   return <Animated.View style={[styles.ring, { transform: [{ scale }] }]} pointerEvents="none" />;
 }
 
-function Trail({ from, to }: { from: { x: number; y: number }; to: { x: number; y: number } }) {
+const radiusOf = (n: number) => (isMilestone(n) ? NODE + 12 : NODE) / 2;
+
+/** Dots run along the gap between two circles, never underneath them. */
+function Trail({ n, goal }: { n: number; goal: number }) {
+  const from = position(n, goal);
+  const to = position(n + 1, goal);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const start = radiusOf(n) + DOT_GAP;
+  const span = length - start - (radiusOf(n + 1) + DOT_GAP);
+  if (span <= 0) return null;
+
+  const count = Math.max(1, Math.min(MAX_TRAIL_DOTS, Math.round(span / (DOT * 3))));
+
   return (
     <>
-      {Array.from({ length: TRAIL_DOTS }, (_, i) => {
-        const t = (i + 1) / (TRAIL_DOTS + 1);
+      {Array.from({ length: count }, (_, i) => {
+        const along = (start + (span * (i + 1)) / (count + 1)) / length;
         return (
           <View
             key={i}
             style={[
               styles.dot,
               {
-                marginLeft: from.x + (to.x - from.x) * t - 4,
-                bottom: from.y + (to.y - from.y) * t + NODE / 2 - 4,
+                marginLeft: from.x + dx * along - DOT / 2,
+                bottom: from.y + dy * along + NODE / 2 - DOT / 2,
               },
             ]}
           />
@@ -108,7 +125,7 @@ export function LevelMap({
       >
         <View style={styles.board}>
           {levels.slice(0, -1).map((n) => (
-            <Trail key={`trail-${n}`} from={position(n, goal)} to={position(n + 1, goal)} />
+            <Trail key={`trail-${n}`} n={n} goal={goal} />
           ))}
 
           {levels.map((n) => {
@@ -195,9 +212,9 @@ const styles = StyleSheet.create({
   dot: {
     position: 'absolute',
     left: '50%',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: DOT,
+    height: DOT,
+    borderRadius: DOT / 2,
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   goalFlag: {

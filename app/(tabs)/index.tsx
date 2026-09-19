@@ -25,6 +25,7 @@ export default function Home() {
     opensAt,
     taskForLevel,
     myPostForLevel,
+    me,
     loading,
   } = useApp();
   const [selected, setSelected] = useState<number | null>(null);
@@ -51,6 +52,8 @@ export default function Home() {
         goal={group.goal}
         reward={group.rewardText}
         streak={group.currentStreak}
+        myAvatar={me.avatar}
+        onPressAvatar={() => router.push('/family')}
       />
 
       {waitingForPeriod ? (

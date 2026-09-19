@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Handwriting';
+import { AvatarFace } from './AvatarFace';
 import { tallyEmoji } from '../lib/reactions';
 import { colors, radius, spacing } from '../lib/theme';
 import type { Post, Profile, Reaction } from '../lib/types';
@@ -36,7 +37,7 @@ export function PostCard({
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.header}>
-        <Text style={styles.avatar}>{author?.avatar ?? '🙂'}</Text>
+        <AvatarFace value={author?.avatar} size={28} />
         <Text style={styles.name}>{author?.name ?? 'Someone'}</Text>
         <Text style={styles.time}>{timeAgo(post.createdAt)}</Text>
       </View>
@@ -79,7 +80,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  avatar: { fontSize: 22 },
   name: { fontWeight: '700', color: colors.text, flex: 1 },
   time: { color: colors.muted, fontSize: 12 },
   body: { marginTop: spacing.sm, fontSize: 15, color: colors.text, lineHeight: 21 },
