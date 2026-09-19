@@ -1,8 +1,19 @@
 import React, { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { describeWait } from '../lib/levels';
+import { dismissKeyboard } from '../lib/keyboard';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -15,6 +26,7 @@ export default function Capture() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
+  const [textFocused, setTextFocused] = useState(false);
 
   const pick = async (from: 'camera' | 'library') => {
     setPhotoError('');
@@ -70,65 +82,77 @@ export default function Capture() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.wrap}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
-    >
-      <Text style={styles.prompt}>
-        {hangout ? 'Share anything with the family' : task.prompt}
-      </Text>
+    <View style={styles.screen}>
+      <KeyboardAvoidingView
+        style={styles.wrap}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        <Text style={styles.prompt}>
+          {hangout ? 'Share anything with the family' : task.prompt}
+        </Text>
 
-      <View style={styles.toggle}>
-        {(['photo', 'text'] as const).map((m) => (
-          <Pressable
-            key={m}
-            onPress={() => setMode(m)}
-            style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]}
-          >
-            <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
-              {m === 'photo' ? '📷 Photo' : '✍️ Text'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {mode === 'photo' ? (
-        <View style={styles.photoArea}>
-          {photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
-          ) : (
-            <Text style={styles.placeholder}>No photo yet</Text>
-          )}
-          <View style={styles.row}>
-            <Pressable style={styles.secondary} onPress={() => pick('camera')}>
-              <Text style={styles.secondaryText}>Open camera</Text>
+        <View style={styles.toggle}>
+          {(['photo', 'text'] as const).map((m) => (
+            <Pressable
+              key={m}
+              onPress={() => setMode(m)}
+              style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]}
+            >
+              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
+                {m === 'photo' ? '📷 Photo' : '✍️ Text'}
+              </Text>
             </Pressable>
-            <Pressable style={styles.secondary} onPress={() => pick('library')}>
-              <Text style={styles.secondaryText}>Choose photo</Text>
-            </Pressable>
-          </View>
-          {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
+          ))}
         </View>
-      ) : (
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          multiline
-          placeholder={hangout ? 'What\u2019s going on?' : 'Tell them about your day…'}
-          placeholderTextColor={colors.muted}
-        />
-      )}
 
-      <Pressable style={styles.cta} onPress={post}>
-        <Text style={styles.ctaText}>{hangout ? 'Post to hangout' : 'Post to family'}</Text>
-      </Pressable>
-    </KeyboardAvoidingView>
+        {mode === 'photo' ? (
+          <View style={styles.photoArea}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
+            ) : (
+              <Text style={styles.placeholder}>No photo yet</Text>
+            )}
+            <View style={styles.row}>
+              <Pressable style={styles.secondary} onPress={() => pick('camera')}>
+                <Text style={styles.secondaryText}>Open camera</Text>
+              </Pressable>
+              <Pressable style={styles.secondary} onPress={() => pick('library')}>
+                <Text style={styles.secondaryText}>Choose photo</Text>
+              </Pressable>
+            </View>
+            {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
+          </View>
+        ) : (
+          <TextInput
+            style={styles.input}
+            value={text}
+            onChangeText={setText}
+            onFocus={() => setTextFocused(true)}
+            onBlur={() => setTextFocused(false)}
+            multiline
+            placeholder={hangout ? 'What\u2019s going on?' : 'Tell them about your day…'}
+            placeholderTextColor={colors.muted}
+          />
+        )}
+
+        <Pressable
+          style={styles.cta}
+          onPress={() => {
+            dismissKeyboard();
+            post();
+          }}
+        >
+          <Text style={styles.ctaText}>{hangout ? 'Post to hangout' : 'Post to family'}</Text>
+        </Pressable>
+      </KeyboardAvoidingView>
+      <KeyboardDismissLayer armed={textFocused} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
   wrap: { flex: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
   prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
   locked: { flex: 1, color: colors.muted, fontSize: 16, lineHeight: 22 },

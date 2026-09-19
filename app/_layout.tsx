@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NotificationController } from '../components/NotificationController';
 import { PhoneFrame } from '../components/PhoneFrame';
+import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { AppProvider } from '../lib/store';
 import { colors } from '../lib/theme';
 
@@ -30,6 +31,7 @@ export default function RootLayout() {
             <Stack.Screen name="next-goal" options={{ title: 'Next goal' }} />
             <Stack.Screen name="post/[id]" options={{ title: 'Reactions' }} />
           </Stack>
+          <KeyboardDismissLayer />
         </PhoneFrame>
       </AppProvider>
     </SafeAreaProvider>

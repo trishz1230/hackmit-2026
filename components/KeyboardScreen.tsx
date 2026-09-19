@@ -16,7 +16,7 @@ export function KeyboardScreen({
     <ScrollView
       style={styles.flex}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
       automaticallyAdjustKeyboardInsets
       contentContainerStyle={[
         { paddingBottom: spacing.md + insets.bottom },
