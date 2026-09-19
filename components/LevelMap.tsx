@@ -16,6 +16,8 @@ export type LevelMapProps = {
   level: number;
   goal: number;
   reward: string;
+  /** The level you're on hasn't opened yet, so it wears a padlock. */
+  locked?: boolean;
   onSelectLevel?: (level: number) => void;
 };
 
@@ -70,7 +72,7 @@ function Trail({ from, to }: { from: { x: number; y: number }; to: { x: number; 
   );
 }
 
-export function LevelMap({ level, goal, reward, onSelectLevel }: LevelMapProps) {
+export function LevelMap({ level, goal, reward, locked = false, onSelectLevel }: LevelMapProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const current = Math.min(level, goal);
@@ -121,7 +123,7 @@ export function LevelMap({ level, goal, reward, onSelectLevel }: LevelMapProps) 
                   ]}
                 >
                   <Text style={[styles.nodeLabel, !done && !isCurrent && styles.nodeLabelLocked]}>
-                    {milestone ? iconFor(n) : done ? '✓' : n}
+                    {isCurrent && locked ? '🔒' : milestone ? iconFor(n) : done ? '✓' : n}
                   </Text>
                 </View>
                 {milestone && <Text style={styles.milestoneCaption}>Level {n}</Text>}
