@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 /** Wonderland palette — twilight purple, tea-party gold, cheshire teal. */
 export const colors = {
   bg: '#F7F1FF',
@@ -13,8 +15,19 @@ export const colors = {
   nightSoft: '#3A2459',
 };
 
-/** Loaded in app/_layout.tsx; the key must match the useFonts key. */
-export const fonts = { body: 'PatrickHand_400Regular' };
+const handwriting = 'PatrickHand_400Regular';
+
+/**
+ * Loaded in app/_layout.tsx; the name must match the useFonts key. The web
+ * build lists the emoji faces too, since a browser given a single family
+ * leaves glyphs the handwriting face lacks — every emoji — blank.
+ */
+export const fonts = {
+  body: Platform.select({
+    web: `${handwriting}, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`,
+    default: handwriting,
+  }),
+};
 
 export const radius = { sm: 8, md: 14, lg: 22 };
 export const spacing = { xs: 6, sm: 10, md: 16, lg: 24 };
