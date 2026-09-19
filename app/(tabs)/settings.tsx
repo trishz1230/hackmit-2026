@@ -17,6 +17,10 @@ export default function Settings() {
     leaveGroup,
     simulateMissedDay,
     endPeriodNow,
+    cadencePendingOn,
+    proposeCadence,
+    approveCadence,
+    cancelCadenceChange,
   } = useApp();
   const [name, setName] = useState(me.name);
   const [phone, setPhone] = useState(me.phone ?? '');
@@ -57,7 +61,6 @@ export default function Settings() {
           onPress={() => {
             if (!familyName.trim()) return;
             updateSettings({
-              cadence: group.cadence,
               rewardText: group.rewardText,
               goal: group.goal,
               name: familyName.trim(),
@@ -113,25 +116,45 @@ export default function Settings() {
         <Text style={styles.label}>Level length &amp; reminders</Text>
         <Text style={styles.meta}>
           How long one level lasts and how often the family gets nudged. Everyone can post any
-          time, but the level only clears at midnight once the period is up.
+          time, but the level only clears at midnight once the period is up. Changing it needs
+          every member&apos;s approval.
         </Text>
         <View style={styles.picker}>
-          {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => (
-            <Pressable
-              key={c}
-              onPress={() =>
-                updateSettings({ cadence: c, rewardText: group.rewardText, goal: group.goal })
-              }
-              style={[styles.pickerBtn, group.cadence === c && styles.pickerBtnActive]}
-            >
-              <Text
-                style={[styles.pickerText, group.cadence === c && styles.pickerTextActive]}
+          {(Object.keys(CADENCE_LABELS) as Cadence[]).map((c) => {
+            const active = (group.pendingCadence ?? group.cadence) === c;
+            return (
+              <Pressable
+                key={c}
+                onPress={() => proposeCadence(c)}
+                style={[styles.pickerBtn, active && styles.pickerBtnActive]}
               >
-                {CADENCE_LABELS[c]}
-              </Text>
-            </Pressable>
-          ))}
+                <Text style={[styles.pickerText, active && styles.pickerTextActive]}>
+                  {CADENCE_LABELS[c]}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
+        {group.pendingCadence ? (
+          <View style={styles.vote}>
+            <Text style={styles.voteTitle}>
+              Change to {CADENCE_LABELS[group.pendingCadence]} &middot;{' '}
+              {group.cadenceApprovals.length} of {members.length} approved
+            </Text>
+            <Text style={styles.meta}>
+              Still waiting on {cadencePendingOn.map((m) => m.name).join(', ')}. Until then the
+              family stays on {CADENCE_LABELS[group.cadence]}.
+            </Text>
+            {group.cadenceApprovals.includes(me.id) ? null : (
+              <Pressable style={styles.cta} onPress={approveCadence}>
+                <Text style={styles.ctaText}>Approve the change</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={cancelCadenceChange}>
+              <Text style={styles.cancel}>Cancel this change</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.card}>
@@ -227,6 +250,14 @@ const styles = StyleSheet.create({
   pickerBtnActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
   pickerText: { color: colors.muted, fontWeight: '600' },
   pickerTextActive: { color: colors.text },
+  vote: {
+    gap: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  voteTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  cancel: { textAlign: 'center', color: colors.muted, fontWeight: '700', paddingTop: spacing.xs },
   leave: { alignItems: 'center', paddingVertical: spacing.sm },
   leaveText: { color: colors.accent, fontWeight: '700' },
   demo: { alignItems: 'center', paddingVertical: spacing.sm },

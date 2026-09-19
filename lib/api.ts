@@ -15,6 +15,7 @@ type Row = Record<string, unknown>;
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
 const toGroup = (r: Row): Group => ({
   id: str(r.id),
@@ -26,6 +27,8 @@ const toGroup = (r: Row): Group => ({
   rewardText: str(r.reward_text),
   currentStreak: num(r.current_streak),
   awaitingNextGoal: Boolean(r.awaiting_next_goal),
+  pendingCadence: (str(r.pending_cadence) || undefined) as Cadence | undefined,
+  cadenceApprovals: strs(r.cadence_approvals),
 });
 
 const toProfile = (r: Row): Profile => ({
@@ -158,20 +161,79 @@ export async function joinGroup(userId: string, opts: JoinOptions): Promise<Grou
   return group;
 }
 
-/** Settings screen: name, cadence, reward and level goal can change any time. */
+/**
+ * Settings screen: name, reward and level goal can change any time. Cadence
+ * cannot — it goes through proposeCadence/approveCadence instead.
+ */
 export async function updateGroup(
   groupId: string,
-  patch: { cadence: Cadence; rewardText: string; goal: number; name?: string }
+  patch: { rewardText: string; goal: number; name?: string }
 ): Promise<void> {
   const sb = getSupabase();
   const { error } = await sb
     .from('groups')
     .update({
-      cadence: patch.cadence,
       reward_text: patch.rewardText,
       goal: patch.goal,
       ...(patch.name ? { name: patch.name } : {}),
     })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
+/**
+ * Reminder frequency is a family decision: proposing one starts a vote that the
+ * proposer has already cast. In a family of one it applies immediately.
+ */
+export async function proposeCadence(
+  group: Group,
+  members: Profile[],
+  userId: string,
+  cadence: Cadence
+): Promise<void> {
+  if (cadence === group.cadence) return cancelCadenceChange(group.id);
+  await recordCadenceVote(group.id, cadence, [userId], members);
+}
+
+export async function approveCadence(
+  group: Group,
+  members: Profile[],
+  userId: string
+): Promise<void> {
+  if (!group.pendingCadence || group.cadenceApprovals.includes(userId)) return;
+  await recordCadenceVote(
+    group.id,
+    group.pendingCadence,
+    [...group.cadenceApprovals, userId],
+    members
+  );
+}
+
+export async function cancelCadenceChange(groupId: string): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update({ pending_cadence: null, cadence_approvals: [] })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
+/** Writes the tally, or applies the cadence once every member is in it. */
+async function recordCadenceVote(
+  groupId: string,
+  cadence: Cadence,
+  approvals: string[],
+  members: Profile[]
+): Promise<void> {
+  const everyone = members.length > 0 && members.every((m) => approvals.includes(m.id));
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update(
+      everyone
+        ? { cadence, pending_cadence: null, cadence_approvals: [] }
+        : { pending_cadence: cadence, cadence_approvals: approvals }
+    )
     .eq('id', groupId);
   if (error) throw error;
 }
