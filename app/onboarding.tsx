@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Handwriting';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
 import { formatPhone, isValidPhone } from '../lib/phone';
 import { useApp } from '../lib/store';
-import { colors, radius, spacing } from '../lib/theme';
+import { paper, radius, spacing } from '../lib/theme';
 import { CADENCE_LABELS, type Cadence } from '../lib/types';
 
 const CODE_LENGTH = 6;
@@ -15,7 +15,8 @@ export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { group, createGroup, joinGroup, isLive, error, dismissError } = useApp();
-  const [mode, setMode] = useState<'create' | 'join'>('create');
+  const { mode: picked } = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<'create' | 'join'>(picked === 'join' ? 'join' : 'create');
   const [myName, setMyName] = useState('');
   const [phone, setPhone] = useState('');
   const [cadence, setCadence] = useState<Cadence>('daily');
@@ -103,6 +104,7 @@ export default function Onboarding() {
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       automaticallyAdjustKeyboardInsets
+      style={styles.page}
       contentContainerStyle={[styles.wrap, { paddingBottom: spacing.lg + insets.bottom }]}
     >
       <Text style={styles.logo}>btw</Text>
@@ -130,7 +132,7 @@ export default function Onboarding() {
         value={myName}
         onChangeText={setMyName}
         placeholder="Alex"
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={paper.muted}
       />
       {nameMissing && <Text style={styles.error}>Your name is required.</Text>}
 
@@ -141,7 +143,7 @@ export default function Onboarding() {
         onChangeText={setPhone}
         keyboardType="phone-pad"
         placeholder="123 456 7890"
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={paper.muted}
       />
       {phoneBad && <Text style={styles.error}>Enter a 10-digit phone number.</Text>}
 
@@ -153,7 +155,7 @@ export default function Onboarding() {
             value={familyName}
             onChangeText={setFamilyName}
             placeholder="No.1 Family"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={paper.muted}
           />
 
           <Text style={styles.label}>What does one level equal?</Text>
@@ -177,7 +179,7 @@ export default function Onboarding() {
             value={reward}
             onChangeText={setReward}
             placeholder="Pizza Night"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={paper.muted}
           />
           {rewardMissing && (
             <Text style={styles.error}>Pick what the family is working toward.</Text>
@@ -189,7 +191,7 @@ export default function Onboarding() {
             onChangeText={setLevels}
             keyboardType="number-pad"
             placeholder="10"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={paper.muted}
           />
         </>
       ) : (
@@ -202,7 +204,7 @@ export default function Onboarding() {
             autoCapitalize="characters"
             maxLength={CODE_LENGTH}
             placeholder="FAM123"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={paper.muted}
           />
           {codeMissing && <Text style={styles.error}>Enter the family&apos;s code to join.</Text>}
           {codeTooShort && (
@@ -228,29 +230,40 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { padding: spacing.lg, paddingTop: 72, gap: spacing.sm },
-  logo: { fontSize: 34, fontWeight: '800', color: colors.accent },
-  tagline: { fontSize: 15, color: colors.muted, marginBottom: spacing.lg, lineHeight: 21 },
+  page: { backgroundColor: paper.page },
+  wrap: {
+    padding: spacing.lg,
+    paddingTop: 72,
+    gap: spacing.sm,
+    backgroundColor: paper.page,
+    flexGrow: 1,
+  },
+  logo: { fontSize: 38, color: paper.ink },
+  tagline: { fontSize: 16, color: paper.muted, marginBottom: spacing.lg, lineHeight: 22 },
   toggle: {
     flexDirection: 'row',
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius.md,
-    padding: 4,
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  toggleBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
-  toggleBtnActive: { backgroundColor: colors.card },
-  toggleText: { color: colors.muted, fontWeight: '600' },
-  toggleTextActive: { color: colors.text },
-  label: { fontSize: 13, color: colors.muted, marginTop: spacing.sm },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    backgroundColor: paper.field,
+  },
+  toggleBtnActive: { backgroundColor: paper.button },
+  toggleText: { color: paper.muted, fontSize: 17 },
+  toggleTextActive: { color: paper.ink },
+  label: { fontSize: 15, color: paper.muted, marginTop: spacing.sm },
   input: {
-    backgroundColor: colors.card,
+    backgroundColor: paper.field,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: paper.line,
     borderRadius: radius.md,
     padding: spacing.md,
-    fontSize: 16,
-    color: colors.text,
+    fontSize: 17,
+    color: paper.ink,
   },
   inputBad: { borderColor: '#b3261e' },
   picker: { flexDirection: 'row', gap: spacing.xs },
@@ -259,31 +272,30 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: paper.line,
+    backgroundColor: paper.field,
     alignItems: 'center',
   },
-  pickerBtnActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-  pickerText: { color: colors.muted, fontWeight: '600' },
-  pickerTextActive: { color: colors.text },
-  code: { letterSpacing: 4, fontSize: 20, fontWeight: '700' },
+  pickerBtnActive: { backgroundColor: paper.button, borderColor: paper.buttonOn },
+  pickerText: { color: paper.muted, fontSize: 16 },
+  pickerTextActive: { color: paper.ink },
+  code: { letterSpacing: 4, fontSize: 22 },
   bigCode: {
-    fontSize: 40,
-    fontWeight: '800',
+    fontSize: 42,
     letterSpacing: 8,
-    color: colors.accent,
+    color: paper.ink,
     textAlign: 'center',
     marginVertical: spacing.lg,
   },
-  summary: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20 },
+  summary: { fontSize: 16, color: paper.muted, textAlign: 'center', lineHeight: 22 },
   cta: {
     marginTop: spacing.lg,
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    backgroundColor: paper.button,
+    borderRadius: radius.lg,
     padding: spacing.md,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  error: { marginTop: spacing.md, fontSize: 13, color: '#b3261e', lineHeight: 18 },
-  demoNote: { marginTop: spacing.md, fontSize: 12, color: colors.muted, lineHeight: 17 },
+  ctaText: { color: paper.ink, fontSize: 19 },
+  error: { marginTop: spacing.md, fontSize: 14, color: '#b3261e', lineHeight: 19 },
+  demoNote: { marginTop: spacing.md, fontSize: 13, color: paper.muted, lineHeight: 18 },
 });

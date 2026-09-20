@@ -49,7 +49,7 @@ export default function Welcome() {
     }
 
     done.current = true;
-    const open = setTimeout(() => router.replace('/avatar'), SETTLE_MS);
+    const open = setTimeout(() => router.replace('/start'), SETTLE_MS);
     return () => clearTimeout(open);
   }, [frame, holding, router]);
 

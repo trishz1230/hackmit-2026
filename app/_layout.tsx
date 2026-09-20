@@ -33,6 +33,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
             <Stack.Screen name="welcome" options={{ headerShown: false }} />
+            <Stack.Screen name="start" options={{ headerShown: false }} />
             <Stack.Screen name="avatar" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="family" options={{ headerShown: false }} />
