@@ -8,6 +8,8 @@ import { AvatarButton } from '../../components/AvatarButton';
 import { PostStack } from '../../components/PostStack';
 import { GreenStar, HeartsDoodle, YellowStar } from '../../components/Doodles';
 import { weekRange, weekStats } from '../../lib/week';
+import { DEFAULT_LABELS, weekLabels, type StatLabels } from '../../lib/weekLabels';
+import { familyContext } from '../../lib/prompts';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -18,6 +20,7 @@ export default function Home() {
   const router = useRouter();
   const { group, members, posts, hangoutPosts, reactions, memberById, loading } = useApp();
   const insets = useSafeAreaInsets();
+  const [labels, setLabels] = useState<StatLabels>(DEFAULT_LABELS);
   const { height: screenHeight } = useWindowDimensions();
   // Wakes the screen once the week rolls over, so the dates and the photo pile
   // restart even if the app stays open through Sunday night.
@@ -30,9 +33,6 @@ export default function Home() {
     return () => clearTimeout(id);
   }, [now]);
 
-  if (loading) return <View style={styles.wrap} />;
-  if (!group) return <Redirect href="/onboarding" />;
-
   const { start, end } = weekRange(now);
   const all = [...posts, ...hangoutPosts];
   const thisWeek = all.filter((p) => {
@@ -40,6 +40,24 @@ export default function Home() {
     return at >= start.getTime() && at <= end.getTime();
   });
   const stats = weekStats(thisWeek, reactions, members);
+
+  // The week names its own categories once there is something to name them after.
+  const groupId = group?.id;
+  const weekKey = start.toDateString();
+  const named = stats.length > 0;
+  useEffect(() => {
+    if (!groupId || !named) return;
+    let live = true;
+    weekLabels(groupId, start, familyContext(group?.name ?? '', members, thisWeek)).then((l) => {
+      if (live) setLabels(l);
+    });
+    return () => {
+      live = false;
+    };
+  }, [groupId, weekKey, named]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) return <View style={styles.wrap} />;
+  if (!group) return <Redirect href="/onboarding" />;
 
   return (
     <ScrollView style={[styles.wrap, { paddingTop: insets.top }]} contentContainerStyle={styles.body}>
@@ -74,12 +92,12 @@ export default function Home() {
 
       {[
         {
-          label: 'who is the least responsive??',
-          member: stats.find((s) => s.label === 'Least responsive')?.member,
+          label: labels.quiet,
+          member: stats.find((s) => s.metric === 'quiet')?.member,
         },
         {
-          label: 'most talked about topic!',
-          member: stats.find((s) => s.label === 'Most talked')?.member,
+          label: labels.talked,
+          member: stats.find((s) => s.metric === 'talked')?.member,
         },
       ].map((box, i) => (
         <View key={box.label} style={styles.statWrap}>

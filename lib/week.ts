@@ -12,7 +12,8 @@ export function weekRange(now = new Date()): { start: Date; end: Date } {
   return { start, end };
 }
 
-export type WeekStat = { label: string; member: Profile };
+/** `metric` says what the card measures; its wording is named elsewhere. */
+export type WeekStat = { metric: 'talked' | 'quiet'; member: Profile };
 
 const countBy = <T,>(items: T[], id: (item: T) => string) =>
   items.reduce<Record<string, number>>((acc, item) => {
@@ -61,14 +62,14 @@ export function weekStats(
   const mostTalked = weekPosts.length + comments.length > 0
     ? standout(members, talked, 'high')
     : undefined;
-  if (mostTalked) stats.push({ label: 'Most talked', member: mostTalked });
+  if (mostTalked) stats.push({ metric: 'talked', member: mostTalked });
 
   // Only meaningful once someone has reacted — otherwise everybody is level.
   const leastResponsive = weekReactions.length > 0
     ? standout(members, responded, 'low')
     : undefined;
   if (leastResponsive && leastResponsive.id !== mostTalked?.id) {
-    stats.push({ label: 'Least responsive', member: leastResponsive });
+    stats.push({ metric: 'quiet', member: leastResponsive });
   }
 
   return stats;
