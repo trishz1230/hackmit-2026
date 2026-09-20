@@ -17,7 +17,7 @@ const STATS_API = process.env.EXPO_PUBLIC_STATS_API || DEPLOYED_STATS_API;
 export type WeekCard = { label: string; who: string };
 
 const keyFor = (groupId: string, weekStart: Date) =>
-  `famstreak.weekCards.${groupId}.${weekStart.toDateString()}`;
+  `btw.weekCards.${groupId}.${weekStart.toDateString()}`;
 
 /** One failed call is enough: the endpoint stays unreachable for this session. */
 let unavailable = false;

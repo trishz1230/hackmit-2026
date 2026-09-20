@@ -15,11 +15,11 @@ const DESCRIBE_API = process.env.EXPO_PUBLIC_DESCRIBE_API || DEPLOYED_DESCRIBE_A
 /** Matches api/describe.ts, which reads at most this many in one request. */
 const MAX_ITEMS = 8;
 
-const keyFor = (postId: string) => `famstreak.described.${postId}`;
+const keyFor = (postId: string) => `btw.described.${postId}`;
 
 const memory = new Map<string, string>();
 
-const UNAVAILABLE_KEY = 'famstreak.described.unavailable';
+const UNAVAILABLE_KEY = 'btw.described.unavailable';
 
 /**
  * One failed call is enough: an undeployed endpoint stays unreachable, so the
