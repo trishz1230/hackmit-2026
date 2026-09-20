@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AVATAR_SIZE } from '../../components/AvatarButton';
 import { AvatarFace } from '../../components/AvatarFace';
 import { HistoryGrid } from '../../components/HistoryGrid';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
@@ -118,12 +119,16 @@ export default function Settings() {
     <KeyboardScreen
       contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
     >
-      <Text style={styles.title}>Settings</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Settings</Text>
+        <Pressable onPress={() => router.push('/avatar?edit=1')} hitSlop={8}>
+          <AvatarFace value={me.avatar} size={AVATAR_SIZE} />
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Your avatar</Text>
         <View style={styles.avatarRow}>
-          <AvatarFace value={me.avatar} size={72} />
           <Pressable onPress={() => router.push('/avatar?edit=1')}>
             <Text style={styles.edit}>Change avatar</Text>
           </Pressable>
@@ -393,6 +398,7 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   blank: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
