@@ -70,18 +70,22 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
   }
   if (missing.length === 0 || (await givenUp())) return described;
 
+  // Marked before the call, not after it: an endpoint that isn't deployed
+  // fails for every refresh racing this one too, and each of those failures
+  // surfaces as a network error in development.
+  await giveUp();
+
   try {
     const res = await fetch(DESCRIBE_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: missing }),
     });
-    if (!res.ok) {
-      await giveUp();
-      return described;
-    }
+    if (!res.ok) return described;
 
     const data = (await res.json()) as { described?: Record<string, string> };
+    unavailable = false;
+    await AsyncStorage.removeItem(UNAVAILABLE_KEY).catch(() => {});
     for (const item of missing) {
       const text = data.described?.[item.id]?.trim() ?? '';
       // An empty answer is cached too: a photo the model can't read stays
@@ -92,7 +96,6 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
     }
     return described;
   } catch {
-    await giveUp();
     return described;
   }
 }

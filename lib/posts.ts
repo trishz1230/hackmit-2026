@@ -61,6 +61,22 @@ export function feedLevel(tasks: Task[], posts: Post[], current: number): number
   return answered.length ? Math.max(...answered) : current;
 }
 
+/** Whether a member has answered a level's task since the row was stamped. */
+export function answeredLevel(
+  tasks: Task[],
+  posts: Post[],
+  level: number,
+  userId: string
+): boolean {
+  return tasks.some((t) => {
+    if (t.level !== level) return false;
+    const since = t.createdAt ? Date.parse(t.createdAt) : 0;
+    return posts.some(
+      (p) => p.taskId === t.id && p.userId === userId && Date.parse(p.createdAt) >= since
+    );
+  });
+}
+
 /**
  * Posts belonging to a level: an answer belongs to the level of the task it
  * answers, whatever the clock says, and a hangout post to the level that was

@@ -406,7 +406,8 @@ async function contextFor(group: Group): Promise<FamilyContext> {
   ]);
 
   const recent = (posts.data ?? []).map(toPost);
-  return familyContext(group.name, members, recent, await describeMedia(recent));
+  const described = await describeMedia(recent).catch(() => ({}));
+  return familyContext(group.name, members, recent, described);
 }
 
 /** The task for the group's current level, created on demand. */
