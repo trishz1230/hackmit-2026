@@ -1,7 +1,9 @@
 /**
  * Serverless prompt generator, deployed on Vercel. Runs on Muse Spark through
- * Meta's Model API; the key lives here as an environment variable so nobody has
- * to configure anything locally.
+ * Meta's Model API, reading what the family shared (including their photos and
+ * recordings, via api/describe.ts) to write a prompt only this family would be
+ * asked. The key lives here as an environment variable so nobody has to
+ * configure anything locally.
  *
  * Deploy: `npx vercel --prod`, then set MODEL_API_KEY in the project settings.
  */
@@ -38,7 +40,7 @@ export default async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
-  const model = provider();
+  const model = provider('muse');
   if (!model) return json({ error: 'MODEL_API_KEY is not set on the server' }, 500);
 
   const { recent = [], context = {} } = (await req.json().catch(() => ({}))) as {

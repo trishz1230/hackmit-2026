@@ -1,8 +1,8 @@
 /**
- * Task prompts. Calls the deployed prompt function (api/prompt.ts), which holds
- * the OpenAI key server-side so nobody needs local configuration. Falls back to
- * the hardcoded list whenever that endpoint is missing or fails, so the app
- * always works.
+ * Task prompts. Calls the deployed prompt function (api/prompt.ts), which runs
+ * on Muse and holds its key server-side so nobody needs local configuration.
+ * Falls back to the hardcoded list whenever that endpoint is missing or fails,
+ * so the app always works.
  *
  * Point PROMPT_API at your own deployment, or override it per machine with
  * EXPO_PUBLIC_PROMPT_API.

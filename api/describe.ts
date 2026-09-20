@@ -112,7 +112,7 @@ export default async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
-  const model = provider();
+  const model = provider('muse');
   if (!model) return json({ error: 'MODEL_API_KEY is not set on the server' }, 500);
 
   const { items = [] } = (await req.json().catch(() => ({}))) as { items?: Item[] };

@@ -7,8 +7,8 @@ import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
 import { PostStack } from '../../components/PostStack';
 import { GreenStar, HeartsDoodle, PhoneDoodle, YellowStar } from '../../components/Doodles';
-import { weekRange, weekStats } from '../../lib/week';
-import { DEFAULT_LABELS, weekLabels, type StatLabels } from '../../lib/weekLabels';
+import { weekRange, weekStats, weekTallies } from '../../lib/week';
+import { weekCards, type WeekCard } from '../../lib/weekCards';
 import { describeMedia } from '../../lib/describe';
 import { familyContext } from '../../lib/prompts';
 import { useApp } from '../../lib/store';
@@ -21,7 +21,7 @@ export default function Home() {
   const router = useRouter();
   const { group, members, posts, hangoutPosts, reactions, memberById, loading } = useApp();
   const insets = useSafeAreaInsets();
-  const [labels, setLabels] = useState<StatLabels>(DEFAULT_LABELS);
+  const [cards, setCards] = useState<WeekCard[] | null>(null);
   const { height: screenHeight } = useWindowDimensions();
   // Wakes the screen once the week rolls over, so the dates and the photo pile
   // restart even if the app stays open through Sunday night.
@@ -42,7 +42,7 @@ export default function Home() {
   });
   const stats = weekStats(thisWeek, reactions, members);
 
-  // The week names its own categories once there is something to name them after.
+  // The week writes its own two cards once there is something to write about.
   const groupId = group?.id;
   const weekKey = start.toDateString();
   const named = stats.length > 0;
@@ -51,10 +51,15 @@ export default function Home() {
     let live = true;
     describeMedia(thisWeek)
       .then((described) =>
-        weekLabels(groupId, start, familyContext(group?.name ?? '', members, thisWeek, described)),
+        weekCards(
+          groupId,
+          start,
+          familyContext(group?.name ?? '', members, thisWeek, described),
+          weekTallies(thisWeek, reactions, members),
+        ),
       )
-      .then((l) => {
-        if (live) setLabels(l);
+      .then((c) => {
+        if (live && c) setCards(c);
       });
     return () => {
       live = false;
@@ -98,16 +103,19 @@ export default function Home() {
         </View>
       )}
 
-      {[
-        {
-          label: labels.quiet,
-          member: stats.find((s) => s.metric === 'quiet')?.member,
-        },
-        {
-          label: labels.talked,
-          member: stats.find((s) => s.metric === 'talked')?.member,
-        },
-      ].map((box, i) => (
+      {(cards
+        ? cards.map((card) => ({
+            label: card.label,
+            member: members.find((m) => m.name === card.who),
+          }))
+        : [
+            { label: 'who is the least responsive??', metric: 'quiet' as const },
+            { label: 'most talked about topic!', metric: 'talked' as const },
+          ].map((box) => ({
+            label: box.label,
+            member: stats.find((s) => s.metric === box.metric)?.member,
+          }))
+      ).map((box, i) => (
         <View key={box.label} style={styles.statWrap}>
           <View style={styles.stat}>
             <Text style={styles.statLabel}>{box.label}</Text>

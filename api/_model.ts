@@ -1,10 +1,12 @@
 /**
- * Which model the serverless functions talk to. Meta's Model API is the one we
- * build on (Muse Spark for words and photos, Muse Voice Transcribe for
- * recordings); it speaks the OpenAI chat-completions wire format, so OpenAI
- * stays usable as a fallback when only OPENAI_API_KEY is set.
+ * Which model each serverless function talks to. The two jobs are split on
+ * purpose: Muse reads the family (photos, recordings, words) and writes the
+ * next prompt, OpenAI judges the week (what the two stat cards are called and
+ * who each one lands on). Meta's Model API speaks the OpenAI chat-completions
+ * wire format, so one `chat()` covers both, and either provider stands in for
+ * the other when only one key is configured.
  *
- * Set MODEL_API_KEY in the Vercel project settings to run on Muse.
+ * Set MODEL_API_KEY (Muse) and OPENAI_API_KEY in the Vercel project settings.
  * Underscore-prefixed files in api/ are shared code, not routes.
  */
 export type Provider = {
@@ -17,23 +19,26 @@ export type Provider = {
 
 export const VOICE_MODEL = process.env.MUSE_VOICE_MODEL || 'muse-voice-transcribe-1.0';
 
-export function provider(): Provider | null {
-  const muse = process.env.MODEL_API_KEY;
-  if (muse) {
-    return {
-      name: 'muse',
-      base: 'https://api.meta.ai/v1',
-      key: muse,
-      chat: process.env.MUSE_MODEL || 'muse-spark-1.3',
-    };
-  }
+function muse(): Provider | null {
+  const key = process.env.MODEL_API_KEY;
+  if (!key) return null;
+  return {
+    name: 'muse',
+    base: 'https://api.meta.ai/v1',
+    key,
+    chat: process.env.MUSE_MODEL || 'muse-spark-1.3',
+  };
+}
 
-  const openai = process.env.OPENAI_API_KEY;
-  if (openai) {
-    return { name: 'openai', base: 'https://api.openai.com/v1', key: openai, chat: 'gpt-4o-mini' };
-  }
+function openai(): Provider | null {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
+  return { name: 'openai', base: 'https://api.openai.com/v1', key, chat: 'gpt-4o-mini' };
+}
 
-  return null;
+/** The provider for this job, or the other one when its key is missing. */
+export function provider(want: 'muse' | 'openai'): Provider | null {
+  return want === 'muse' ? muse() ?? openai() : openai() ?? muse();
 }
 
 /** A chat message, in the format both providers accept. */

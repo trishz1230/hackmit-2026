@@ -39,6 +39,25 @@ const standout = (
   return first.member;
 };
 
+/** One member's week in numbers, for api/stats.ts to award its cards from. */
+export type Tally = { name: string; posts: number; comments: number; reactions: number };
+
+export function weekTallies(
+  weekPosts: Post[],
+  reactions: Reaction[],
+  members: Profile[],
+): Tally[] {
+  const weekPostIds = weekPosts.map((p) => p.id);
+  const weekReactions = reactions.filter((r) => weekPostIds.includes(r.postId));
+
+  return members.map((member) => ({
+    name: member.name,
+    posts: weekPosts.filter((p) => p.userId === member.id).length,
+    comments: weekReactions.filter((r) => r.userId === member.id && r.kind === 'comment').length,
+    reactions: weekReactions.filter((r) => r.userId === member.id).length,
+  }));
+}
+
 /**
  * Headline stats for the week, read straight off what the family did. A stat
  * is left out entirely unless the week's activity actually names someone, so
