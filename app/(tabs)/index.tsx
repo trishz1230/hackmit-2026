@@ -80,9 +80,7 @@ export default function Home() {
             {dayMonth(start)}–{dayMonth(end)}
           </Text>
         </View>
-        <View style={styles.avatarLift}>
-          <AvatarButton size={54} />
-        </View>
+        <AvatarButton />
       </View>
 
       <View
@@ -160,7 +158,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
   emptyCard: { marginBottom: spacing.sm + 7 },
-  avatarLift: { marginTop: -3 },
   starTitle: { position: 'absolute', left: -20, top: -24 },
   statWrap: { marginBottom: spacing.sm },
   stat: {

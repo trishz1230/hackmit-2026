@@ -116,7 +116,7 @@ export default function Settings() {
 
   return (
     <KeyboardScreen
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
     >
       <Text style={styles.title}>Settings</Text>
 

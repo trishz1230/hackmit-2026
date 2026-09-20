@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
 import { PostCard } from '../../components/PostCard';
 import { AvatarButton } from '../../components/AvatarButton';
@@ -31,6 +32,7 @@ export default function HistoryDayScreen() {
     likedByMe,
     loading,
   } = useApp();
+  const insets = useSafeAreaInsets();
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
@@ -42,7 +44,7 @@ export default function HistoryDayScreen() {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, { paddingTop: insets.top + spacing.md }]}>
         <Text style={styles.title}>{longDate(day)}</Text>
         <AvatarButton />
       </View>
@@ -62,7 +64,7 @@ export default function HistoryDayScreen() {
             liked={likedByMe(item.id)}
           />
         )}
-        contentContainerStyle={{ paddingBottom: spacing.lg }}
+        contentContainerStyle={{ paddingBottom: spacing.lg + insets.bottom }}
       />
     </View>
   );
