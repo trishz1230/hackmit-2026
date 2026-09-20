@@ -4,6 +4,7 @@ import { Text } from './Handwriting';
 import { AvatarFace } from './AvatarFace';
 import { VoiceNote } from './VoiceNote';
 import { tallyEmoji } from '../lib/reactions';
+import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 import type { Post, Profile, Reaction } from '../lib/types';
 
@@ -31,6 +32,8 @@ export function PostCard({
   onLike: () => void;
   liked: boolean;
 }) {
+  const { me } = useApp();
+  const mine = post.userId === me.id;
   const likes = reactions.filter((r) => r.kind === 'like').length;
   const emojis = tallyEmoji(reactions, '');
   const comments = reactions.filter((r) => r.kind === 'comment').length;
@@ -59,11 +62,15 @@ export function PostCard({
       {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <View style={styles.footer}>
-        <Pressable onPress={onLike} hitSlop={8}>
-          <Text style={[styles.action, liked && styles.liked]}>
-            {liked ? '❤️' : '🤍'} {likes}
-          </Text>
-        </Pressable>
+        {mine ? (
+          <Text style={styles.action}>❤️ {likes}</Text>
+        ) : (
+          <Pressable onPress={onLike} hitSlop={8}>
+            <Text style={[styles.action, liked && styles.liked]}>
+              {liked ? '❤️' : '🤍'} {likes}
+            </Text>
+          </Pressable>
+        )}
         <Text style={styles.action}>💬 {comments}</Text>
         {emojis.map((t) => (
           <Text key={t.value} style={styles.action}>

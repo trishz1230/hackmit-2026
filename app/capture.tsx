@@ -20,6 +20,7 @@ import {
 } from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { KeyboardScreen } from '../components/KeyboardScreen';
@@ -57,6 +58,7 @@ const VOICE = {
 
 export default function Capture() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { channel, start } = useLocalSearchParams<{ channel?: string; start?: string }>();
   const hangout = channel === 'hangout';
   const { task, addPost, taskLocked, opensAt, hasPostedThisCycle } = useApp();
@@ -215,13 +217,14 @@ export default function Capture() {
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen
-        options={{
-          title: extra ? 'Share more' : "Today's task",
-          headerShadowVisible: false,
-          headerRight: () => <AvatarButton />,
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.bar, { paddingTop: insets.top + spacing.sm }]}>
+        <Pressable style={styles.backRow} onPress={() => router.back()} hitSlop={8}>
+          <Text style={styles.back}>←</Text>
+          <Text style={styles.barTitle}>{extra ? 'Share more' : "Today's task"}</Text>
+        </Pressable>
+        <AvatarButton />
+      </View>
       <KeyboardScreen contentContainerStyle={styles.wrap}>
         <Text style={styles.prompt}>
           {hangout
@@ -300,6 +303,17 @@ export default function Capture() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  back: { fontSize: 22, color: colors.text },
+  barTitle: { fontSize: 17, color: colors.text },
   wrap: { flexGrow: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
   prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
   locked: { flex: 1, color: colors.muted, fontSize: 16, lineHeight: 22 },
