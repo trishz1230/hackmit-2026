@@ -3,12 +3,13 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
 import { EXTRA_PROMPT, isExtraPost } from '../../lib/posts';
 import { useApp } from '../../lib/store';
-import { colors, radius, spacing } from '../../lib/theme';
+import { paper, radius, spacing } from '../../lib/theme';
 
 export default function Feed() {
   const router = useRouter();
@@ -34,6 +35,9 @@ export default function Feed() {
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
+      <View style={styles.topBar}>
+        <AvatarButton />
+      </View>
       <Tabs active="family" />
       <View style={styles.header}>
         <Text style={styles.title}>{group.name}</Text>
@@ -82,41 +86,40 @@ export default function Feed() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: colors.bg },
+  wrap: { flex: 1, backgroundColor: paper.page },
+  topBar: { alignItems: 'flex-end', paddingHorizontal: spacing.md, paddingTop: spacing.md },
   header: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    backgroundColor: colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
-  title: { fontSize: 20, fontWeight: '800', color: colors.text },
-  sub: { marginTop: 2, fontSize: 13, color: colors.muted },
+  title: { fontSize: 26, color: paper.ink },
+  sub: { marginTop: 2, fontSize: 15, color: paper.muted },
   task: {
     margin: spacing.md,
+    marginTop: 0,
     marginBottom: 0,
     padding: spacing.md,
     gap: spacing.xs,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: paper.field,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: paper.line,
   },
   taskLabel: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: colors.accent,
+    textTransform: 'lowercase',
+    color: paper.muted,
   },
-  taskPrompt: { fontSize: 16, fontWeight: '700', color: colors.text, lineHeight: 22 },
-  complete: { marginTop: spacing.sm, color: colors.success, fontWeight: '800' },
+  taskPrompt: { fontSize: 18, color: paper.ink, lineHeight: 24 },
   cta: {
     marginTop: spacing.xs,
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
+    backgroundColor: paper.button,
+    borderRadius: radius.lg,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700' },
-  empty: { margin: spacing.lg, color: colors.muted, textAlign: 'center' },
+  ctaText: { color: paper.ink, fontSize: 18 },
+  empty: { margin: spacing.lg, color: paper.muted, textAlign: 'center' },
 });

@@ -5,7 +5,7 @@ import { AvatarFace } from './AvatarFace';
 import { VoiceNote } from './VoiceNote';
 import { tallyEmoji } from '../lib/reactions';
 import { useApp } from '../lib/store';
-import { colors, radius, spacing } from '../lib/theme';
+import { paper, radius, spacing } from '../lib/theme';
 import type { Post, Profile, Reaction } from '../lib/types';
 
 function timeAgo(iso: string): string {
@@ -84,21 +84,21 @@ export function PostCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: paper.field,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: paper.line,
     padding: spacing.md,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { fontWeight: '700', color: colors.text, flex: 1 },
-  time: { color: colors.muted, fontSize: 12 },
-  body: { marginTop: spacing.sm, fontSize: 15, color: colors.text, lineHeight: 21 },
+  name: { color: paper.ink, fontSize: 17, flex: 1 },
+  time: { color: paper.muted, fontSize: 14 },
+  body: { marginTop: spacing.sm, fontSize: 17, color: paper.ink, lineHeight: 23 },
   photo: { marginTop: spacing.sm, width: '100%', height: 200, borderRadius: radius.sm },
-  prompt: { marginTop: spacing.sm, fontSize: 13, color: colors.muted, lineHeight: 18 },
+  prompt: { marginTop: spacing.sm, fontSize: 15, color: paper.muted, lineHeight: 20 },
   footer: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
-  action: { color: colors.muted, fontSize: 14 },
-  liked: { color: colors.accent, fontWeight: '700' },
+  action: { color: paper.muted, fontSize: 15 },
+  liked: { color: paper.ink },
 });
