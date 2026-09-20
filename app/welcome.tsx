@@ -23,6 +23,8 @@ const frames = [
 const FACE_W = 250;
 const FACE_H = FACE_W * (570 / 645);
 const FRAME_MS = 130;
+/** The frame the face finishes colouring in on; the sparkles come after. */
+const FILLED = 6;
 /** Beat on the last drawn frame before the app opens. */
 const SETTLE_MS = 1000;
 /** The page colour the animation was drawn on. */
@@ -37,7 +39,8 @@ export default function Welcome() {
   useEffect(() => {
     if (done.current) return;
 
-    if (!holding) {
+    // Once the yellow is in, the sparkles finish on their own.
+    if (!holding && frame < FILLED) {
       if (frame === 0) return;
       const back = setTimeout(() => setFrame((f) => f - 1), FRAME_MS);
       return () => clearTimeout(back);
