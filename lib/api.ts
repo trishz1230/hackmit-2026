@@ -8,6 +8,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { levelUnlocksAt, postsForTask } from './levels';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabase';
+import { describeMedia } from './describe';
+import { toWav } from './wav';
 import { familyContext, generatePrompt, type FamilyContext } from './prompts';
 import { sendExpoPush } from './push';
 import { nudgeContent } from './nudge';
@@ -216,12 +218,15 @@ export async function deletePost(id: string): Promise<void> {
   await sb.from('posts').delete().eq('id', id);
 }
 
+/** What a family is called when nobody names it. */
+export const DEFAULT_FAMILY_NAME = 'family';
+
 export async function createGroup(userId: string, opts: CreateOptions): Promise<Group> {
   const sb = getSupabase();
   const { data, error } = await sb
     .from('groups')
     .insert({
-      name: opts.familyName?.trim() || `${opts.myName}'s family`,
+      name: opts.familyName?.trim() || DEFAULT_FAMILY_NAME,
       join_code: randomCode(),
       goal: opts.goal,
       level: 1,
@@ -479,8 +484,8 @@ export async function getPastAuthors(groupId: string, members: Profile[]): Promi
 
 /**
  * What the family has been sharing lately, so the next prompt can follow on
- * from it rather than being generic. Photos come through as their caption
- * only — the image itself is a data URL nobody can read.
+ * from it rather than being generic. Photos and recordings are read by
+ * api/describe.ts, so what is in them counts too, not just their captions.
  */
 async function contextFor(group: Group): Promise<FamilyContext> {
   const sb = getSupabase();
@@ -494,7 +499,9 @@ async function contextFor(group: Group): Promise<FamilyContext> {
       .limit(12),
   ]);
 
-  return familyContext(group.name, members, (posts.data ?? []).map(toPost));
+  const recent = (posts.data ?? []).map(toPost);
+  const described = await describeMedia(recent).catch(() => ({}));
+  return familyContext(group.name, members, recent, described);
 }
 
 /** The task for the group's current level, created on demand. */
@@ -556,23 +563,23 @@ export async function resetForMissedPeriod(group: Group): Promise<void> {
     .eq('id', group.id);
   if (error) throw error;
 
+  const now = await serverNow();
+  // The climb back up reuses the old task rows; re-stamp them first so posts
+  // from the failed run stop counting even if the new prompt never arrives.
+  await sb
+    .from('tasks')
+    .update({ created_at: now })
+    .eq('group_id', group.id)
+    .lte('level', group.goal);
+
   const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
   const recent = (previous ?? []).map((r: Row) => str(r.prompt));
   const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
-  const now = await serverNow();
   await sb
     .from('tasks')
     .update({ prompt, created_at: now })
     .eq('group_id', group.id)
     .eq('level', 1);
-  // The climb back up reuses the old task rows; re-stamp them so posts from
-  // the failed run stop counting.
-  await sb
-    .from('tasks')
-    .update({ created_at: now })
-    .eq('group_id', group.id)
-    .gt('level', 1)
-    .lte('level', group.goal);
 }
 
 /**
@@ -580,7 +587,8 @@ export async function resetForMissedPeriod(group: Group): Promise<void> {
  * restarts at level 1. Task rows are keyed (group_id, level), so the new map
  * would reuse last cycle's rows — and postsForTask would count the old
  * answers. Every row the new map can reach is re-stamped so its posts start
- * counting from now; level 1 also gets a fresh prompt.
+ * counting from now; level 1 also gets a fresh prompt. The streak carries
+ * over: only a missed period breaks it.
  */
 export async function startNextGoal(
   group: Group,
@@ -590,11 +598,19 @@ export async function startNextGoal(
   const sb = getSupabase();
   const { error } = await sb
     .from('groups')
-    .update({ reward_text: rewardText, goal: levelCount, level: 1, current_streak: 0 })
+    .update({ reward_text: rewardText, goal: levelCount, level: 1 })
     .eq('id', group.id);
   if (error) throw error;
 
   const now = await serverNow();
+  // Re-stamp before writing the prompt: a prompt that fails to generate must
+  // not leave the old answers counting, which would clear the new map at once.
+  await sb
+    .from('tasks')
+    .update({ created_at: now })
+    .eq('group_id', group.id)
+    .lte('level', levelCount);
+
   const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
   const recent = (previous ?? []).map((r: Row) => str(r.prompt));
   const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
@@ -603,12 +619,6 @@ export async function startNextGoal(
     .update({ prompt, created_at: now })
     .eq('group_id', group.id)
     .eq('level', 1);
-  await sb
-    .from('tasks')
-    .update({ created_at: now })
-    .eq('group_id', group.id)
-    .gt('level', 1)
-    .lte('level', levelCount);
 }
 
 export async function getTasks(groupId: string): Promise<Task[]> {
@@ -675,13 +685,17 @@ export async function createPost(
 
 /**
  * Uploads a local photo or recording to the public `photos` bucket, returning
- * its url. Recordings share the bucket so no new one has to be created; they
- * keep the extension the recorder gave them (m4a on a phone, webm on the web).
+ * its url. Recordings share the bucket so no new one has to be created, and
+ * are stored as WAV wherever that is possible, because Muse Voice Transcribe
+ * reads nothing else.
  */
 async function uploadMedia(kind: 'photo' | 'voice', uri: string, userId: string): Promise<string> {
   if (uri.startsWith('http')) return uri;
   const sb = getSupabase();
-  const blob = await (await fetch(uri)).blob();
+  const recorded = await (await fetch(uri)).blob();
+  const wav = kind === 'voice' && !recorded.type.includes('wav') ? await toWav(recorded) : null;
+  const blob = wav ?? recorded;
+
   const type = kind === 'photo' ? 'image/jpeg' : blob.type || 'audio/m4a';
   const extension = kind === 'photo' ? 'jpg' : (type.split('/')[1]?.split(';')[0] ?? 'm4a');
   const path = `${userId}/${Date.now()}.${extension}`;

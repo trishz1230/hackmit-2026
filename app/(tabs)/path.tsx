@@ -3,11 +3,12 @@ import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-nat
 import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
 import { VoiceNote } from '../../components/VoiceNote';
-import { describeWait, streakCount } from '../../lib/levels';
+import { levelStreak, streakCount } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import type { Post } from '../../lib/types';
@@ -39,57 +40,71 @@ export default function Path() {
     missedReset,
     dismissMissedReset,
     waitingForPeriod,
-    unlocksAt,
     taskLocked,
-    opensAt,
     taskForLevel,
     myPostForLevel,
-    me,
     loading,
   } = useApp();
   const insets = useSafeAreaInsets();
   // Only levels that can't be opened use the sheet; the rest have their own page.
   const [selected, setSelected] = useState<number | null>(null);
+  // The sheet keeps its content while it fades out, so it doesn't blank first.
+  const [shown, setShown] = useState<number | null>(null);
 
   const openLevel = (n: number) => {
-    const reachable = group ? n < group.level || (n === Math.min(group.level, group.goal) && !taskLocked) : false;
-    if (reachable) router.push(`/level/${n}`);
-    else setSelected(n);
+    if (!group) return;
+    const currentLevel = Math.min(group.level, group.goal);
+    const reachable = n < group.level || (n === currentLevel && !taskLocked);
+    if (!reachable) {
+      setShown(n);
+      setSelected(n);
+      return;
+    }
+    // Nothing left to do on the level you've answered, so go to the feed.
+    if (n === currentLevel && hasPostedThisCycle) {
+      router.push('/(tabs)/feed');
+      return;
+    }
+    router.push(`/level/${n}`);
   };
 
   if (loading) return <View style={styles.fill} />;
   if (!group) return <Redirect href="/onboarding" />;
 
   const current = Math.min(group.level, group.goal);
-  const streak = streakCount(group, everyonePostedThisCycle);
-  const isCurrent = selected === current && !group.awaitingNextGoal;
-  const isCleared = selected !== null && (selected < group.level || group.awaitingNextGoal);
-  const isLocked = selected !== null && selected > current;
-  const remembered = selected !== null ? taskForLevel(selected) : undefined;
-  const myPost = selected !== null ? myPostForLevel(selected) : undefined;
+  const cleared = streakCount(group, everyonePostedThisCycle);
+  const streak = levelStreak(group, everyonePostedThisCycle);
+  const isCurrent = shown === current && !group.awaitingNextGoal;
+  const isCleared = shown !== null && (shown < group.level || group.awaitingNextGoal);
+  const isLocked = shown !== null && shown > current;
+  const remembered = shown !== null ? taskForLevel(shown) : undefined;
+  const myPost = shown !== null ? myPostForLevel(shown) : undefined;
   const prompt = isCurrent ? task.prompt : remembered?.prompt;
 
   return (
     <View style={styles.fill}>
-      <View style={{ paddingTop: insets.top, backgroundColor: colors.card }}>
-        <ProgressBar
-          level={current}
-          cleared={streak}
-          goal={group.goal}
-          reward={group.rewardText}
-          streak={streak}
-          myAvatar={me.avatar}
-          onPressAvatar={() => router.push('/(tabs)/settings')}
-        />
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <View style={styles.grow}>
+          <Text style={styles.family}>{group.name}</Text>
+        </View>
+        <AvatarButton />
       </View>
+
+      <ProgressBar
+        level={current}
+        cleared={cleared}
+        goal={group.goal}
+        reward={group.rewardText}
+        streak={streak}
+      />
 
       {waitingForPeriod ? (
         <View style={styles.waitBanner}>
           <Text style={styles.waitTitle}>Everyone posted</Text>
           <Text style={styles.waitBody}>
             {group.level < group.goal
-              ? `Level ${group.level + 1} will open ${describeWait(unlocksAt)}.`
-              : `${group.rewardText || 'Your reward'} unlocks ${describeWait(unlocksAt)}.`}
+              ? `Level ${group.level + 1} will open soon. What will the next conversation be?`
+              : `${group.rewardText || 'Your reward'} unlocks soon.`}
           </Text>
         </View>
       ) : hasPostedThisCycle ? (
@@ -124,14 +139,13 @@ export default function Path() {
         <Pressable style={styles.backdrop} onPress={() => setSelected(null)}>
           <Pressable style={styles.sheet} onPress={() => undefined}>
             <ScrollView bounces={false}>
-              <Text style={styles.sheetTitle}>Level {selected}</Text>
+              <Text style={styles.sheetTitle}>Level {shown}</Text>
               {isCurrent && taskLocked ? (
                 <>
                   <Text style={styles.taskLabel}>🔒 Locked</Text>
                   <Text style={styles.sheetBody}>
                     Wait till the next notification for a new conversation :)
                   </Text>
-                  <Text style={styles.sheetMeta}>Opens {describeWait(opensAt)}.</Text>
                 </>
               ) : isCurrent ? (
                 <>
@@ -162,13 +176,12 @@ export default function Path() {
                     <Text style={styles.sheetBody}>Your post from this level is gone.</Text>
                   )}
                 </>
-              ) : isLocked && selected === current + 1 && waitingForPeriod ? (
+              ) : isLocked && shown === current + 1 && waitingForPeriod ? (
                 <>
                   <Text style={styles.taskLabel}>🔒 Locked</Text>
                   <Text style={styles.sheetBody}>
                     Wait till the next notification for a new conversation :)
                   </Text>
-                  <Text style={styles.sheetMeta}>Opens {describeWait(unlocksAt)}.</Text>
                 </>
               ) : (
                 <Text style={styles.sheetBody}>
@@ -187,7 +200,15 @@ export default function Path() {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.night },
+  fill: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  grow: { flex: 1 },
+  family: { fontSize: 34, color: colors.text },
   resetBanner: {
     backgroundColor: '#FDE8E8',
     paddingHorizontal: spacing.md,
@@ -203,7 +224,6 @@ const styles = StyleSheet.create({
   resetTitle: { fontWeight: '800', color: colors.text },
   resetBody: { color: colors.muted, marginTop: 2 },
   dismiss: { marginTop: spacing.xs, color: colors.accent, fontWeight: '700' },
-  sheetMeta: { color: colors.muted, marginTop: spacing.xs },
   complete: {
     marginTop: spacing.md,
     color: colors.success,
@@ -212,7 +232,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(20,10,35,0.6)',
+    backgroundColor: colors.scrim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -236,12 +256,12 @@ const styles = StyleSheet.create({
   photo: { width: '100%', height: 180, borderRadius: radius.md, marginBottom: spacing.sm },
   cta: {
     marginTop: spacing.xs,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
     borderRadius: radius.sm,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700' },
+  ctaText: { color: colors.text, fontWeight: '700' },
   close: { alignItems: 'center', paddingVertical: spacing.xs },
   closeText: { color: colors.muted, fontWeight: '600' },
 });

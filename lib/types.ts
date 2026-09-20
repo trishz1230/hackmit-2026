@@ -4,13 +4,13 @@ export type Cadence = 'daily' | 'every_3_days' | 'weekly';
 export const CADENCE_LABELS: Record<Cadence, string> = {
   daily: '1 day',
   every_3_days: '3 days',
-  weekly: 'a week',
+  weekly: '1 week',
 };
 
 /** Everything the create-a-family form collects. */
 export type CreateOptions = {
   myName: string;
-  /** What the family calls itself; defaults to "<myName>'s family". */
+  /** What the family calls itself; defaults to "family". */
   familyName?: string;
   phone?: string;
   cadence: Cadence;

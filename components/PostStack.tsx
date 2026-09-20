@@ -5,7 +5,7 @@ import { VoiceNote } from './VoiceNote';
 import { colors, radius, spacing } from '../lib/theme';
 import type { Post } from '../lib/types';
 
-const CARD_W = 150;
+const CARD_W = 195;
 const CARD_H = 230;
 /** How many cards peek out from under the top one. */
 const VISIBLE = 5;

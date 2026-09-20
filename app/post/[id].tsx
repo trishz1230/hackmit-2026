@@ -2,14 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
 import { useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarFace } from '../../components/AvatarFace';
+import { AvatarButton } from '../../components/AvatarButton';
+import { EmojiPicker } from '../../components/EmojiPicker';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { VoiceNote } from '../../components/VoiceNote';
-import { firstEmoji, tallyEmoji } from '../../lib/reactions';
+import { EXTRA_PROMPT, isExtraPost } from '../../lib/posts';
+import { tallyEmoji } from '../../lib/reactions';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
-const EMOJIS = ['❤️', '😂', '🔥', '🥹', '👏', '🍜'];
+const EMOJIS = ['❤️', '😂', '🔥', '🥹', '👏'];
 
 function e164(phone: string) {
   const digits = phone.replace(/\D/g, '');
@@ -21,8 +25,8 @@ function e164(phone: string) {
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { posts, hangoutPosts, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
+  const insets = useSafeAreaInsets();
   const [comment, setComment] = useState('');
-  const [ownEmoji, setOwnEmoji] = useState('');
   const [picking, setPicking] = useState(false);
 
   useEffect(() => {
@@ -33,12 +37,14 @@ export default function PostDetail() {
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
 
   const author = memberById(post.userId);
-  const prompt = promptFor(post.taskId);
+  const prompt = isExtraPost(post, posts) ? EXTRA_PROMPT : promptFor(post.taskId);
   const reactions = reactionsFor(post.id);
   const comments = reactions.filter((r) => r.kind === 'comment');
   const likes = reactions.filter((r) => r.kind === 'like').length;
   const liked = likedByMe(post.id);
   const emojis = tallyEmoji(reactions, me.id);
+  // Liking or ringing yourself is noise, so your own post only shows its tally.
+  const mine = post.userId === me.id;
 
   const call = () => {
     if (author?.phone) void Linking.openURL(`tel:${e164(author.phone)}`);
@@ -49,13 +55,6 @@ export default function PostDetail() {
     void Linking.openURL(`facetime://${e164(author.phone)}`);
   };
 
-  const sendOwnEmoji = () => {
-    const emoji = firstEmoji(ownEmoji);
-    setOwnEmoji('');
-    setPicking(false);
-    if (emoji) toggleEmoji(post.id, emoji);
-  };
-
   const sendComment = () => {
     if (!comment.trim()) return;
     addReaction(post.id, 'comment', comment.trim());
@@ -63,10 +62,12 @@ export default function PostDetail() {
   };
 
   return (
-    <KeyboardScreen contentContainerStyle={styles.wrap}>
+    <KeyboardScreen contentContainerStyle={[styles.wrap, { paddingTop: insets.top + spacing.md }]}>
       <View style={styles.authorRow}>
         <AvatarFace value={author?.avatar} size={30} />
         <Text style={styles.author}>{author?.name}</Text>
+        <View style={styles.spacer} />
+        <AvatarButton />
       </View>
 
       {post.kind === 'photo' ? (
@@ -85,22 +86,30 @@ export default function PostDetail() {
       {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <View style={styles.actions}>
-        <Pressable
-          style={[styles.action, liked && styles.actionOn]}
-          onPress={() => toggleLike(post.id)}
-        >
-          <Text style={[styles.actionText, liked && styles.actionTextOn]}>
-            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'} ({likes})
-          </Text>
-        </Pressable>
-        <Pressable style={styles.action} onPress={call} disabled={!author?.phone}>
-          <Text style={styles.actionText}>📞 Call</Text>
-        </Pressable>
-        {Platform.OS === 'ios' ? (
-          <Pressable style={styles.action} onPress={facetime} disabled={!author?.phone}>
-            <Text style={styles.actionText}>📹 FaceTime</Text>
-          </Pressable>
-        ) : null}
+        {mine ? (
+          <View style={styles.action}>
+            <Text style={styles.actionText}>❤️ {likes}</Text>
+          </View>
+        ) : (
+          <>
+            <Pressable
+              style={[styles.action, liked && styles.actionOn]}
+              onPress={() => toggleLike(post.id)}
+            >
+              <Text style={[styles.actionText, liked && styles.actionTextOn]}>
+                {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'} ({likes})
+              </Text>
+            </Pressable>
+            <Pressable style={styles.action} onPress={call} disabled={!author?.phone}>
+              <Text style={styles.actionText}>📞 Call</Text>
+            </Pressable>
+            {Platform.OS === 'ios' ? (
+              <Pressable style={styles.action} onPress={facetime} disabled={!author?.phone}>
+                <Text style={styles.actionText}>📹 FaceTime</Text>
+              </Pressable>
+            ) : null}
+          </>
+        )}
       </View>
 
       <View style={styles.emojiRow}>
@@ -115,20 +124,12 @@ export default function PostDetail() {
       </View>
 
       {picking ? (
-        <View style={styles.commentRow}>
-          <TextInput
-            style={styles.input}
-            value={ownEmoji}
-            onChangeText={setOwnEmoji}
-            autoFocus
-            placeholder="Any emoji from your keyboard…"
-            placeholderTextColor={colors.muted}
-            onSubmitEditing={sendOwnEmoji}
-          />
-          <Pressable style={styles.send} onPress={sendOwnEmoji}>
-            <Text style={styles.sendText}>Add</Text>
-          </Pressable>
-        </View>
+        <EmojiPicker
+          onPick={(e) => {
+            setPicking(false);
+            toggleEmoji(post.id, e);
+          }}
+        />
       ) : null}
 
       {emojis.length > 0 && (
@@ -176,6 +177,7 @@ const styles = StyleSheet.create({
   wrap: { padding: spacing.md, gap: spacing.sm },
   missing: { padding: spacing.lg, color: colors.muted },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  spacer: { flex: 1 },
   author: { fontSize: 18, fontWeight: '700', color: colors.text },
   photo: { width: '100%', height: 260, borderRadius: radius.md },
   prompt: { fontSize: 14, color: colors.muted, lineHeight: 20 },
@@ -232,10 +234,10 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   send: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
   },
-  sendText: { color: '#fff', fontWeight: '700' },
+  sendText: { color: colors.text, fontWeight: '700' },
 });

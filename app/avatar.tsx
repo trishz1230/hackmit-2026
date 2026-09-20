@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   Image,
-  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,11 +24,12 @@ import {
 import { savePendingAvatar } from '../lib/api';
 import { useApp } from '../lib/store';
 
-const paper = require('../assets/welcome/paper.png');
 const sparkleBig = require('../assets/welcome/sparkle-big.png');
 const sparklePair = require('../assets/welcome/sparkle-pair.png');
 const starArt = require('../assets/welcome/star.png');
 
+/** The page colour the drawings were made on. */
+const PAGE = '#FAF8F0';
 const FACE = 230;
 const STEPS = ['eyes', 'mouth', 'hair'] as const;
 type Step = (typeof STEPS)[number];
@@ -43,20 +43,35 @@ const OPTIONS: Record<Step, Part[]> = { eyes: EYES, mouth: MOUTHS, hair: HAIR };
 const SLOT: Record<Step, { top: number; height: number }> = {
   eyes: { top: 0.32, height: 0.22 },
   mouth: { top: 0.5, height: 0.26 },
-  hair: { top: 0, height: 0.46 },
+  // Long hair hangs past the chin, so its slice is nearly the whole face.
+  hair: { top: 0, height: 0.96 },
 };
-/** Gap between the head and the option peeking above or below it. */
-const PEEK_GAP = 22;
+/**
+ * Gap between the head and the option peeking above or below it. Hair needs
+ * the room above because it hangs past the chin; below it only has to stay
+ * clear of the title, so it sits higher.
+ */
+const PEEK_GAP: Record<Step, { up: number; down: number }> = {
+  eyes: { up: 28, down: 28 },
+  mouth: { up: 28, down: 28 },
+  hair: { up: 96, down: 52 },
+};
+/** How small a neighbouring option is drawn while it waits its turn. */
+const PEEK_SCALE = 0.62;
 const DOUBLE_TAP_MS = 450;
 /** A tap this soon after the reel moved is the end of a scroll, not a tap. */
 const SETTLE_MS = 300;
-/** The title sits alone on the paper before the face appears. */
-const INTRO_MS = 2000;
+/** The title sits alone on the page before the face appears. */
+const INTRO_MS = 1000;
+/** How much bigger the title is while it has the page to itself. */
+const TITLE_INTRO_SCALE = 1.9;
 
 export default function MakeAYou() {
   const router = useRouter();
-  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const { edit, next } = useLocalSearchParams<{ edit?: string; next?: string }>();
   const editing = edit === '1';
+  // Drawn after joining or creating, the face goes straight onto the profile.
+  const onProfile = editing || next === 'family';
   const { me, updateAvatar } = useApp();
   const saveAvatar = useRef(updateAvatar);
   saveAvatar.current = updateAvatar;
@@ -93,6 +108,8 @@ export default function MakeAYou() {
     setStep((s) => s + 1);
   }, []);
 
+  const goBack = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
+
   const onTap = useCallback(() => {
     const now = Date.now();
     if (now - lastTap.current < DOUBLE_TAP_MS) {
@@ -108,7 +125,7 @@ export default function MakeAYou() {
     leaving.current = true;
     setDone(true);
     const face = encodeFace({ eyes, mouth, hair });
-    if (editing) saveAvatar.current(face);
+    if (onProfile) saveAvatar.current(face);
     else savePendingAvatar(face).catch(() => {});
     Animated.sequence([
       Animated.spring(finish, { toValue: 1.12, friction: 4, useNativeDriver: true }),
@@ -116,15 +133,14 @@ export default function MakeAYou() {
     ]).start();
     // Saving re-renders this screen, so the hand-off must not be cancellable.
     setTimeout(() => {
-      if (editing) router.back();
+      if (next === 'family') router.replace('/family');
+      else if (editing) router.back();
       else router.replace('/onboarding');
     }, 1600);
-  }, [editing, eyes, finish, hair, mouth, router, started, step]);
+  }, [editing, eyes, finish, hair, mouth, next, onProfile, router, started, step]);
 
   return (
-    <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
-      <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
-
+    <View style={styles.screen}>
       <Animated.View
         style={[styles.stage, { opacity: reveal }, done && { transform: [{ scale: finish }] }]}
         pointerEvents={started ? 'auto' : 'none'}
@@ -150,6 +166,7 @@ export default function MakeAYou() {
           <FaceReel
             key={current}
             slot={SLOT[current]}
+            gap={PEEK_GAP[current]}
             options={OPTIONS[current]}
             selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
             onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
@@ -166,18 +183,44 @@ export default function MakeAYou() {
         ) : null}
       </Animated.View>
 
-      {!started ? null : current ? (
-        <View style={styles.footer}>
-          <Text style={styles.hint}>scroll the {current} on the face</Text>
-          <Text style={styles.hint}>double tap the face to lock it in.</Text>
-          <Text style={styles.steps}>
-            {STEPS.map((s, i) => (i <= step ? `• ${s}  ` : `◦ ${s}  `)).join('')}
-          </Text>
-        </View>
-      ) : (
-        <Text style={styles.hint}>that's you!</Text>
-      )}
-    </ImageBackground>
+      <View style={styles.footer}>
+        {/* Alone on the page the title is the whole screen; it shrinks into a
+            caption as the face arrives. */}
+        <Animated.View
+          style={{
+            transform: [
+              { scale: reveal.interpolate({ inputRange: [0, 1], outputRange: [TITLE_INTRO_SCALE, 1] }) },
+            ],
+          }}
+        >
+          <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
+        </Animated.View>
+
+        {!started ? null : current ? (
+          <View style={styles.hints}>
+            <Text style={styles.hint}>scroll the {current} on the face</Text>
+            <Text style={styles.hint}>double tap the face to lock it in.</Text>
+            <View style={styles.stepRow}>
+              {STEPS.map((s, i) => (
+                <Text
+                  key={s}
+                  style={[styles.step, i === step && styles.stepNow, i > step && styles.stepToDo]}
+                >
+                  • {s}
+                </Text>
+              ))}
+            </View>
+            {step > 0 ? (
+              <Pressable onPress={goBack} style={styles.back}>
+                <Text style={styles.backText}>← back</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
+          <Text style={styles.hint}>that&apos;s you!</Text>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -199,12 +242,14 @@ function rowStyle(part: Part, slot: Slot) {
  */
 function FaceReel({
   slot,
+  gap,
   options,
   selected,
   onSelect,
   onTap,
 }: {
   slot: Slot;
+  gap: { up: number; down: number };
   options: Part[];
   selected: number;
   onSelect: (i: number) => void;
@@ -213,14 +258,17 @@ function FaceReel({
   const scroller = useRef<ScrollView>(null);
   const offset = useRef(new Animated.Value(0)).current;
   const placed = useRef(false);
+  const parked = useRef(0);
   const resting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const scrolledAt = useRef(0);
   const row = slot.height * FACE;
   // Shove each neighbour clear of the head rather than a fixed distance, so it
   // lands above the hair or below the chin whichever feature is being chosen.
   const middle = (slot.top + slot.height / 2) * FACE;
-  const pushUp = Math.max(0, middle + PEEK_GAP - row);
-  const pushDown = Math.max(0, FACE - middle + PEEK_GAP - row);
+  // Negative for a slice as tall as the hair's, pulling its neighbours back in
+  // rather than leaving them a whole row away.
+  const pushUp = middle + gap.up - row;
+  const pushDown = FACE - middle + gap.down - row;
   const len = options.length;
   const loop = len * row;
   const reel = [...options, ...options, ...options];
@@ -275,7 +323,8 @@ function FaceReel({
           // Start on the middle copy; contentOffset isn't honoured everywhere.
           if (placed.current) return;
           placed.current = true;
-          scroller.current?.scrollTo({ y: loop + selected * row, animated: false });
+          parked.current = loop + selected * row;
+          scroller.current?.scrollTo({ y: parked.current, animated: false });
         }}
         scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: offset } } }], {
@@ -303,6 +352,13 @@ function FaceReel({
                   translateY: offset.interpolate({
                     inputRange: [(i - 1) * row, i * row, (i + 1) * row],
                     outputRange: [pushDown, 0, -pushUp],
+                    extrapolate: 'clamp',
+                  }),
+                },
+                {
+                  scale: offset.interpolate({
+                    inputRange: [(i - 1) * row, i * row, (i + 1) * row],
+                    outputRange: [PEEK_SCALE, 1, PEEK_SCALE],
                     extrapolate: 'clamp',
                   }),
                 },
@@ -350,13 +406,15 @@ function Spark({ source, at, width, height, delay }: SparkProps) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: PAGE,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 150,
   },
   title: {
     fontSize: 24,
     color: '#2F2A26',
-    marginBottom: 56,
+    textAlign: 'center',
   },
   stage: {
     width: FACE,
@@ -374,11 +432,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   footer: {
-    marginTop: 64,
+    marginTop: 120,
+    // Fixed so the face keeps its place when a step's text, or the back
+    // button, changes how tall this column is.
+    height: 176,
     alignSelf: 'stretch',
-    alignItems: 'flex-start',
-    paddingLeft: 36,
+    alignItems: 'center',
+    paddingHorizontal: 36,
   },
+  hints: { alignItems: 'center', marginTop: 20 },
+  stepRow: { flexDirection: 'row', gap: 16, marginTop: 12 },
+  step: { fontSize: 15, color: '#6B5F52' },
+  stepNow: { fontSize: 17, fontWeight: '700', color: '#2F2A26' },
+  stepToDo: { opacity: 0.45 },
+  back: { marginTop: 10, paddingVertical: 6, paddingHorizontal: 12 },
+  backText: { fontSize: 16, color: '#6B5F52' },
   layer: { position: 'absolute', alignSelf: 'center' },
   reelWindow: {
     position: 'absolute',
@@ -388,10 +456,6 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 16,
     color: '#2F2A26',
-  },
-  steps: {
-    marginTop: 12,
-    fontSize: 15,
-    color: '#6B5F52',
+    textAlign: 'center',
   },
 });

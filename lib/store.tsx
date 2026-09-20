@@ -11,6 +11,7 @@ import * as api from './api';
 import { clampLevelCount, levelOpensAt, levelUnlocksAt, postsForTask, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { nudgeContent, nudgeTargetId } from './nudge';
+import { describeMedia } from './describe';
 import { familyContext, generatePrompt } from './prompts';
 import { getPushToken, sendExpoPush } from './push';
 import { isSupabaseConfigured } from './supabase';
@@ -107,7 +108,9 @@ type State = {
     kind: Post['kind'],
     content: string,
     channel?: Channel,
-    caption?: string
+    caption?: string,
+    /** The task being answered, when it isn't the family's current one. */
+    taskId?: string
   ) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   /** Emoji are one per member per emoji: reacting again takes it back. */
@@ -485,11 +488,11 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
-      addPost: (kind, content, channel = 'task', caption) => {
+      addPost: (kind, content, channel = 'task', caption, taskId) => {
         if (!group) return { completedGoal: false };
         run(async () => {
           await api.createPost({
-            taskId: channel === 'hangout' ? null : task.id,
+            taskId: channel === 'hangout' ? null : (taskId ?? task.id),
             groupId: group.id,
             userId,
             kind,
@@ -796,7 +799,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
     setWaived(false);
     const prompt = await generatePrompt(
       seenPrompts.current.slice(-5),
-      familyContext(group?.name ?? '', members, posts),
+      familyContext(group?.name ?? '', members, posts, await describeMedia(posts).catch(() => ({}))),
     );
     seenPrompts.current.push(prompt);
     let completedGoal = false;
@@ -909,7 +912,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       createGroup: ({ myName, familyName, phone, goal, cadence, rewardText }) => {
         setGroup({
           ...mockGroup,
-          name: familyName?.trim() || `${myName}'s family`,
+          name: familyName?.trim() || api.DEFAULT_FAMILY_NAME,
           goal: clampLevelCount(goal),
           cadence,
           rewardText: rewardText || mockGroup.rewardText,
@@ -1074,7 +1077,6 @@ function MockProvider({ children }: { children: React.ReactNode }) {
           rewardText: reward.trim(),
           goal: clampLevelCount(levelCount),
           level: 1,
-          currentStreak: 0,
           awaitingNextGoal: false,
         });
         setMissedReset(false);

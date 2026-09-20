@@ -69,6 +69,14 @@ export function streakCount(group: Group, everyonePosted: boolean): number {
   return Math.max(0, Math.min(group.goal, done));
 }
 
+/**
+ * Levels the family has cleared in a row, counted across goals: `currentStreak`
+ * only goes back to 0 when a period is missed, so a new reward keeps the run.
+ */
+export function levelStreak(group: Group, everyonePosted: boolean): number {
+  return group.currentStreak + (everyonePosted && !group.awaitingNextGoal ? 1 : 0);
+}
+
 export function describeWait(unlocksAt: number, now = Date.now()): string {
   const hours = Math.ceil((unlocksAt - now) / 3_600_000);
   if (hours <= 1) return 'in under an hour';

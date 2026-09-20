@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
@@ -7,8 +7,9 @@ import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
 import { PostStack } from '../../components/PostStack';
 import { GreenStar, HeartsDoodle, YellowStar } from '../../components/Doodles';
-import { weekRange, weekStats } from '../../lib/week';
-import { DEFAULT_LABELS, weekLabels, type StatLabels } from '../../lib/weekLabels';
+import { weekRange, weekStats, weekTallies } from '../../lib/week';
+import { weekCards, type WeekCard } from '../../lib/weekCards';
+import { describeMedia } from '../../lib/describe';
 import { familyContext } from '../../lib/prompts';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -20,7 +21,8 @@ export default function Home() {
   const router = useRouter();
   const { group, members, posts, hangoutPosts, reactions, memberById, loading } = useApp();
   const insets = useSafeAreaInsets();
-  const [labels, setLabels] = useState<StatLabels>(DEFAULT_LABELS);
+  const [cards, setCards] = useState<WeekCard[] | null>(null);
+  const [cardWidth, setCardWidth] = useState(0);
   const { height: screenHeight } = useWindowDimensions();
   // Wakes the screen once the week rolls over, so the dates and the photo pile
   // restart even if the app stays open through Sunday night.
@@ -41,16 +43,25 @@ export default function Home() {
   });
   const stats = weekStats(thisWeek, reactions, members);
 
-  // The week names its own categories once there is something to name them after.
+  // The week writes its own two cards once there is something to write about.
   const groupId = group?.id;
   const weekKey = start.toDateString();
   const named = stats.length > 0;
   useEffect(() => {
     if (!groupId || !named) return;
     let live = true;
-    weekLabels(groupId, start, familyContext(group?.name ?? '', members, thisWeek)).then((l) => {
-      if (live) setLabels(l);
-    });
+    describeMedia(thisWeek)
+      .then((described) =>
+        weekCards(
+          groupId,
+          start,
+          familyContext(group?.name ?? '', members, thisWeek, described),
+          weekTallies(thisWeek, reactions, members),
+        ),
+      )
+      .then((c) => {
+        if (live && c) setCards(c);
+      });
     return () => {
       live = false;
     };
@@ -72,36 +83,58 @@ export default function Home() {
         <AvatarButton />
       </View>
 
-      {thisWeek.length === 0 ? (
-        <Text style={styles.empty}>Nothing from the family yet this week.</Text>
-      ) : (
-        <View
-          style={{
-            // The pile starts about a quarter of the way down the screen.
-            marginTop: Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 109),
-          }}
-        >
+      <View
+        style={{
+          // The pile hangs about a quarter of the way down the screen; the
+          // empty card just follows the dates.
+          marginTop:
+            thisWeek.length === 0
+              ? spacing.md
+              : Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 124),
+        }}
+        onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
+      >
+        {thisWeek.length === 0 ? (
+          // Sized off the measured row: the artwork's own pixel width would
+          // otherwise stretch the page wider than the phone.
+          cardWidth > 0 && (
+            <Image
+              source={require('../../assets/doodles/empty-week.png')}
+              style={[styles.emptyCard, { width: cardWidth, height: (cardWidth * 814) / 964 }]}
+              resizeMode="contain"
+            />
+          )
+        ) : (
           <PostStack
             key={start.getTime()}
             posts={thisWeek}
             nameOf={(id) => memberById(id)?.name ?? 'Someone'}
             onOpen={(post) => router.push(`/post/${post.id}`)}
           />
-        </View>
-      )}
+        )}
+      </View>
 
-      {[
-        {
-          label: labels.quiet,
-          member: stats.find((s) => s.metric === 'quiet')?.member,
-        },
-        {
-          label: labels.talked,
-          member: stats.find((s) => s.metric === 'talked')?.member,
-        },
-      ].map((box, i) => (
+      {(cards
+        ? cards.map((card) => ({
+            label: card.label,
+            member: members.find((m) => m.name === card.who),
+          }))
+        : [
+            { label: 'who is the least responsive??', metric: 'quiet' as const },
+            { label: 'most talked about topic!', metric: 'talked' as const },
+          ].map((box) => ({
+            label: box.label,
+            member: stats.find((s) => s.metric === box.metric)?.member,
+          }))
+      ).map((box, i) => (
         <View key={box.label} style={styles.statWrap}>
-          <View style={styles.stat}>
+          <View
+            style={[
+              styles.stat,
+              { backgroundColor: i === 0 ? '#FDD98B4D' : '#E9B0B566' },
+              i === 1 && { minHeight: 117 },
+            ]}
+          >
             <Text style={styles.statLabel}>{box.label}</Text>
             {box.member && (
               <View style={styles.statWho}>
@@ -111,7 +144,7 @@ export default function Home() {
             )}
           </View>
           {i === 0 && <YellowStar size={54} style={styles.starBox} />}
-          {i === 1 && <HeartsDoodle size={54} style={styles.heartsBox} />}
+          {i === 1 && <HeartsDoodle size={68} style={styles.heartsBox} />}
         </View>
       ))}
     </ScrollView>
@@ -121,16 +154,15 @@ export default function Home() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.lg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
-  empty: { color: colors.muted, marginVertical: spacing.md },
+  emptyCard: { marginBottom: spacing.sm + 7 },
   starTitle: { position: 'absolute', left: -20, top: -24 },
   statWrap: { marginBottom: spacing.sm },
   stat: {
     padding: spacing.md,
     minHeight: 92,
-    backgroundColor: colors.card,
     borderRadius: radius.md,
   },
   starBox: { position: 'absolute', right: -12, top: '35%' },

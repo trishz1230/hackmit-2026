@@ -3,22 +3,26 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
+import { feedLevel, isExtraPost, withinLevel } from '../../lib/posts';
 import { useApp } from '../../lib/store';
-import { colors, radius, spacing } from '../../lib/theme';
+import { paper, radius, spacing } from '../../lib/theme';
 
 export default function Feed() {
   const router = useRouter();
   const {
     group,
     posts,
+    tasks,
     task,
     hasPostedThisCycle,
     pending,
     remindToPost,
     taskLocked,
+    taskForLevel,
     reactionsFor,
     memberById,
     toggleLike,
@@ -31,35 +35,63 @@ export default function Feed() {
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
 
+  // Only answers to a task belong here; extra shares live in hangout. The feed
+  // follows the level being played, and holds on the last answered one until
+  // somebody starts the new level.
+  const current = Math.min(group.level, group.goal);
+  // A locked level keeps its prompt hidden, so the feed stays on the level
+  // before it rather than showing a card nobody can answer.
+  const level = taskLocked
+    ? Math.max(1, Math.min(feedLevel(tasks, posts, current), task.level - 1))
+    : feedLevel(tasks, posts, current);
+  const answers = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts));
+  // The card is the task to answer, so while the next level is open it runs
+  // ahead of the posts below it, which stay on the level the family answered.
+  const shown = (taskLocked ? taskForLevel(level) : task) ?? task;
+
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
-      <Tabs active="family" />
-      <View style={styles.header}>
-        <Text style={styles.title}>{group.name}</Text>
-        <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
-      </View>
-      <View style={styles.task}>
-        <Text style={styles.taskLabel}>Level {Math.min(group.level, group.goal)} task</Text>
-        {taskLocked ? (
-          <Text style={styles.taskPrompt}>
-            🔒 Locked! Wait till the next notification for a new conversation :)
-          </Text>
-        ) : (
-          <>
-            <Text style={styles.taskPrompt}>{task.prompt}</Text>
-            {hasPostedThisCycle ? (
-              <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
-            ) : (
-              <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
-                <Text style={styles.ctaText}>Complete task</Text>
-              </Pressable>
-            )}
-          </>
-        )}
-      </View>
       <FlatList
-        data={posts}
+        data={answers}
         keyExtractor={(p) => p.id}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.topBar}>
+              <Pressable onPress={() => router.push('/(tabs)/path')} hitSlop={8}>
+                <Text style={styles.back}>← the map</Text>
+              </Pressable>
+              <AvatarButton />
+            </View>
+            <Tabs active="family" />
+            <View style={styles.header}>
+              <Text style={styles.title}>{group.name}</Text>
+              <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
+            </View>
+            <View style={styles.task}>
+              <Text style={styles.taskLabel}>Level {shown.level} task</Text>
+              {taskLocked ? (
+                <>
+                  <Text style={styles.taskPrompt}>{shown.prompt}</Text>
+                  <Text style={styles.locked}>
+                    🔒 The next level is locked — wait till the next notification for a new
+                    conversation :)
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.taskPrompt}>{shown.prompt}</Text>
+                  {hasPostedThisCycle ? (
+                    <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
+                  ) : (
+                    <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
+                      <Text style={styles.ctaText}>Complete task</Text>
+                    </Pressable>
+                  )}
+                </>
+              )}
+            </View>
+          </View>
+        }
         ListEmptyComponent={
           <Text style={styles.empty}>No posts yet. Complete a level to share with family.</Text>
         }
@@ -81,41 +113,48 @@ export default function Feed() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: colors.bg },
+  wrap: { flex: 1, backgroundColor: paper.page },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  back: { fontSize: 17, color: paper.muted },
   header: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    backgroundColor: colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
-  title: { fontSize: 20, fontWeight: '800', color: colors.text },
-  sub: { marginTop: 2, fontSize: 13, color: colors.muted },
+  title: { fontSize: 26, color: paper.ink },
+  sub: { marginTop: 2, fontSize: 15, color: paper.muted },
   task: {
     margin: spacing.md,
+    marginTop: 0,
     marginBottom: 0,
     padding: spacing.md,
     gap: spacing.xs,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: paper.field,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: paper.line,
   },
   taskLabel: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: colors.accent,
+    textTransform: 'lowercase',
+    color: paper.muted,
   },
-  taskPrompt: { fontSize: 16, fontWeight: '700', color: colors.text, lineHeight: 22 },
-  complete: { marginTop: spacing.sm, color: colors.success, fontWeight: '800' },
+  taskPrompt: { fontSize: 18, color: paper.ink, lineHeight: 24 },
+  locked: { fontSize: 16, color: paper.muted, lineHeight: 22 },
   cta: {
     marginTop: spacing.xs,
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
+    backgroundColor: paper.button,
+    borderRadius: radius.lg,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700' },
-  empty: { margin: spacing.lg, color: colors.muted, textAlign: 'center' },
+  ctaText: { color: paper.ink, fontSize: 18 },
+  empty: { margin: spacing.lg, color: paper.muted, textAlign: 'center' },
 });

@@ -3,9 +3,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AVATAR_SIZE } from '../../components/AvatarButton';
 import { AvatarFace } from '../../components/AvatarFace';
+import { HistoryGrid } from '../../components/HistoryGrid';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
-import { dayDate, historyDays } from '../../lib/history';
+import { historyDays } from '../../lib/history';
 import { MAX_LEVELS, MIN_LEVELS } from '../../lib/levels';
 import { formatPhone, isValidPhone } from '../../lib/phone';
 import { useApp } from '../../lib/store';
@@ -115,14 +117,18 @@ export default function Settings() {
 
   return (
     <KeyboardScreen
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
     >
-      <Text style={styles.title}>Settings</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Settings</Text>
+        <Pressable onPress={() => router.push('/avatar?edit=1')} hitSlop={8}>
+          <AvatarFace value={me.avatar} size={AVATAR_SIZE} />
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Your avatar</Text>
         <View style={styles.avatarRow}>
-          <AvatarFace value={me.avatar} size={72} />
           <Pressable onPress={() => router.push('/avatar?edit=1')}>
             <Text style={styles.edit}>Change avatar</Text>
           </Pressable>
@@ -294,26 +300,7 @@ export default function Settings() {
 
       <View style={styles.card}>
         <Text style={styles.label}>History</Text>
-        {history.length === 0 ? null : (
-          <View style={styles.historyGrid}>
-            {history.map((day) => {
-              const date = dayDate(day.key);
-              return (
-                <Pressable
-                  key={day.key}
-                  style={styles.dayIcon}
-                  onPress={() => router.push(`/history/${day.key}`)}
-                >
-                  <Text style={styles.dayMonth}>
-                    {date.toLocaleDateString(undefined, { month: 'short' })}
-                  </Text>
-                  <Text style={styles.dayNumber}>{date.getDate()}</Text>
-                  <Text style={styles.dayYear}>{date.getFullYear()}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+        {history.length === 0 ? null : <HistoryGrid days={history} />}
       </View>
 
       <View style={styles.card}>
@@ -432,6 +419,7 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   blank: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -465,7 +453,7 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.xs,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
     borderRadius: radius.sm,
     paddingVertical: spacing.sm,
     alignItems: 'center',
@@ -476,7 +464,7 @@ const styles = StyleSheet.create({
   secondary: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   secondaryText: { color: colors.muted, fontWeight: '700' },
   edit: { color: colors.accent, fontWeight: '700', fontSize: 13 },
-  ctaText: { color: '#fff', fontWeight: '700' },
+  ctaText: { color: colors.text, fontWeight: '700' },
   inputBad: { borderColor: '#D64545' },
   error: { color: '#D64545', fontSize: 13 },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 2 },
@@ -511,19 +499,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   toggleLabel: { color: colors.text, fontWeight: '600', flex: 1, paddingRight: spacing.sm },
-  historyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  dayIcon: {
-    width: 64,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    backgroundColor: colors.accentSoft,
-  },
-  dayMonth: { fontSize: 13, color: colors.accent, textTransform: 'uppercase' },
-  dayNumber: { fontSize: 22, color: colors.text },
-  dayYear: { fontSize: 12, color: colors.muted },
   pill: {
     borderRadius: 999,
     paddingHorizontal: spacing.md,
@@ -532,7 +507,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  pillOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  pillOn: { backgroundColor: colors.gold, borderColor: colors.gold },
   pillText: { color: colors.muted, fontWeight: '800' },
-  pillTextOn: { color: '#fff' },
+  pillTextOn: { color: colors.text },
 });

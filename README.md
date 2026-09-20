@@ -53,19 +53,29 @@ Without Supabase keys the app runs in **demo mode**: the relatives are scripted
 and reply on a timer (`REPLY_DELAY_MS`, `familyReplies`) so one person can show
 the whole loop. With keys it runs **live** — see below.
 
-## Generated prompts
+## The AI, and which model does what
 
-New prompts come from `api/prompt.ts`, a serverless function that calls OpenAI.
-The key lives on the server, so nobody has to configure anything locally — clone
-and run. If the endpoint is unset or fails, the app falls back to `taskPrompts`
-in `lib/mockData.ts`, so it never breaks.
+Two models, two jobs (`api/_model.ts` picks per route; either covers the other
+when only one key is set):
+
+| Route | Model | Job |
+| --- | --- | --- |
+| `api/describe.ts` | Muse Spark vision, Muse Voice Transcribe | read the family's photos and recordings |
+| `api/prompt.ts` | Muse Spark | write the next level's prompt from what they shared |
+| `api/stats.ts` | OpenAI `gpt-4o-mini` | name the week's two stat cards and award each to a member |
+
+The keys live on the server, so nobody has to configure anything locally — clone
+and run. If an endpoint is unset or fails the app falls back on its own: prompts
+to `taskPrompts` in `lib/mockData.ts`, stat cards to the counted pair in
+`lib/week.ts`.
 
 Deploy it once (one person, then everyone benefits):
 
 ```bash
 npx vercel --prod                       # "Other" framework if it asks
+npx vercel env add MODEL_API_KEY production    # Muse, from Meta's Model API
 npx vercel env add OPENAI_API_KEY production
-npx vercel --prod                       # redeploy so the key is picked up
+npx vercel --prod                       # redeploy so the keys are picked up
 ```
 
 Then paste the resulting URL into `DEPLOYED_PROMPT_API` in `lib/prompts.ts`

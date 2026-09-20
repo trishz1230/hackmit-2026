@@ -1,18 +1,31 @@
 import { Platform } from 'react-native';
 
-/** Wonderland palette — twilight purple, tea-party gold, cheshire teal. */
+/** The drawn-on-paper screens: welcome, start and the family forms. */
+export const paper = {
+  page: '#FAF8F0',
+  ink: '#2A2A2A',
+  muted: '#8A8275',
+  button: '#FBE7BE',
+  buttonOn: '#F2D294',
+  field: '#FFFDF6',
+  line: '#E6DFCD',
+};
+
+/** The same paper, named for the screens that were drawn on it first. */
 export const colors = {
-  bg: '#FCF9EE',
-  card: '#FFFFFF',
-  text: '#2A1B3D',
-  muted: '#7B6A93',
-  accent: '#7E4BC4',
-  accentSoft: '#EBE0FF',
-  border: '#E4D9F5',
-  success: '#2BB3A3',
-  gold: '#E8B84B',
-  night: '#241539',
-  nightSoft: '#3A2459',
+  bg: paper.page,
+  card: paper.field,
+  text: paper.ink,
+  muted: paper.muted,
+  accent: '#B07D2B',
+  accentSoft: paper.button,
+  border: paper.line,
+  success: '#B07D2B',
+  gold: paper.buttonOn,
+  night: paper.page,
+  nightSoft: '#F4ECD8',
+  /** Behind a popup: warm ink rather than the old purple. */
+  scrim: 'rgba(58,44,20,0.45)',
 };
 
 const handwriting = 'Schoolbell_400Regular';

@@ -1,0 +1,125 @@
+import type { Post, Task } from './types';
+
+/** Shown instead of the prompt on a share made after the task was answered. */
+export const EXTRA_PROMPT = 'btw...also...';
+
+const stampOf = (tasks: Task[], level: number): number => {
+  const stamps = tasks
+    .filter((t) => t.level === level)
+    .map((t) => (t.createdAt ? Date.parse(t.createdAt) : 0));
+  return stamps.length ? Math.max(...stamps) : 0;
+};
+
+/**
+ * When a level began for the family, or null if it hasn't. A row is stamped as
+ * soon as the family can reach it — and a reset re-stamps every row it will
+ * climb back through with the same time — so a level only really begins once
+ * somebody answers it, and one waiting to open never takes over the level the
+ * family is still sharing to.
+ */
+function levelStart(tasks: Task[], answers: Post[], level: number): number | null {
+  const stamped = stampOf(tasks, level);
+  const ids = new Set(tasks.filter((t) => t.level === level).map((t) => t.id));
+  const first = answers
+    .filter((p) => ids.has(p.taskId) && Date.parse(p.createdAt) >= stamped)
+    .map((p) => Date.parse(p.createdAt))
+    .sort((a, b) => a - b)[0];
+  return first ?? null;
+}
+
+/** When a level started and when the next one took over, as timestamps. */
+export function levelWindow(
+  tasks: Task[],
+  answers: Post[],
+  level: number
+): { since: number; until: number } {
+  const since = levelStart(tasks, answers, level) ?? stampOf(tasks, level);
+  const later = tasks
+    .filter((t) => t.level > level)
+    .map((t) => levelStart(tasks, answers, t.level))
+    .filter((start): start is number => start !== null && start > since)
+    .sort((a, b) => a - b);
+  return { since, until: later[0] ?? Infinity };
+}
+
+/**
+ * The level the feeds should show: the newest one somebody has answered, so a
+ * level nobody has started yet doesn't empty the feed.
+ */
+export function feedLevel(tasks: Task[], posts: Post[], current: number): number {
+  const answered = tasks
+    .filter((t) => {
+      const since = t.createdAt ? Date.parse(t.createdAt) : 0;
+      // An answer from before the row was stamped belongs to a run the family
+      // has since lost, so it doesn't count as having started this level.
+      return (
+        t.level <= current &&
+        posts.some((p) => p.taskId === t.id && Date.parse(p.createdAt) >= since)
+      );
+    })
+    .map((t) => t.level);
+  return answered.length ? Math.max(...answered) : current;
+}
+
+/** Whether a member has answered a level's task since the row was stamped. */
+export function answeredLevel(
+  tasks: Task[],
+  posts: Post[],
+  level: number,
+  userId: string
+): boolean {
+  return tasks.some((t) => {
+    if (t.level !== level) return false;
+    const since = t.createdAt ? Date.parse(t.createdAt) : 0;
+    return posts.some(
+      (p) => p.taskId === t.id && p.userId === userId && Date.parse(p.createdAt) >= since
+    );
+  });
+}
+
+/**
+ * Whether hangout (and the ＋ share it takes) is still closed to a member: it
+ * opens once they have answered the level the feeds are showing, so nobody
+ * shares before the family has been answered — including on level 1, where the
+ * next level being locked used to leave nothing to answer.
+ */
+export function hangoutLocked(
+  tasks: Task[],
+  posts: Post[],
+  current: number,
+  userId: string
+): boolean {
+  return !answeredLevel(tasks, posts, feedLevel(tasks, posts, current), userId);
+}
+
+/**
+ * Posts belonging to a level: an answer belongs to the level of the task it
+ * answers, whatever the clock says, and a hangout post to the level that was
+ * running when it was made.
+ */
+export function withinLevel(
+  posts: Post[],
+  tasks: Task[],
+  level: number,
+  answers: Post[] = posts
+): Post[] {
+  const { since, until } = levelWindow(tasks, answers, level);
+  const task = tasks.find((t) => t.level === level);
+  const stamped = stampOf(tasks, level);
+  return posts.filter((p) => {
+    const at = Date.parse(p.createdAt);
+    if (p.taskId !== '') return p.taskId === task?.id && at >= stamped;
+    return at >= since && at < until;
+  });
+}
+
+/** An extra share: a hangout post, or anything after your first answer to the same task. */
+export function isExtraPost(post: Post, posts: Post[]): boolean {
+  if (post.taskId === '') return true;
+  return posts.some(
+    (p) =>
+      p.userId === post.userId &&
+      p.taskId === post.taskId &&
+      (p.createdAt < post.createdAt || (p.createdAt === post.createdAt && p.id < post.id))
+  );
+}

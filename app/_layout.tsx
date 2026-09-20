@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NotificationController } from '../components/NotificationController';
 import { PhoneFrame } from '../components/PhoneFrame';
-import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
+import { OpeningSmiley } from '../components/OpeningSmiley';
 import { AppProvider } from '../lib/store';
 import { colors, fonts } from '../lib/theme';
 
@@ -33,16 +33,21 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
             <Stack.Screen name="welcome" options={{ headerShown: false }} />
+            <Stack.Screen name="start" options={{ headerShown: false }} />
             <Stack.Screen name="avatar" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="family" options={{ headerShown: false }} />
             <Stack.Screen name="hangout" options={{ title: 'Hangout' }} />
             <Stack.Screen name="settings" options={{ title: 'Family settings' }} />
-            <Stack.Screen name="capture" options={{ title: "Today's task", presentation: 'modal' }} />
+            <Stack.Screen
+              name="capture"
+              options={{ headerShown: false, presentation: 'modal' }}
+            />
             <Stack.Screen name="post/[id]" options={{ title: 'Reactions' }} />
+            <Stack.Screen name="history/index" options={{ title: 'History' }} />
             <Stack.Screen name="history/[day]" options={{ title: 'History' }} />
           </Stack>
-          <KeyboardDismissLayer />
+          <OpeningSmiley />
         </PhoneFrame>
       </AppProvider>
     </SafeAreaProvider>
