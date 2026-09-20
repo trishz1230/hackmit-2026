@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Text } from '../../components/Handwriting';
 import { PostCard } from '../../components/PostCard';
+import { AvatarButton } from '../../components/AvatarButton';
 import { dayDate, dayKey } from '../../lib/history';
 import { useApp } from '../../lib/store';
 import { colors, spacing } from '../../lib/theme';
@@ -41,7 +42,10 @@ export default function HistoryDayScreen() {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>{longDate(day)}</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>{longDate(day)}</Text>
+        <AvatarButton />
+      </View>
       {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <FlatList
@@ -66,7 +70,15 @@ export default function HistoryDayScreen() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  title: { fontSize: 20, color: colors.text, paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  title: { flex: 1, fontSize: 20, color: colors.text },
   prompt: { color: colors.muted, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
   empty: { margin: spacing.lg, color: colors.muted, textAlign: 'center' },
 });

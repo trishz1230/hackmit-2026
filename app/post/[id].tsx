@@ -3,6 +3,7 @@ import { Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-nat
 import { Text, TextInput } from '../../components/Handwriting';
 import { useLocalSearchParams } from 'expo-router';
 import { AvatarFace } from '../../components/AvatarFace';
+import { AvatarButton } from '../../components/AvatarButton';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { VoiceNote } from '../../components/VoiceNote';
 import { firstEmoji, tallyEmoji } from '../../lib/reactions';
@@ -67,6 +68,8 @@ export default function PostDetail() {
       <View style={styles.authorRow}>
         <AvatarFace value={author?.avatar} size={30} />
         <Text style={styles.author}>{author?.name}</Text>
+        <View style={styles.spacer} />
+        <AvatarButton />
       </View>
 
       {post.kind === 'photo' ? (
@@ -176,6 +179,7 @@ const styles = StyleSheet.create({
   wrap: { padding: spacing.md, gap: spacing.sm },
   missing: { padding: spacing.lg, color: colors.muted },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  spacer: { flex: 1 },
   author: { fontSize: 18, fontWeight: '700', color: colors.text },
   photo: { width: '100%', height: 260, borderRadius: radius.md },
   prompt: { fontSize: 14, color: colors.muted, lineHeight: 20 },
