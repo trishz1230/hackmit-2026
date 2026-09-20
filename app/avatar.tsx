@@ -48,9 +48,14 @@ const SLOT: Record<Step, { top: number; height: number }> = {
 };
 /**
  * Gap between the head and the option peeking above or below it. Hair needs
- * the room because it hangs past the chin; eyes and mouth read better close in.
+ * the room above because it hangs past the chin; below it only has to stay
+ * clear of the title, so it sits higher.
  */
-const PEEK_GAP: Record<Step, number> = { eyes: 28, mouth: 28, hair: 96 };
+const PEEK_GAP: Record<Step, { up: number; down: number }> = {
+  eyes: { up: 28, down: 28 },
+  mouth: { up: 28, down: 28 },
+  hair: { up: 96, down: 52 },
+};
 /** How small a neighbouring option is drawn while it waits its turn. */
 const PEEK_SCALE = 0.62;
 const DOUBLE_TAP_MS = 450;
@@ -244,7 +249,7 @@ function FaceReel({
   onTap,
 }: {
   slot: Slot;
-  gap: number;
+  gap: { up: number; down: number };
   options: Part[];
   selected: number;
   onSelect: (i: number) => void;
@@ -262,8 +267,8 @@ function FaceReel({
   const middle = (slot.top + slot.height / 2) * FACE;
   // Negative for a slice as tall as the hair's, pulling its neighbours back in
   // rather than leaving them a whole row away.
-  const pushUp = middle + gap - row;
-  const pushDown = FACE - middle + gap - row;
+  const pushUp = middle + gap.up - row;
+  const pushDown = FACE - middle + gap.down - row;
   const len = options.length;
   const loop = len * row;
   const reel = [...options, ...options, ...options];
@@ -427,7 +432,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   footer: {
-    marginTop: 148,
+    marginTop: 120,
+    // Fixed so the face keeps its place when a step's text, or the back
+    // button, changes how tall this column is.
+    height: 176,
     alignSelf: 'stretch',
     alignItems: 'center',
     paddingHorizontal: 36,
