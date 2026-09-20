@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
+import { EXTRA_PROMPT, isExtraPost } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -68,7 +69,7 @@ export default function Feed() {
             post={item}
             author={memberById(item.userId)}
             reactions={reactionsFor(item.id)}
-            prompt={promptFor(item.taskId)}
+            prompt={isExtraPost(item, posts) ? EXTRA_PROMPT : promptFor(item.taskId)}
             onPress={() => router.push(`/post/${item.id}`)}
             onLike={() => toggleLike(item.id)}
             liked={likedByMe(item.id)}
