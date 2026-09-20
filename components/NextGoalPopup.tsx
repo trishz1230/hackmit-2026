@@ -1,10 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, TextInput } from './Handwriting';
+import { Confetti } from './Confetti';
 import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
+
+const PARTY = require('../assets/levels/star.png');
 
 /**
  * Centered over whatever tab is open once the family finishes its map: the
@@ -54,7 +65,7 @@ export function NextGoalPopup() {
       >
         {celebrating ? (
           <View style={styles.card}>
-            <Text style={styles.party}>🎉</Text>
+            <Image source={PARTY} style={styles.party} resizeMode="contain" />
             <Text style={[styles.title, styles.centered]}>Congrats!</Text>
             <Text style={[styles.sub, styles.centered]}>
               You guys earned {group.rewardText || 'your reward'}. Go enjoy it — then pick what the
@@ -105,6 +116,7 @@ export function NextGoalPopup() {
             </Pressable>
           </View>
         )}
+        {celebrating && <Confetti />}
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -129,7 +141,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   kicker: { color: colors.accent, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  party: { fontSize: 40, textAlign: 'center' },
+  party: { width: 96, height: 98, alignSelf: 'center' },
   centered: { textAlign: 'center' },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   sub: { color: colors.muted, lineHeight: 21, marginBottom: spacing.sm },

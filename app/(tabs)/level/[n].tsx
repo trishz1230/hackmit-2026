@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../../components/Handwriting';
 import { CompletedAnnouncement } from '../../../components/CompletedAnnouncement';
 import { PostCard } from '../../../components/PostCard';
 import { Tabs } from '../../../components/Tabs';
-import { levelSymbol } from '../../../components/LevelMap';
+import { levelArt } from '../../../components/LevelMap';
 import { AvatarButton } from '../../../components/AvatarButton';
 import { EXTRA_PROMPT, isExtraPost, withinLevel } from '../../../lib/posts';
 import { useApp } from '../../../lib/store';
@@ -91,9 +91,7 @@ export default function Level() {
         ListHeaderComponent={
           <View>
             <View style={styles.header}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{levelSymbol(level) ?? level}</Text>
-              </View>
+              <Image source={levelArt(level).src} style={styles.badge} resizeMode="contain" />
               <View>
                 <Text style={styles.title}>Level {level}</Text>
                 <Text style={styles.date}>{shortDate(task?.createdAt)}</Text>
@@ -180,17 +178,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
   },
-  badge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-    borderWidth: 2,
-    borderColor: colors.accent,
-  },
-  badgeText: { fontSize: 28, color: colors.accent },
+  badge: { width: 64, height: 64 },
   title: { fontSize: 22, color: colors.text },
   date: { fontSize: 15, color: colors.muted },
   card: {
