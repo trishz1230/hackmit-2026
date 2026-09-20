@@ -76,9 +76,25 @@ const toReaction = (r: Row): Reaction => ({
   value: str(r.value),
 });
 
-const USER_ID_KEY = 'famstreak.userId';
-const GROUP_ID_KEY = 'famstreak.groupId';
-const AVATAR_KEY = 'famstreak.avatar';
+const USER_ID_KEY = 'btw.userId';
+const GROUP_ID_KEY = 'btw.groupId';
+const AVATAR_KEY = 'btw.avatar';
+
+/** Where the same value lived under the app's old name. */
+const RENAMED: Record<string, string> = {
+  [USER_ID_KEY]: 'famstreak.userId',
+  [GROUP_ID_KEY]: 'famstreak.groupId',
+  [AVATAR_KEY]: 'famstreak.avatar',
+};
+
+/** Reads a saved value, carrying it over from the old key on first read. */
+async function stored(key: string): Promise<string | null> {
+  const value = await AsyncStorage.getItem(key);
+  if (value !== null) return value;
+  const old = await AsyncStorage.getItem(RENAMED[key]);
+  if (old !== null) await AsyncStorage.setItem(key, old);
+  return old;
+}
 
 function uuid(): string {
   const c = globalThis.crypto;
@@ -91,7 +107,7 @@ function uuid(): string {
 
 /** This device's stable user id, created on first run. */
 export async function identity(): Promise<string> {
-  const saved = await AsyncStorage.getItem(USER_ID_KEY);
+  const saved = await stored(USER_ID_KEY);
   if (saved) return saved;
   const id = uuid();
   await AsyncStorage.setItem(USER_ID_KEY, id);
@@ -100,12 +116,12 @@ export async function identity(): Promise<string> {
 
 /** The family this device last joined, so a refresh keeps you in it. */
 export async function savedGroupId(): Promise<string | null> {
-  return AsyncStorage.getItem(GROUP_ID_KEY);
+  return stored(GROUP_ID_KEY);
 }
 
 export async function rememberGroup(groupId: string | null): Promise<void> {
   if (groupId) await AsyncStorage.setItem(GROUP_ID_KEY, groupId);
-  else await AsyncStorage.removeItem(GROUP_ID_KEY);
+  else await AsyncStorage.multiRemove([GROUP_ID_KEY, RENAMED[GROUP_ID_KEY]]);
 }
 
 function randomCode(): string {
@@ -121,7 +137,7 @@ export async function savePendingAvatar(avatar: string): Promise<void> {
 }
 
 export async function pendingAvatar(): Promise<string | null> {
-  return AsyncStorage.getItem(AVATAR_KEY);
+  return stored(AVATAR_KEY);
 }
 
 /** Redraw the face on a profile that already exists. */

@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "btw",
-    "slug": "famstreak",
-    "scheme": "famstreak",
+    "slug": "btw",
+    "scheme": "btw",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

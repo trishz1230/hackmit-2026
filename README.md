@@ -79,7 +79,7 @@ npx vercel --prod                       # redeploy so the keys are picked up
 ```
 
 Then paste the resulting URL into `DEPLOYED_PROMPT_API` in `lib/prompts.ts`
-(e.g. `https://famstreak.vercel.app/api/prompt`) and commit it — that URL is not
+(e.g. `https://btw.vercel.app/api/prompt`) and commit it — that URL is not
 a secret. To point at a different endpoint on one machine only, set
 `EXPO_PUBLIC_PROMPT_API` in `.env`.
 
