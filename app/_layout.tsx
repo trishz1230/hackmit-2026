@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NotificationController } from '../components/NotificationController';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
+import { OpeningSmiley } from '../components/OpeningSmiley';
 import { AppProvider } from '../lib/store';
 import { colors, fonts } from '../lib/theme';
 
@@ -45,6 +46,7 @@ export default function RootLayout() {
             <Stack.Screen name="history/[day]" options={{ title: 'History' }} />
           </Stack>
           <KeyboardDismissLayer />
+          <OpeningSmiley />
         </PhoneFrame>
       </AppProvider>
     </SafeAreaProvider>
