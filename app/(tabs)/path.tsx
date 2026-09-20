@@ -236,12 +236,12 @@ const styles = StyleSheet.create({
   photo: { width: '100%', height: 180, borderRadius: radius.md, marginBottom: spacing.sm },
   cta: {
     marginTop: spacing.xs,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
     borderRadius: radius.sm,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700' },
+  ctaText: { color: colors.text, fontWeight: '700' },
   close: { alignItems: 'center', paddingVertical: spacing.xs },
   closeText: { color: colors.muted, fontWeight: '600' },
 });

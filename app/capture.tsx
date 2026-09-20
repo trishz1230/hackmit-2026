@@ -191,7 +191,7 @@ export default function Capture() {
     const to = hangout || extra ? 'hangout' : 'task';
     // A recording or a photo carries the words as its caption; text posts are the words.
     const kind = voiceUri ? 'voice' : photoUri ? 'photo' : 'text';
-    const { completedGoal } = addPost(
+    addPost(
       kind,
       voiceUri ?? photoUri ?? words,
       to,
@@ -201,7 +201,9 @@ export default function Capture() {
       router.replace('/(tabs)/plus');
       return;
     }
-    router.replace(completedGoal ? '/(tabs)/path' : '/(tabs)/feed');
+    // Answering always lands back on the family feed, wherever capture opened
+    // from; the finished goal announces itself over it.
+    router.replace('/(tabs)/feed');
   };
 
   if (!hangout && taskLocked) {
@@ -354,8 +356,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlignVertical: 'top',
   },
-  cta: { backgroundColor: colors.accent, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
+  cta: { backgroundColor: colors.gold, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
   ctaDisabled: { opacity: 0.5 },
-  ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  ctaText: { color: colors.text, fontWeight: '700', fontSize: 16 },
   error: { color: '#C62828', fontWeight: '600' },
 });

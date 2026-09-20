@@ -232,10 +232,10 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   send: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
   },
-  sendText: { color: '#fff', fontWeight: '700' },
+  sendText: { color: colors.text, fontWeight: '700' },
 });

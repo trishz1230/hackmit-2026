@@ -128,10 +128,10 @@ const styles = StyleSheet.create({
   error: { color: '#C62828', fontWeight: '700' },
   cta: {
     marginTop: spacing.md,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
     borderRadius: radius.md,
     padding: spacing.md,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  ctaText: { color: colors.text, fontWeight: '700', fontSize: 16 },
 });

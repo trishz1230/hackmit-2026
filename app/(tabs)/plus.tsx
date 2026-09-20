@@ -27,6 +27,9 @@ export default function Plus() {
         ListHeaderComponent={
           <View>
             <View style={styles.topBar}>
+              <Pressable onPress={() => router.push('/(tabs)/path')} hitSlop={8}>
+                <Text style={styles.back}>← the map</Text>
+              </Pressable>
               <AvatarButton />
             </View>
             <Tabs active="hangout" />
@@ -61,7 +64,14 @@ export default function Plus() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: paper.page },
-  topBar: { alignItems: 'flex-end', paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  back: { fontSize: 17, color: paper.muted },
   header: {
     margin: spacing.md,
     marginTop: spacing.sm,

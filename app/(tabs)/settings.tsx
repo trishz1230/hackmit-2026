@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.xs,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
     borderRadius: radius.sm,
     paddingVertical: spacing.sm,
     alignItems: 'center',
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   secondary: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   secondaryText: { color: colors.muted, fontWeight: '700' },
   edit: { color: colors.accent, fontWeight: '700', fontSize: 13 },
-  ctaText: { color: '#fff', fontWeight: '700' },
+  ctaText: { color: colors.text, fontWeight: '700' },
   inputBad: { borderColor: '#D64545' },
   error: { color: '#D64545', fontSize: 13 },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 2 },
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  pillOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  pillOn: { backgroundColor: colors.gold, borderColor: colors.gold },
   pillText: { color: colors.muted, fontWeight: '800' },
-  pillTextOn: { color: '#fff' },
+  pillTextOn: { color: colors.text },
 });
