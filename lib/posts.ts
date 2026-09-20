@@ -78,6 +78,21 @@ export function answeredLevel(
 }
 
 /**
+ * Whether hangout (and the ＋ share it takes) is still closed to a member: it
+ * opens once they have answered the level the feeds are showing, so nobody
+ * shares before the family has been answered — including on level 1, where the
+ * next level being locked used to leave nothing to answer.
+ */
+export function hangoutLocked(
+  tasks: Task[],
+  posts: Post[],
+  current: number,
+  userId: string
+): boolean {
+  return !answeredLevel(tasks, posts, feedLevel(tasks, posts, current), userId);
+}
+
+/**
  * Posts belonging to a level: an answer belongs to the level of the task it
  * answers, whatever the clock says, and a hangout post to the level that was
  * running when it was made.
