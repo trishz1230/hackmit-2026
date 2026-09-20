@@ -111,7 +111,12 @@ export function partStyle(part: Part, size: number): ImageStyle {
 /** Renders a drawn avatar, or the emoji fallback for profiles made before this. */
 export function AvatarFace({ value, size }: { value?: string; size: number }) {
   const face = parseFace(value);
-  if (!face) return <Text style={{ fontSize: size * 0.8 }}>{value || '🙂'}</Text>;
+  if (!face)
+    return (
+      <View style={[styles.wrap, { width: size, height: size }]}>
+        <Text style={{ fontSize: size * 0.8, lineHeight: size }}>{value || '🙂'}</Text>
+      </View>
+    );
   return <FaceLayers face={face} size={size} />;
 }
 

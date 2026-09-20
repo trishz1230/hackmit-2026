@@ -14,10 +14,10 @@ export const mockGroup: Group = {
 };
 
 export const mockProfiles: Profile[] = [
-  { id: 'user-1', name: 'Alex', groupId: 'group-1', avatar: '🙂', phone: '1234567890' },
-  { id: 'user-2', name: 'Mom', groupId: 'group-1', avatar: '👩', phone: '5552345678' },
-  { id: 'user-3', name: 'Dad', groupId: 'group-1', avatar: '👨', phone: '5553456789' },
-  { id: 'user-4', name: 'Kevin', groupId: 'group-1', avatar: '🧑', phone: '5554567890' },
+  { id: 'user-1', name: 'Alex', groupId: 'group-1', avatar: 'face:0,0,0', phone: '1234567890' },
+  { id: 'user-2', name: 'Mom', groupId: 'group-1', avatar: 'face:1,1,2', phone: '5552345678' },
+  { id: 'user-3', name: 'Dad', groupId: 'group-1', avatar: 'face:2,4,1', phone: '5553456789' },
+  { id: 'user-4', name: 'Kevin', groupId: 'group-1', avatar: 'face:3,2,0', phone: '5554567890' },
 ];
 
 export const mockTask: Task = {
