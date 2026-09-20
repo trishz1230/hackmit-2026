@@ -4,8 +4,9 @@ import { Text, TextInput } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarFace } from '../../components/AvatarFace';
+import { HistoryGrid } from '../../components/HistoryGrid';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
-import { dayDate, historyDays } from '../../lib/history';
+import { historyDays } from '../../lib/history';
 import { MAX_LEVELS, MIN_LEVELS } from '../../lib/levels';
 import { formatPhone, isValidPhone } from '../../lib/phone';
 import { useApp } from '../../lib/store';
@@ -294,26 +295,7 @@ export default function Settings() {
 
       <View style={styles.card}>
         <Text style={styles.label}>History</Text>
-        {history.length === 0 ? null : (
-          <View style={styles.historyGrid}>
-            {history.map((day) => {
-              const date = dayDate(day.key);
-              return (
-                <Pressable
-                  key={day.key}
-                  style={styles.dayIcon}
-                  onPress={() => router.push(`/history/${day.key}`)}
-                >
-                  <Text style={styles.dayMonth}>
-                    {date.toLocaleDateString(undefined, { month: 'short' })}
-                  </Text>
-                  <Text style={styles.dayNumber}>{date.getDate()}</Text>
-                  <Text style={styles.dayYear}>{date.getFullYear()}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+        {history.length === 0 ? null : <HistoryGrid days={history} />}
       </View>
 
       <View style={styles.card}>
@@ -490,19 +472,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   toggleLabel: { color: colors.text, fontWeight: '600', flex: 1, paddingRight: spacing.sm },
-  historyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  dayIcon: {
-    width: 64,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    backgroundColor: colors.accentSoft,
-  },
-  dayMonth: { fontSize: 13, color: colors.accent, textTransform: 'uppercase' },
-  dayNumber: { fontSize: 22, color: colors.text },
-  dayYear: { fontSize: 12, color: colors.muted },
   pill: {
     borderRadius: 999,
     paddingHorizontal: spacing.md,

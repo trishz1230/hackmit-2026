@@ -8,7 +8,7 @@ import { AvatarButton } from '../../components/AvatarButton';
 import { Tabs } from '../../components/Tabs';
 import { EXTRA_PROMPT } from '../../lib/posts';
 import { useApp } from '../../lib/store';
-import { colors, radius, spacing } from '../../lib/theme';
+import { paper, radius, spacing } from '../../lib/theme';
 
 /** The ＋ tab: post anything to the family, counting toward no level. */
 export default function Plus() {
@@ -31,9 +31,9 @@ export default function Plus() {
             </View>
             <Tabs active="hangout" />
             <View style={styles.header}>
-              <Text style={styles.title}>Hangout</Text>
+              <Text style={styles.title}>hangout</Text>
               <Text style={styles.body}>
-                Share whatever you want with {group.name}. Nothing here counts toward the level.
+                Share whatever you want with {group.name} — nothing here counts toward the level.
               </Text>
               <Pressable style={styles.cta} onPress={() => router.push('/capture?channel=hangout')}>
                 <Text style={styles.ctaText}>Share something</Text>
@@ -60,25 +60,27 @@ export default function Plus() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: colors.bg },
+  wrap: { flex: 1, backgroundColor: paper.page },
   topBar: { alignItems: 'flex-end', paddingHorizontal: spacing.md, paddingTop: spacing.md },
   header: {
     margin: spacing.md,
     marginTop: spacing.sm,
     marginBottom: 0,
     padding: spacing.md,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: paper.field,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: paper.line,
   },
-  title: { fontSize: 20, fontWeight: '700', color: colors.text },
-  body: { marginTop: spacing.xs, fontSize: 14, color: colors.muted, lineHeight: 20 },
+  title: { fontSize: 26, color: paper.ink },
+  body: { marginTop: spacing.xs, fontSize: 16, color: paper.muted, lineHeight: 22 },
   cta: {
     marginTop: spacing.md,
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
+    backgroundColor: paper.button,
+    borderRadius: radius.lg,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700' },
-  empty: { textAlign: 'center', color: colors.muted, marginTop: spacing.lg },
+  ctaText: { color: paper.ink, fontSize: 18 },
+  empty: { textAlign: 'center', color: paper.muted, marginTop: spacing.lg },
 });
