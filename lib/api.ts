@@ -8,6 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { levelUnlocksAt, postsForTask } from './levels';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabase';
+import { describeMedia } from './describe';
 import { familyContext, generatePrompt, type FamilyContext } from './prompts';
 import { sendExpoPush } from './push';
 import { nudgeContent } from './nudge';
@@ -385,8 +386,8 @@ export async function getPastAuthors(groupId: string, members: Profile[]): Promi
 
 /**
  * What the family has been sharing lately, so the next prompt can follow on
- * from it rather than being generic. Photos come through as their caption
- * only — the image itself is a data URL nobody can read.
+ * from it rather than being generic. Photos and recordings are read by
+ * api/describe.ts, so what is in them counts too, not just their captions.
  */
 async function contextFor(group: Group): Promise<FamilyContext> {
   const sb = getSupabase();
@@ -400,7 +401,8 @@ async function contextFor(group: Group): Promise<FamilyContext> {
       .limit(12),
   ]);
 
-  return familyContext(group.name, members, (posts.data ?? []).map(toPost));
+  const recent = (posts.data ?? []).map(toPost);
+  return familyContext(group.name, members, recent, await describeMedia(recent));
 }
 
 /** The task for the group's current level, created on demand. */

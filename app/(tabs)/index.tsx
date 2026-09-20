@@ -9,6 +9,7 @@ import { PostStack } from '../../components/PostStack';
 import { GreenStar, HeartsDoodle, PhoneDoodle, YellowStar } from '../../components/Doodles';
 import { weekRange, weekStats } from '../../lib/week';
 import { DEFAULT_LABELS, weekLabels, type StatLabels } from '../../lib/weekLabels';
+import { describeMedia } from '../../lib/describe';
 import { familyContext } from '../../lib/prompts';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -48,9 +49,13 @@ export default function Home() {
   useEffect(() => {
     if (!groupId || !named) return;
     let live = true;
-    weekLabels(groupId, start, familyContext(group?.name ?? '', members, thisWeek)).then((l) => {
-      if (live) setLabels(l);
-    });
+    describeMedia(thisWeek)
+      .then((described) =>
+        weekLabels(groupId, start, familyContext(group?.name ?? '', members, thisWeek, described)),
+      )
+      .then((l) => {
+        if (live) setLabels(l);
+      });
     return () => {
       live = false;
     };
