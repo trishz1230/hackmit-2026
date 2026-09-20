@@ -266,7 +266,14 @@ export default function Capture() {
   };
 
   const bar = (
-    <View style={[styles.bar, { paddingTop: insets.top + spacing.md }]}>
+    // A modal sheet already starts below the notch, so the whole safe-area
+    // inset on top of it drops the header into the middle of the card.
+    <View
+      style={[
+        styles.bar,
+        { paddingTop: Platform.OS === 'ios' ? spacing.lg : insets.top + spacing.md },
+      ]}
+    >
       <Pressable style={styles.backRow} onPress={goBack} hitSlop={8}>
         <Text style={styles.back}>←</Text>
         <Text style={styles.barTitle}>{hangout || extra ? 'Share more' : "Today's task"}</Text>
