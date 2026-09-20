@@ -120,6 +120,16 @@ export default function Settings() {
       <Text style={styles.title}>Settings</Text>
 
       <View style={styles.card}>
+        <Text style={styles.label}>Your avatar</Text>
+        <View style={styles.avatarRow}>
+          <AvatarFace value={me.avatar} size={72} />
+          <Pressable onPress={() => router.push('/avatar?edit=1')}>
+            <Text style={styles.edit}>Change avatar</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.card}>
         <Text style={styles.label}>Family name</Text>
         {editingFamily ? (
           <>
@@ -403,6 +413,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.md },
   blank: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
+  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.md,

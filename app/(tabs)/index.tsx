@@ -4,6 +4,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
 import { AvatarFace } from '../../components/AvatarFace';
+import { AvatarButton } from '../../components/AvatarButton';
 import { weekRange, weekStats } from '../../lib/week';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -13,7 +14,7 @@ const dayMonth = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
 /** The first thing you see: how the family's week is going. */
 export default function Home() {
   const router = useRouter();
-  const { group, members, me, posts, hangoutPosts, reactions, memberById, loading } = useApp();
+  const { group, members, posts, hangoutPosts, reactions, memberById, loading } = useApp();
   const insets = useSafeAreaInsets();
 
   if (loading) return <View style={styles.wrap} />;
@@ -31,14 +32,12 @@ export default function Home() {
     <ScrollView style={[styles.wrap, { paddingTop: insets.top }]} contentContainerStyle={styles.body}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>This week</Text>
+          <Text style={styles.title}>this week</Text>
           <Text style={styles.dates}>
             {dayMonth(start)}–{dayMonth(end)}
           </Text>
         </View>
-        <Pressable onPress={() => router.push('/family')} hitSlop={8}>
-          <AvatarFace value={me.avatar} size={42} />
-        </Pressable>
+        <AvatarButton />
       </View>
 
       <View style={styles.collage}>
@@ -83,7 +82,7 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.lg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 24, color: colors.text },
+  title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
   collage: {
     flexDirection: 'row',
