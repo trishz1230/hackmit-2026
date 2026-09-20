@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { levelUnlocksAt, postsForTask } from './levels';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabase';
 import { describeMedia } from './describe';
+import { toWav } from './wav';
 import { familyContext, generatePrompt, type FamilyContext } from './prompts';
 import { sendExpoPush } from './push';
 import { nudgeContent } from './nudge';
@@ -583,13 +584,17 @@ export async function createPost(
 
 /**
  * Uploads a local photo or recording to the public `photos` bucket, returning
- * its url. Recordings share the bucket so no new one has to be created; they
- * keep the extension the recorder gave them (m4a on a phone, webm on the web).
+ * its url. Recordings share the bucket so no new one has to be created, and
+ * are stored as WAV wherever that is possible, because Muse Voice Transcribe
+ * reads nothing else.
  */
 async function uploadMedia(kind: 'photo' | 'voice', uri: string, userId: string): Promise<string> {
   if (uri.startsWith('http')) return uri;
   const sb = getSupabase();
-  const blob = await (await fetch(uri)).blob();
+  const recorded = await (await fetch(uri)).blob();
+  const wav = kind === 'voice' && !recorded.type.includes('wav') ? await toWav(recorded) : null;
+  const blob = wav ?? recorded;
+
   const type = kind === 'photo' ? 'image/jpeg' : blob.type || 'audio/m4a';
   const extension = kind === 'photo' ? 'jpg' : (type.split('/')[1]?.split(';')[0] ?? 'm4a');
   const path = `${userId}/${Date.now()}.${extension}`;

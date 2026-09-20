@@ -3,6 +3,7 @@ import { ActionSheetIOS, Alert, Image, Platform, Pressable, StyleSheet, View } f
 import { Text, TextInput } from '../components/Handwriting';
 import {
   AudioModule,
+  IOSOutputFormat,
   RecordingPresets,
   setAudioModeAsync,
   useAudioRecorder,
@@ -22,6 +23,29 @@ import { colors, radius, spacing } from '../lib/theme';
 /** Long enough to say something, short enough that nobody scrolls past it. */
 const MAX_RECORDING_SECONDS = 60;
 
+/**
+ * Mono 16 kHz WAV: the one format Muse Voice Transcribe reads, so the family's
+ * voice notes arrive transcribable. iOS records it directly; Android's recorder
+ * has no WAV output and the web recorder gives WebM, so those are converted on
+ * upload (lib/wav.ts).
+ */
+const VOICE = {
+  ...RecordingPresets.HIGH_QUALITY,
+  extension: '.wav',
+  sampleRate: 16_000,
+  numberOfChannels: 1,
+  ios: {
+    ...RecordingPresets.HIGH_QUALITY.ios,
+    extension: '.wav',
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    sampleRate: 16_000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  android: { ...RecordingPresets.HIGH_QUALITY.android, extension: '.m4a' },
+};
+
 export default function Capture() {
   const router = useRouter();
   const { channel } = useLocalSearchParams<{ channel?: string }>();
@@ -35,7 +59,7 @@ export default function Capture() {
   const [textFocused, setTextFocused] = useState(false);
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
   const [voiceError, setVoiceError] = useState('');
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(VOICE);
   const recorderState = useAudioRecorderState(recorder);
   const started = useRef(false);
 
