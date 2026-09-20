@@ -4,7 +4,7 @@ import { Text } from '../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { AvatarFace } from '../components/AvatarFace';
 import { useApp } from '../lib/store';
-import { colors, radius, spacing } from '../lib/theme';
+import { paper, radius, spacing } from '../lib/theme';
 
 /** Shown straight after creating or joining: who is in the family so far. */
 export default function FamilyAvatars() {
@@ -17,7 +17,7 @@ export default function FamilyAvatars() {
   const alone = members.length <= 1;
 
   return (
-    <ScrollView contentContainerStyle={styles.wrap}>
+    <ScrollView style={styles.page} contentContainerStyle={styles.wrap}>
       <Text style={styles.title}>{group.name}</Text>
       <Text style={styles.tagline}>
         {alone
@@ -50,10 +50,17 @@ export default function FamilyAvatars() {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.night },
-  wrap: { padding: spacing.lg, paddingTop: 72, gap: spacing.sm },
-  title: { fontSize: 30, fontWeight: '800', color: colors.accent },
-  tagline: { fontSize: 15, color: colors.muted, lineHeight: 21, marginBottom: spacing.lg },
+  fill: { flex: 1, backgroundColor: paper.page },
+  page: { backgroundColor: paper.page },
+  wrap: {
+    padding: spacing.lg,
+    paddingTop: 72,
+    gap: spacing.sm,
+    backgroundColor: paper.page,
+    flexGrow: 1,
+  },
+  title: { fontSize: 34, color: paper.ink },
+  tagline: { fontSize: 16, color: paper.muted, lineHeight: 22, marginBottom: spacing.lg },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -61,14 +68,14 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   member: { alignItems: 'center', width: 110 },
-  name: { marginTop: spacing.xs, fontSize: 16, color: colors.text },
-  edit: { fontSize: 14, color: colors.accent, textDecorationLine: 'underline' },
+  name: { marginTop: spacing.xs, fontSize: 17, color: paper.ink },
+  edit: { fontSize: 15, color: paper.muted, textDecorationLine: 'underline' },
   cta: {
     marginTop: spacing.lg,
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    backgroundColor: paper.button,
+    borderRadius: radius.lg,
     padding: spacing.md,
     alignItems: 'center',
   },
-  ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  ctaText: { color: paper.ink, fontSize: 19 },
 });
