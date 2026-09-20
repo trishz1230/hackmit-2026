@@ -69,7 +69,7 @@ export default function Plus() {
               <Text style={styles.title}>hangout</Text>
               <Text style={styles.body}>
                 {locked
-                  ? '🔒 Locked! Answer the family task first, then hangout is all yours.'
+                  ? `🔒 Locked! Answer the level ${level} task first, then hangout is all yours.`
                   : `Share whatever you want with ${group.name} — nothing here counts toward the level.`}
               </Text>
               {locked ? null : (
