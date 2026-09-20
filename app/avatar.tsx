@@ -47,7 +47,9 @@ const SLOT: Record<Step, { top: number; height: number }> = {
   hair: { top: 0, height: 0.96 },
 };
 /** Gap between the head and the option peeking above or below it. */
-const PEEK_GAP = 44;
+const PEEK_GAP = 96;
+/** How small a neighbouring option is drawn while it waits its turn. */
+const PEEK_SCALE = 0.62;
 const DOUBLE_TAP_MS = 450;
 /** A tap this soon after the reel moved is the end of a scroll, not a tap. */
 const SETTLE_MS = 300;
@@ -58,8 +60,10 @@ const TITLE_INTRO_SCALE = 1.9;
 
 export default function MakeAYou() {
   const router = useRouter();
-  const { edit, mode } = useLocalSearchParams<{ edit?: string; mode?: string }>();
+  const { edit, next } = useLocalSearchParams<{ edit?: string; next?: string }>();
   const editing = edit === '1';
+  // Drawn after joining or creating, the face goes straight onto the profile.
+  const onProfile = editing || next === 'family';
   const { me, updateAvatar } = useApp();
   const saveAvatar = useRef(updateAvatar);
   saveAvatar.current = updateAvatar;
@@ -124,7 +128,7 @@ export default function MakeAYou() {
     leaving.current = true;
     setDone(true);
     const face = encodeFace({ eyes, mouth, hair });
-    if (editing) saveAvatar.current(face);
+    if (onProfile) saveAvatar.current(face);
     else savePendingAvatar(face).catch(() => {});
     Animated.sequence([
       Animated.spring(finish, { toValue: 1.12, friction: 4, useNativeDriver: true }),
@@ -132,10 +136,11 @@ export default function MakeAYou() {
     ]).start();
     // Saving re-renders this screen, so the hand-off must not be cancellable.
     setTimeout(() => {
-      if (editing) router.back();
-      else router.replace(mode ? `/onboarding?mode=${mode}` : '/onboarding');
+      if (next === 'family') router.replace('/family');
+      else if (editing) router.back();
+      else router.replace('/onboarding');
     }, 1600);
-  }, [editing, eyes, finish, hair, mode, mouth, router, started, step]);
+  }, [editing, eyes, finish, hair, mouth, next, onProfile, router, started, step]);
 
   return (
     <View style={styles.screen}>
@@ -351,6 +356,13 @@ function FaceReel({
                     extrapolate: 'clamp',
                   }),
                 },
+                {
+                  scale: offset.interpolate({
+                    inputRange: [(i - 1) * row, i * row, (i + 1) * row],
+                    outputRange: [PEEK_SCALE, 1, PEEK_SCALE],
+                    extrapolate: 'clamp',
+                  }),
+                },
               ],
             }}
           >
@@ -398,7 +410,7 @@ const styles = StyleSheet.create({
     backgroundColor: PAGE,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 72,
+    paddingTop: 150,
   },
   title: {
     fontSize: 24,

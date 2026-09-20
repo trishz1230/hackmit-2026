@@ -26,10 +26,10 @@ export default function Start() {
       </View>
 
       <View style={styles.buttons}>
-        <Pressable style={styles.button} onPress={() => router.push('/avatar?mode=join')}>
+        <Pressable style={styles.button} onPress={() => router.push('/onboarding?mode=join')}>
           <Text style={styles.label}>join a fam.</Text>
         </Pressable>
-        <Pressable style={styles.button} onPress={() => router.push('/avatar?mode=create')}>
+        <Pressable style={styles.button} onPress={() => router.push('/onboarding?mode=create')}>
           <Text style={styles.label}>create a fam.</Text>
         </Pressable>
       </View>
