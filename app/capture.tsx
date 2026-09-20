@@ -25,7 +25,6 @@ import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
-import { describeWait } from '../lib/levels';
 import { dismissKeyboard } from '../lib/keyboard';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
@@ -61,7 +60,7 @@ export default function Capture() {
   const insets = useSafeAreaInsets();
   const { channel, start } = useLocalSearchParams<{ channel?: string; start?: string }>();
   const hangout = channel === 'hangout';
-  const { task, addPost, taskLocked, opensAt, hasPostedThisCycle } = useApp();
+  const { task, addPost, taskLocked, hasPostedThisCycle } = useApp();
   // The prompt is only asked once; anything after it is a free extra share.
   const extra = !hangout && hasPostedThisCycle;
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -210,7 +209,7 @@ export default function Capture() {
     return (
       <View style={styles.wrap}>
         <Text style={styles.prompt}>Wait till the next time for a new conversation!</Text>
-        <Text style={styles.locked}>This level starts {describeWait(opensAt)}.</Text>
+        <Text style={styles.locked}>We&apos;ll let you know when this level starts.</Text>
         <Pressable style={styles.cta} onPress={() => router.replace('/(tabs)/feed')}>
           <Text style={styles.ctaText}>Back to the family</Text>
         </Pressable>

@@ -7,7 +7,7 @@ import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
-import { EXTRA_PROMPT, isExtraPost } from '../../lib/posts';
+import { isExtraPost } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { paper, radius, spacing } from '../../lib/theme';
 
@@ -32,6 +32,9 @@ export default function Feed() {
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
+
+  // Only answers to a task belong here; extra shares live in hangout.
+  const answers = posts.filter((p) => !isExtraPost(p, posts));
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -66,7 +69,7 @@ export default function Feed() {
         )}
       </View>
       <FlatList
-        data={posts}
+        data={answers}
         keyExtractor={(p) => p.id}
         ListEmptyComponent={
           <Text style={styles.empty}>No posts yet. Complete a level to share with family.</Text>
@@ -76,7 +79,7 @@ export default function Feed() {
             post={item}
             author={memberById(item.userId)}
             reactions={reactionsFor(item.id)}
-            prompt={isExtraPost(item, posts) ? EXTRA_PROMPT : promptFor(item.taskId)}
+            prompt={promptFor(item.taskId)}
             onPress={() => router.push(`/post/${item.id}`)}
             onLike={() => toggleLike(item.id)}
             liked={likedByMe(item.id)}

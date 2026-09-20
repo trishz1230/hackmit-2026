@@ -7,7 +7,7 @@ import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
 import { VoiceNote } from '../../components/VoiceNote';
-import { describeWait, streakCount } from '../../lib/levels';
+import { streakCount } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import type { Post } from '../../lib/types';
@@ -39,9 +39,7 @@ export default function Path() {
     missedReset,
     dismissMissedReset,
     waitingForPeriod,
-    unlocksAt,
     taskLocked,
-    opensAt,
     taskForLevel,
     myPostForLevel,
     me,
@@ -98,8 +96,8 @@ export default function Path() {
           <Text style={styles.waitTitle}>Everyone posted</Text>
           <Text style={styles.waitBody}>
             {group.level < group.goal
-              ? `Level ${group.level + 1} will open ${describeWait(unlocksAt)}.`
-              : `${group.rewardText || 'Your reward'} unlocks ${describeWait(unlocksAt)}.`}
+              ? `Level ${group.level + 1} opens with your next notification.`
+              : `${group.rewardText || 'Your reward'} unlocks with your next notification.`}
           </Text>
         </View>
       ) : hasPostedThisCycle ? (
@@ -141,7 +139,6 @@ export default function Path() {
                   <Text style={styles.sheetBody}>
                     Wait till the next notification for a new conversation :)
                   </Text>
-                  <Text style={styles.sheetMeta}>Opens {describeWait(opensAt)}.</Text>
                 </>
               ) : isCurrent ? (
                 <>
@@ -178,7 +175,6 @@ export default function Path() {
                   <Text style={styles.sheetBody}>
                     Wait till the next notification for a new conversation :)
                   </Text>
-                  <Text style={styles.sheetMeta}>Opens {describeWait(unlocksAt)}.</Text>
                 </>
               ) : (
                 <Text style={styles.sheetBody}>
@@ -213,7 +209,6 @@ const styles = StyleSheet.create({
   resetTitle: { fontWeight: '800', color: colors.text },
   resetBody: { color: colors.muted, marginTop: 2 },
   dismiss: { marginTop: spacing.xs, color: colors.accent, fontWeight: '700' },
-  sheetMeta: { color: colors.muted, marginTop: spacing.xs },
   complete: {
     marginTop: spacing.md,
     color: colors.success,
