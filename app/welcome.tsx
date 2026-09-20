@@ -58,8 +58,8 @@ export default function Welcome() {
   const release = useCallback(() => setHolding(false), []);
 
   return (
-    <View style={styles.screen}>
-      <Pressable onPressIn={hold} onPressOut={release} style={styles.stage}>
+    <Pressable onPressIn={hold} onPressOut={release} style={styles.screen}>
+      <View style={styles.stage}>
         {/* Every frame stays mounted so stepping through them never waits on a load. */}
         {frames.map((source, i) => (
           <Image
@@ -69,10 +69,10 @@ export default function Welcome() {
             style={[styles.face, { opacity: i === frame ? 1 : 0 }]}
           />
         ))}
-      </Pressable>
+      </View>
 
       {frame === 0 ? <Text style={styles.hint}>press to get started...</Text> : null}
-    </View>
+    </Pressable>
   );
 }
 
