@@ -11,18 +11,20 @@ const stampOf = (tasks: Task[], level: number): number => {
 };
 
 /**
- * When a level began for the family. A row is stamped as soon as the family
- * can reach it — and a reset re-stamps every row it will climb back through
- * with the same time — so a level only really begins once somebody answers it.
+ * When a level began for the family, or null if it hasn't. A row is stamped as
+ * soon as the family can reach it — and a reset re-stamps every row it will
+ * climb back through with the same time — so a level only really begins once
+ * somebody answers it, and one waiting to open never takes over the level the
+ * family is still sharing to.
  */
-function levelStart(tasks: Task[], answers: Post[], level: number): number {
+function levelStart(tasks: Task[], answers: Post[], level: number): number | null {
   const stamped = stampOf(tasks, level);
   const ids = new Set(tasks.filter((t) => t.level === level).map((t) => t.id));
   const first = answers
     .filter((p) => ids.has(p.taskId) && Date.parse(p.createdAt) >= stamped)
     .map((p) => Date.parse(p.createdAt))
     .sort((a, b) => a - b)[0];
-  return first ?? stamped;
+  return first ?? null;
 }
 
 /** When a level started and when the next one took over, as timestamps. */
@@ -31,11 +33,11 @@ export function levelWindow(
   answers: Post[],
   level: number
 ): { since: number; until: number } {
-  const since = levelStart(tasks, answers, level);
+  const since = levelStart(tasks, answers, level) ?? stampOf(tasks, level);
   const later = tasks
     .filter((t) => t.level > level)
     .map((t) => levelStart(tasks, answers, t.level))
-    .filter((start) => start > since)
+    .filter((start): start is number => start !== null && start > since)
     .sort((a, b) => a - b);
   return { since, until: later[0] ?? Infinity };
 }

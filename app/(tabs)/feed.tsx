@@ -22,6 +22,7 @@ export default function Feed() {
     pending,
     remindToPost,
     taskLocked,
+    taskForLevel,
     reactionsFor,
     memberById,
     toggleLike,
@@ -37,8 +38,14 @@ export default function Feed() {
   // Only answers to a task belong here; extra shares live in hangout. The feed
   // follows the level being played, and holds on the last answered one until
   // somebody starts the new level.
-  const level = feedLevel(tasks, posts, Math.min(group.level, group.goal));
+  const current = Math.min(group.level, group.goal);
+  // A locked level keeps its prompt hidden, so the feed stays on the level
+  // before it rather than showing a card nobody can answer.
+  const level = taskLocked
+    ? Math.max(1, Math.min(feedLevel(tasks, posts, current), task.level - 1))
+    : feedLevel(tasks, posts, current);
   const answers = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts));
+  const shown = taskForLevel(level) ?? task;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -59,11 +66,15 @@ export default function Feed() {
               <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
             </View>
             <View style={styles.task}>
-              <Text style={styles.taskLabel}>Level {Math.min(group.level, group.goal)} task</Text>
+              <Text style={styles.taskLabel}>Level {level} task</Text>
               {taskLocked ? (
-                <Text style={styles.taskPrompt}>
-                  🔒 Locked! Wait till the next notification for a new conversation :)
-                </Text>
+                <>
+                  <Text style={styles.taskPrompt}>{shown.prompt}</Text>
+                  <Text style={styles.locked}>
+                    🔒 The next level is locked — wait till the next notification for a new
+                    conversation :)
+                  </Text>
+                </>
               ) : (
                 <>
                   <Text style={styles.taskPrompt}>{task.prompt}</Text>
@@ -134,6 +145,7 @@ const styles = StyleSheet.create({
     color: paper.muted,
   },
   taskPrompt: { fontSize: 18, color: paper.ink, lineHeight: 24 },
+  locked: { fontSize: 16, color: paper.muted, lineHeight: 22 },
   cta: {
     marginTop: spacing.xs,
     backgroundColor: paper.button,
