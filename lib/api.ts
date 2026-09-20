@@ -11,7 +11,17 @@ import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabase';
 import { familyContext, generatePrompt, type FamilyContext } from './prompts';
 import { sendExpoPush } from './push';
 import { nudgeContent } from './nudge';
-import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
+import type {
+  Cadence,
+  CreateOptions,
+  Group,
+  JoinOptions,
+  Post,
+  Profile,
+  Reaction,
+  RewardChange,
+  Task,
+} from './types';
 
 type Row = Record<string, unknown>;
 
@@ -33,6 +43,10 @@ const toGroup = (r: Row): Group => ({
   awaitingNextGoal: num(r.level) > num(r.goal),
   pendingCadence: (str(r.pending_cadence) || undefined) as Cadence | undefined,
   cadenceApprovals: strs(r.cadence_approvals),
+  pendingReward: str(r.pending_reward_text)
+    ? { rewardText: str(r.pending_reward_text), goal: num(r.pending_reward_goal) || num(r.goal) }
+    : undefined,
+  rewardApprovals: strs(r.reward_approvals),
 });
 
 const toProfile = (r: Row): Profile => ({
@@ -244,19 +258,19 @@ export async function leaveGroup(groupId: string, userId: string): Promise<void>
 }
 
 /**
- * Settings screen: name, reward and level goal can change any time. Cadence
- * cannot — it goes through proposeCadence/approveCadence instead.
+ * Settings screen: the family name changes any time. Cadence, reward and level
+ * goal cannot — they go through their propose/approve pairs instead.
  */
 export async function updateGroup(
   groupId: string,
-  patch: { rewardText: string; goal: number; name?: string }
+  patch: { rewardText?: string; goal?: number; name?: string }
 ): Promise<void> {
   const sb = getSupabase();
   const { error } = await sb
     .from('groups')
     .update({
-      reward_text: patch.rewardText,
-      goal: patch.goal,
+      ...(patch.rewardText !== undefined ? { reward_text: patch.rewardText } : {}),
+      ...(patch.goal !== undefined ? { goal: patch.goal } : {}),
       ...(patch.name ? { name: patch.name } : {}),
     })
     .eq('id', groupId);
@@ -323,6 +337,86 @@ async function recordCadenceVote(
   // frequency outright, which is all a family of one ever needs.
   if (everyone) {
     const retry = await sb.from('groups').update({ cadence }).eq('id', groupId);
+    if (!retry.error) return;
+  }
+  throw error;
+}
+
+/**
+ * What the family is working towards is a family decision too: proposing a
+ * reward starts a vote the proposer has already cast.
+ */
+export async function proposeReward(
+  group: Group,
+  members: Profile[],
+  userId: string,
+  change: RewardChange
+): Promise<void> {
+  if (change.rewardText === group.rewardText && change.goal === group.goal) {
+    return cancelRewardChange(group.id);
+  }
+  await recordRewardVote(group.id, change, [userId], members);
+}
+
+export async function approveReward(
+  group: Group,
+  members: Profile[],
+  userId: string
+): Promise<void> {
+  if (!group.pendingReward || group.rewardApprovals.includes(userId)) return;
+  await recordRewardVote(
+    group.id,
+    group.pendingReward,
+    [...group.rewardApprovals, userId],
+    members
+  );
+}
+
+export async function cancelRewardChange(groupId: string): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update({ pending_reward_text: null, pending_reward_goal: null, reward_approvals: [] })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
+/** Writes the tally, or applies the reward once every member is in it. */
+async function recordRewardVote(
+  groupId: string,
+  change: RewardChange,
+  approvals: string[],
+  members: Profile[]
+): Promise<void> {
+  const everyone = members.length > 0 && members.every((m) => approvals.includes(m.id));
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update(
+      everyone
+        ? {
+            reward_text: change.rewardText,
+            goal: change.goal,
+            pending_reward_text: null,
+            pending_reward_goal: null,
+            reward_approvals: [],
+          }
+        : {
+            pending_reward_text: change.rewardText,
+            pending_reward_goal: change.goal,
+            reward_approvals: approvals,
+          }
+    )
+    .eq('id', groupId);
+  if (!error) return;
+
+  // Databases created before the vote columns existed can still change the
+  // reward outright, which is all a family of one ever needs.
+  if (everyone) {
+    const retry = await sb
+      .from('groups')
+      .update({ reward_text: change.rewardText, goal: change.goal })
+      .eq('id', groupId);
     if (!retry.error) return;
   }
   throw error;

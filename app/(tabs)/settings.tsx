@@ -52,6 +52,10 @@ export default function Settings() {
     proposeCadence,
     approveCadence,
     cancelCadenceChange,
+    rewardPendingOn,
+    proposeReward,
+    approveReward,
+    cancelRewardChange,
     loading,
     error,
   } = useApp();
@@ -90,17 +94,13 @@ export default function Settings() {
 
   const saveFamilyName = () => {
     if (!group || !familyName.trim()) return;
-    updateSettings({
-      rewardText: group.rewardText,
-      goal: group.goal,
-      name: familyName.trim(),
-    });
+    updateSettings({ name: familyName.trim() });
     setEditingFamily(false);
   };
 
   const saveReward = () => {
     if (!group || rewardBad) return;
-    updateSettings({ rewardText: reward.trim(), goal: goalNumber });
+    proposeReward({ rewardText: reward.trim(), goal: goalNumber });
     setEditingReward(false);
   };
 
@@ -318,6 +318,7 @@ export default function Settings() {
 
       <View style={styles.card}>
         <Text style={styles.label}>Reward &amp; level goal</Text>
+        <Text style={styles.meta}>Every family member needs to approve.</Text>
         {editingReward ? (
           <>
             <TextInput
@@ -375,6 +376,26 @@ export default function Settings() {
             </Pressable>
           </>
         )}
+        {group.pendingReward ? (
+          <View style={styles.vote}>
+            <Text style={styles.voteTitle}>
+              Change to {group.pendingReward.rewardText} after {group.pendingReward.goal} levels
+              &middot; {group.rewardApprovals.length} of {members.length} approved
+            </Text>
+            <Text style={styles.meta}>
+              Still waiting on {rewardPendingOn.map((m) => m.name).join(', ')}. Until then the
+              family keeps {group.rewardText} after {group.goal} levels.
+            </Text>
+            {group.rewardApprovals.includes(me.id) ? null : (
+              <Pressable style={styles.cta} onPress={approveReward}>
+                <Text style={styles.ctaText}>Approve the change</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={cancelRewardChange}>
+              <Text style={styles.cancel}>Cancel this change</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.card}>

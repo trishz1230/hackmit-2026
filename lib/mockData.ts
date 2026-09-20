@@ -11,6 +11,7 @@ export const mockGroup: Group = {
   currentStreak: 0,
   awaitingNextGoal: false,
   cadenceApprovals: [],
+  rewardApprovals: [],
 };
 
 export const mockProfiles: Profile[] = [
