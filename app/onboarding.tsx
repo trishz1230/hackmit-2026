@@ -116,7 +116,11 @@ export default function Onboarding() {
         {(['join', 'create'] as const).map((m) => (
           <Pressable
             key={m}
-            onPress={() => setMode(m)}
+            onPress={() => {
+              setMode(m);
+              setSubmitted(false);
+              dismissError();
+            }}
             style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]}
           >
             <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
