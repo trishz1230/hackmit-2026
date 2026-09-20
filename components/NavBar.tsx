@@ -43,7 +43,9 @@ export function NavBar({ state, navigation }: NavBarProps) {
         </Pressable>
       </View>
       <View style={styles.spacer} />
-      <Pressable style={styles.plus} onPress={() => router.push('/capture')}>
+      {/* The ＋ is a free share rather than the family task, so it waits on that
+          task the way hangout does. */}
+      <Pressable style={styles.plus} onPress={() => router.push('/capture?channel=hangout')}>
         <PlusIcon size={52} />
       </Pressable>
     </View>
