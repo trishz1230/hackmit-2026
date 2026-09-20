@@ -75,7 +75,7 @@ export default function Home() {
       {thisWeek.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.empty}>nothing shared yet... :(</Text>
-          <PhoneDoodle size={28} style={styles.emptyPhone} />
+          <PhoneDoodle size={22} style={styles.emptyPhone} />
         </View>
       ) : (
         <View
@@ -129,16 +129,17 @@ const styles = StyleSheet.create({
   dates: { fontSize: 15, color: colors.muted },
   empty: { fontSize: 18, color: colors.text },
   emptyCard: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+    // Sits straight on the stat cards, with only the receiver's headroom above.
+    marginTop: 52,
+    marginBottom: spacing.sm,
     padding: spacing.md,
-    minHeight: 140,
+    minHeight: 104,
     justifyContent: 'center',
     backgroundColor: '#F0F0F0',
     borderRadius: radius.md,
   },
   // The receiver dangles into the card from above, cord and all.
-  emptyPhone: { position: 'absolute', right: 34, top: -58 },
+  emptyPhone: { position: 'absolute', right: 30, top: -46 },
   starTitle: { position: 'absolute', left: -20, top: -24 },
   statWrap: { marginBottom: spacing.sm },
   stat: {
