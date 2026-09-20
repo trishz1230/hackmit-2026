@@ -220,7 +220,7 @@ export default function Capture() {
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.bar, { paddingTop: insets.top + spacing.sm }]}>
+      <View style={[styles.bar, { paddingTop: insets.top + spacing.md }]}>
         <Pressable style={styles.backRow} onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.back}>←</Text>
           <Text style={styles.barTitle}>{extra ? 'Share more' : "Today's task"}</Text>
