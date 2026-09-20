@@ -4,6 +4,7 @@ import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PostCard } from '../../components/PostCard';
+import { AvatarButton } from '../../components/AvatarButton';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -23,7 +24,10 @@ export default function Plus() {
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>Hangout</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Hangout</Text>
+              <AvatarButton size={36} />
+            </View>
             <Text style={styles.body}>
               Share whatever you want with {group.name}. Nothing here counts toward the level.
             </Text>
@@ -51,6 +55,7 @@ export default function Plus() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   header: {
     margin: spacing.md,
     marginBottom: 0,

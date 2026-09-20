@@ -79,7 +79,7 @@ export default function Path() {
           reward={group.rewardText}
           streak={streak}
           myAvatar={me.avatar}
-          onPressAvatar={() => router.push('/family')}
+          onPressAvatar={() => router.push('/(tabs)/settings')}
         />
       </View>
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Text } from '../../components/Handwriting';
 import { NextGoalPopup } from '../../components/NextGoalPopup';
 import { Tabs } from 'expo-router';
@@ -42,16 +43,17 @@ export default function TabLayout() {
         name="plus"
         options={{
           title: 'Post',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>＋</Text>,
+          // Drawn as two bars: the handwriting font has no plus glyph.
+          tabBarIcon: ({ color }) => (
+            <View style={{ width: 18, height: 18, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ position: 'absolute', width: 16, height: 2, backgroundColor: color }} />
+              <View style={{ position: 'absolute', width: 2, height: 16, backgroundColor: color }} />
+            </View>
+          ),
         }}
       />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⚙</Text>,
-        }}
-      />
+      {/* Reached by tapping your avatar, not the bottom bar. */}
+      <Tabs.Screen name="settings" options={{ href: null }} />
       {/* Reached from the Family task / Hangout switcher, not the bottom bar. */}
       <Tabs.Screen name="feed" options={{ href: null }} />
       {/* In the tab group only so a level keeps the bottom bar. */}

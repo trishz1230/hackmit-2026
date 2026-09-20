@@ -53,6 +53,8 @@ export default function MakeAYou() {
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const editing = edit === '1';
   const { me, updateAvatar } = useApp();
+  const saveAvatar = useRef(updateAvatar);
+  saveAvatar.current = updateAvatar;
   const existing = editing ? parseFace(me.avatar) : null;
   const [step, setStep] = useState(0);
   const [eyes, setEyes] = useState(existing?.eyes ?? 0);
@@ -101,18 +103,18 @@ export default function MakeAYou() {
     leaving.current = true;
     setDone(true);
     const face = encodeFace({ eyes, mouth, hair });
-    if (editing) updateAvatar(face);
+    if (editing) saveAvatar.current(face);
     else savePendingAvatar(face).catch(() => {});
     Animated.sequence([
       Animated.spring(finish, { toValue: 1.12, friction: 4, useNativeDriver: true }),
       Animated.spring(finish, { toValue: 1, friction: 5, useNativeDriver: true }),
     ]).start();
-    const t = setTimeout(() => {
+    // Saving re-renders this screen, so the hand-off must not be cancellable.
+    setTimeout(() => {
       if (editing) router.back();
       else router.replace('/onboarding');
     }, 1600);
-    return () => clearTimeout(t);
-  }, [editing, eyes, finish, hair, mouth, router, started, step, updateAvatar]);
+  }, [editing, eyes, finish, hair, mouth, router, started, step]);
 
   return (
     <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
