@@ -120,6 +120,14 @@ export async function pendingAvatar(): Promise<string | null> {
   return AsyncStorage.getItem(AVATAR_KEY);
 }
 
+/** Redraw the face on a profile that already exists. */
+export async function saveAvatar(userId: string, avatar: string): Promise<void> {
+  await savePendingAvatar(avatar);
+  const sb = getSupabase();
+  const { error } = await sb.from('profiles').update({ avatar }).eq('id', userId);
+  if (error) throw error;
+}
+
 export async function saveProfile(
   userId: string,
   name: string,
