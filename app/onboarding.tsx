@@ -107,7 +107,7 @@ export default function Onboarding() {
     >
       <Text style={styles.logo}>btw</Text>
       <Text style={styles.tagline}>
-        Between us. Everyone posts, or the whole family&apos;s streak resets.
+        by the way! just between us. we miss you &lt;3
       </Text>
 
       <View style={styles.toggle}>

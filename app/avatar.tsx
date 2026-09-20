@@ -47,12 +47,14 @@ const SLOT: Record<Step, { top: number; height: number }> = {
   hair: { top: 0, height: 0.96 },
 };
 /** Gap between the head and the option peeking above or below it. */
-const PEEK_GAP = 22;
+const PEEK_GAP = 44;
 const DOUBLE_TAP_MS = 450;
 /** A tap this soon after the reel moved is the end of a scroll, not a tap. */
 const SETTLE_MS = 300;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 1000;
+/** How much bigger the title is while it has the paper to itself. */
+const TITLE_INTRO_SCALE = 1.9;
 
 export default function MakeAYou() {
   const router = useRouter();
@@ -180,7 +182,17 @@ export default function MakeAYou() {
       </Animated.View>
 
       <View style={styles.footer}>
-        <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
+        {/* Alone on the paper the title is the whole screen; it shrinks into a
+            caption as the face arrives. */}
+        <Animated.View
+          style={{
+            transform: [
+              { scale: reveal.interpolate({ inputRange: [0, 1], outputRange: [TITLE_INTRO_SCALE, 1] }) },
+            ],
+          }}
+        >
+          <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
+        </Animated.View>
 
         {!started ? null : current ? (
           <Animated.View
@@ -385,6 +397,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 72,
   },
   title: {
     fontSize: 24,
@@ -407,7 +420,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   footer: {
-    marginTop: 64,
+    marginTop: 96,
     alignSelf: 'stretch',
     alignItems: 'center',
     paddingHorizontal: 36,
