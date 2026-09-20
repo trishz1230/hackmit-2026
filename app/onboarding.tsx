@@ -109,11 +109,11 @@ export default function Onboarding() {
     >
       <Text style={styles.logo}>btw</Text>
       <Text style={styles.tagline}>
-        by the way! just between us. we miss you &lt;3
+        by the way! just between us, your family misses you &lt;3
       </Text>
 
       <View style={styles.toggle}>
-        {(['create', 'join'] as const).map((m) => (
+        {(['join', 'create'] as const).map((m) => (
           <Pressable
             key={m}
             onPress={() => setMode(m)}
