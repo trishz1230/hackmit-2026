@@ -39,6 +39,8 @@ const SLOT = {
   mouth: { top: 0.5, height: 0.3, art: { top: 0.06, width: 0.34, height: 0.18 } },
   hair: { top: 0, height: 0.42, art: { top: 0, width: 1, height: 1 } },
 } as const;
+/** How far the neighbouring options are pushed out, so they clear the face. */
+const PEEK_PUSH = 34;
 const DOUBLE_TAP_MS = 320;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 2000;
@@ -223,14 +225,19 @@ function FaceReel({
   useEffect(() => () => clearTimeout(resting.current), []);
 
   return (
-    <View style={[styles.reelWindow, { top: slot.top * FACE - row, height: row * 3 }]}>
+    <View
+      style={[
+        styles.reelWindow,
+        { top: slot.top * FACE - row - PEEK_PUSH, height: row * 3 + PEEK_PUSH * 2 },
+      ]}
+    >
       <Animated.ScrollView
         ref={scroller as never}
         showsVerticalScrollIndicator={false}
         snapToInterval={row}
         decelerationRate="fast"
         // A row of padding each side keeps the chosen option in the middle band.
-        contentContainerStyle={{ paddingVertical: row }}
+        contentContainerStyle={{ paddingVertical: row + PEEK_PUSH }}
         onContentSizeChange={() => {
           // Start on the middle copy; contentOffset isn't honoured everywhere.
           if (placed.current) return;
@@ -257,6 +264,16 @@ function FaceReel({
                 outputRange: [0.3, 1, 0.3],
                 extrapolate: 'clamp',
               }),
+              // Neighbours drift away from the middle so they clear the face.
+              transform: [
+                {
+                  translateY: offset.interpolate({
+                    inputRange: [(i - 1) * row, i * row, (i + 1) * row],
+                    outputRange: [PEEK_PUSH, 0, -PEEK_PUSH],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
             }}
           >
             <Image
@@ -337,7 +354,8 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 32,
     alignSelf: 'stretch',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 36,
   },
   layer: { position: 'absolute', alignSelf: 'center' },
   reelWindow: {
