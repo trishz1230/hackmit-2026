@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Handwriting';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { clampLevelCount, MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
+import { MAX_LEVELS, MIN_LEVELS } from '../lib/levels';
 import { formatPhone, isValidPhone } from '../lib/phone';
 import { useApp } from '../lib/store';
 import { paper, radius, spacing } from '../lib/theme';
@@ -73,12 +73,16 @@ export default function Onboarding() {
   const codeTooShort = submitted && mode === 'join' && trimmedCode.length > 0 && trimmedCode.length !== CODE_LENGTH;
   const rewardMissing = submitted && mode === 'create' && !reward.trim();
   const phoneBad = submitted && phone.trim().length > 0 && !isValidPhone(phone);
+  const goal = Number(levels);
+  const goalOff = !Number.isInteger(goal) || goal < MIN_LEVELS || goal > MAX_LEVELS;
+  const goalBad = submitted && mode === 'create' && goalOff;
 
   const submit = () => {
     setSubmitted(true);
     if (!myName.trim()) return;
     if (phone.trim() && !isValidPhone(phone)) return;
     if (mode === 'create' && !reward.trim()) return;
+    if (mode === 'create' && goalOff) return;
     if (mode === 'join' && trimmedCode.length !== CODE_LENGTH) return;
     setPriorGroupId(group?.id ?? null);
     dismissError();
@@ -92,7 +96,7 @@ export default function Onboarding() {
         phone: tel,
         cadence,
         rewardText: reward.trim(),
-        goal: clampLevelCount(Number(levels)),
+        goal,
       });
     } else {
       joinGroup({ myName: who, phone: tel, code: trimmedCode.toUpperCase() });
@@ -190,13 +194,18 @@ export default function Onboarding() {
           )}
           <Text style={styles.label}>Levels to the reward ({MIN_LEVELS}–{MAX_LEVELS})</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, goalBad && styles.inputBad]}
             value={levels}
             onChangeText={setLevels}
             keyboardType="number-pad"
             placeholder="10"
             placeholderTextColor={paper.muted}
           />
+          {goalBad && (
+            <Text style={styles.error}>
+              Pick between {MIN_LEVELS} and {MAX_LEVELS} levels.
+            </Text>
+          )}
         </>
       ) : (
         <>
