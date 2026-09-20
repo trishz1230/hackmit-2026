@@ -54,6 +54,8 @@ export default function TabLayout() {
       />
       {/* Reached from the Family task / Hangout switcher, not the bottom bar. */}
       <Tabs.Screen name="feed" options={{ href: null }} />
+      {/* In the tab group only so a level keeps the bottom bar. */}
+      <Tabs.Screen name="level/[n]" options={{ href: null }} />
       <Tabs.Screen name="hangout" options={{ href: null }} />
     </Tabs>
     <NextGoalPopup />

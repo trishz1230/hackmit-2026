@@ -263,8 +263,6 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
 
     if (lastLevel.current !== null && current.level > lastLevel.current) {
       setClearedLevel(current.level - 1);
-      waived.current = false;
-      setPeriodWaivedState(false);
     }
     lastLevel.current = current.level;
 
@@ -334,8 +332,9 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   );
   const unlocksAt = levelUnlocksAt(task.createdAt, group?.cadence ?? 'daily', task.level);
   const opensAt = levelOpensAt(task.createdAt, task.level);
-  const taskLocked = !waived.current && Date.now() < opensAt;
-  const waitingForPeriod = !taskLocked && everyonePostedThisCycle && Date.now() < unlocksAt;
+  const taskLocked = !periodWaived && Date.now() < opensAt;
+  const waitingForPeriod =
+    !taskLocked && everyonePostedThisCycle && !periodWaived && Date.now() < unlocksAt;
   const cadencePendingOn = group?.pendingCadence
     ? members.filter((m) => !group.cadenceApprovals.includes(m.id))
     : [];
