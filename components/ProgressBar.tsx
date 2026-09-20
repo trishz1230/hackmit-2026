@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Handwriting';
 import { AvatarFace } from './AvatarFace';
+import { AVATAR_SIZE } from './AvatarButton';
 import { colors, radius, spacing } from '../lib/theme';
 
 export function ProgressBar({
@@ -33,8 +34,8 @@ export function ProgressBar({
         <View style={styles.right}>
           <Text style={styles.streak}>🔥 {streak} day streak</Text>
           {myAvatar ? (
-            <Pressable onPress={onPressAvatar} hitSlop={8} style={styles.me}>
-              <AvatarFace value={myAvatar} size={34} />
+            <Pressable onPress={onPressAvatar} hitSlop={8}>
+              <AvatarFace value={myAvatar} size={AVATAR_SIZE} />
             </Pressable>
           ) : null}
         </View>
@@ -59,13 +60,6 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   right: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  me: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    padding: 2,
-    backgroundColor: colors.card,
-  },
   level: { fontSize: 17, fontWeight: '700', color: colors.text },
   streak: { fontSize: 14, color: colors.muted },
   track: {

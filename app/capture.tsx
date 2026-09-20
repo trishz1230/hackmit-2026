@@ -20,6 +20,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { describeWait } from '../lib/levels';
@@ -177,6 +178,9 @@ export default function Capture() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
+        <View style={styles.avatarRow}>
+          <AvatarButton />
+        </View>
         <Text style={styles.prompt}>
           {hangout
             ? 'Share anything with the family'
@@ -254,6 +258,7 @@ export default function Capture() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   wrap: { flex: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
+  avatarRow: { alignItems: 'flex-end' },
   prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
   locked: { flex: 1, color: colors.muted, fontSize: 16, lineHeight: 22 },
   square: {

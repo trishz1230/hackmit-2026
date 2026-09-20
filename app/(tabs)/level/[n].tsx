@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../../components/Handwriting';
 import { PostCard } from '../../../components/PostCard';
 import { levelSymbol } from '../../../components/LevelMap';
+import { AvatarButton } from '../../../components/AvatarButton';
 import { useApp } from '../../../lib/store';
 import { colors, radius, spacing } from '../../../lib/theme';
 
@@ -55,6 +56,7 @@ export default function Level() {
           <Text style={styles.back}>←</Text>
           <Text style={styles.barTitle}>back</Text>
         </Pressable>
+        <AvatarButton />
       </View>
 
       <View style={styles.header}>
@@ -94,6 +96,7 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

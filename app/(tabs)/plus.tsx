@@ -26,7 +26,7 @@ export default function Plus() {
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>Hangout</Text>
-              <AvatarButton size={36} />
+              <AvatarButton />
             </View>
             <Text style={styles.body}>
               Share whatever you want with {group.name}. Nothing here counts toward the level.
