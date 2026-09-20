@@ -96,8 +96,8 @@ export default function Path() {
           <Text style={styles.waitTitle}>Everyone posted</Text>
           <Text style={styles.waitBody}>
             {group.level < group.goal
-              ? `Level ${group.level + 1} opens with your next notification.`
-              : `${group.rewardText || 'Your reward'} unlocks with your next notification.`}
+              ? `Level ${group.level + 1} will open soon. What will the next conversation be?`
+              : `${group.rewardText || 'Your reward'} unlocks soon.`}
           </Text>
         </View>
       ) : hasPostedThisCycle ? (
