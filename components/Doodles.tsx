@@ -7,6 +7,7 @@ const plusImg = require('../assets/doodles/plus-sign.png');
 const starYellowImg = require('../assets/doodles/star-yellow.png');
 const starGreenImg = require('../assets/doodles/star-green.png');
 const heartsImg = require('../assets/doodles/hearts.png');
+const phoneImg = require('../assets/doodles/phone.png');
 
 type Props = {
   /** The drawing's width; height follows the artwork's own proportions. */
@@ -47,4 +48,7 @@ export function GreenStar(p: Props) {
 }
 export function HeartsDoodle(p: Props) {
   return doodle(heartsImg, 430 / 473, p);
+}
+export function PhoneDoodle(p: Props) {
+  return doodle(phoneImg, 295 / 45, p);
 }

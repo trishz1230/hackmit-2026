@@ -6,7 +6,7 @@ import { Text } from '../../components/Handwriting';
 import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
 import { PostStack } from '../../components/PostStack';
-import { GreenStar, HeartsDoodle, YellowStar } from '../../components/Doodles';
+import { GreenStar, HeartsDoodle, PhoneDoodle, YellowStar } from '../../components/Doodles';
 import { weekRange, weekStats } from '../../lib/week';
 import { DEFAULT_LABELS, weekLabels, type StatLabels } from '../../lib/weekLabels';
 import { familyContext } from '../../lib/prompts';
@@ -73,7 +73,10 @@ export default function Home() {
       </View>
 
       {thisWeek.length === 0 ? (
-        <Text style={styles.empty}>Nothing from the family yet this week.</Text>
+        <View style={styles.emptyCard}>
+          <Text style={styles.empty}>nothing shared yet... :(</Text>
+          <PhoneDoodle size={28} style={styles.emptyPhone} />
+        </View>
       ) : (
         <View
           style={{
@@ -124,7 +127,18 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
-  empty: { color: colors.muted, marginVertical: spacing.md },
+  empty: { fontSize: 18, color: colors.text },
+  emptyCard: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    minHeight: 140,
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+  },
+  // The receiver dangles into the card from above, cord and all.
+  emptyPhone: { position: 'absolute', right: 34, top: -58 },
   starTitle: { position: 'absolute', left: -20, top: -24 },
   statWrap: { marginBottom: spacing.sm },
   stat: {
