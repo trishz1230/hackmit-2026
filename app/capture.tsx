@@ -1,14 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  ActionSheetIOS,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActionSheetIOS, Alert, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Handwriting';
 import {
   AudioModule,
@@ -19,9 +10,9 @@ import {
 } from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
+import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { describeWait } from '../lib/levels';
 import { dismissKeyboard } from '../lib/keyboard';
@@ -36,7 +27,6 @@ export default function Capture() {
   const { channel } = useLocalSearchParams<{ channel?: string }>();
   const hangout = channel === 'hangout';
   const { task, addPost, taskLocked, opensAt, hasPostedThisCycle } = useApp();
-  const insets = useSafeAreaInsets();
   // The prompt is only asked once; anything after it is a free extra share.
   const extra = !hangout && hasPostedThisCycle;
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -160,7 +150,7 @@ export default function Capture() {
 
   if (!hangout && taskLocked) {
     return (
-      <View style={[styles.wrap, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={styles.wrap}>
         <Text style={styles.prompt}>Wait till the next time for a new conversation!</Text>
         <Text style={styles.locked}>This level starts {describeWait(opensAt)}.</Text>
         <Pressable style={styles.cta} onPress={() => router.replace('/(tabs)/feed')}>
@@ -172,15 +162,14 @@ export default function Capture() {
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen options={{ title: extra ? 'Share more' : "Today's task" }} />
-      <KeyboardAvoidingView
-        style={[styles.wrap, { paddingBottom: insets.bottom + spacing.md }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
-        <View style={styles.avatarRow}>
-          <AvatarButton />
-        </View>
+      <Stack.Screen
+        options={{
+          title: extra ? 'Share more' : "Today's task",
+          headerShadowVisible: false,
+          headerRight: () => <AvatarButton />,
+        }}
+      />
+      <KeyboardScreen contentContainerStyle={styles.wrap}>
         <Text style={styles.prompt}>
           {hangout
             ? 'Share anything with the family'
@@ -249,7 +238,7 @@ export default function Capture() {
         >
           <Text style={styles.ctaText}>{hangout ? 'Post to hangout' : 'Post to family'}</Text>
         </Pressable>
-      </KeyboardAvoidingView>
+      </KeyboardScreen>
       <KeyboardDismissLayer armed={textFocused} />
     </View>
   );
@@ -257,8 +246,7 @@ export default function Capture() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  wrap: { flex: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
-  avatarRow: { alignItems: 'flex-end' },
+  wrap: { flexGrow: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
   prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
   locked: { flex: 1, color: colors.muted, fontSize: 16, lineHeight: 22 },
   square: {
