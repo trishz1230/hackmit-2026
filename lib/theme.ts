@@ -20,7 +20,7 @@ export const colors = {
   accent: '#B07D2B',
   accentSoft: paper.button,
   border: paper.line,
-  success: '#2F8F6B',
+  success: '#B07D2B',
   gold: paper.buttonOn,
   night: paper.page,
   nightSoft: '#F4ECD8',

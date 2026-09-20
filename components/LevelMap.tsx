@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.card,
   },
-  nodeDone: { backgroundColor: colors.success, borderColor: '#BFE4D3' },
+  nodeDone: { backgroundColor: '#E8C98A', borderColor: '#D8B471' },
   nodeCurrent: { backgroundColor: colors.gold, borderColor: '#FFF3D4' },
   nodeLocked: { backgroundColor: colors.card, borderColor: colors.border },
   nodeMilestone: { width: NODE + 12, height: NODE + 12, borderRadius: (NODE + 12) / 2 },
