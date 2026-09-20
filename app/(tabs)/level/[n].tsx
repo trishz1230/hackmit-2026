@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../../components/Handwriting';
 import { CompletedAnnouncement } from '../../../components/CompletedAnnouncement';
 import { PostCard } from '../../../components/PostCard';
+import { Tabs } from '../../../components/Tabs';
 import { levelSymbol } from '../../../components/LevelMap';
 import { AvatarButton } from '../../../components/AvatarButton';
-import { isExtraPost } from '../../../lib/posts';
+import { EXTRA_PROMPT, isExtraPost } from '../../../lib/posts';
 import { useApp } from '../../../lib/store';
 import { colors, radius, spacing } from '../../../lib/theme';
 
@@ -29,6 +30,7 @@ export default function Level() {
     group,
     tasks,
     posts,
+    hangoutPosts,
     task: currentTask,
     taskForLevel,
     reactionsFor,
@@ -42,6 +44,7 @@ export default function Level() {
     loading,
   } = useApp();
   const insets = useSafeAreaInsets();
+  const [tab, setTab] = useState<'family' | 'hangout'>('family');
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
@@ -58,9 +61,22 @@ export default function Level() {
       Date.parse(p.createdAt) >= since &&
       !isExtraPost(p, posts)
   );
+  // Everything shared while this level ran, task answers aside.
+  const next = tasks
+    .filter((t) => t.level > level && t.createdAt)
+    .map((t) => Date.parse(t.createdAt ?? ''))
+    .sort((a, b) => a - b)[0];
+  const within = (iso: string) => {
+    const at = Date.parse(iso);
+    return at >= since && (next === undefined || at < next);
+  };
+  const shares = [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))]
+    .filter((p) => within(p.createdAt))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   // Only the level being played is still live; the rest are a record.
   const open = currentTask.level === level && !taskLocked;
   const done = open && hasPostedThisCycle;
+  const shown = tab === 'family' ? levelPosts : shares;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -86,14 +102,16 @@ export default function Level() {
         </View>
       </View>
 
-      {task ? (
+      <Tabs active={tab} onSelect={setTab} />
+
+      {task && tab === 'family' ? (
         <View style={styles.card}>
           <Text style={styles.prompt}>{task.prompt}</Text>
           {done ? <CompletedAnnouncement pending={pending} onRemind={remindToPost} /> : null}
         </View>
       ) : null}
 
-      {open && !done ? (
+      {open && !done && tab === 'family' ? (
         <View style={styles.answer}>
           {ANSWERS.map((a) => (
             <Pressable
@@ -109,14 +127,21 @@ export default function Level() {
       ) : null}
 
       <FlatList
-        data={levelPosts}
+        data={shown}
         keyExtractor={(p) => p.id}
-        ListEmptyComponent={<Text style={styles.empty}>Nobody has posted for this level yet.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            {tab === 'family'
+              ? 'Nobody has posted for this level yet.'
+              : 'Nothing else was shared during this level.'}
+          </Text>
+        }
         renderItem={({ item }) => (
           <PostCard
             post={item}
             author={memberById(item.userId)}
             reactions={reactionsFor(item.id)}
+            prompt={tab === 'hangout' ? EXTRA_PROMPT : undefined}
             onPress={() => router.push(`/post/${item.id}`)}
             onLike={() => toggleLike(item.id)}
             liked={likedByMe(item.id)}

@@ -9,15 +9,24 @@ const TABS = [
   { key: 'hangout', label: 'hangout', href: '/(tabs)/hangout' },
 ] as const;
 
-/** Switches between the level feed and the anything-goes feed. */
-export function Tabs({ active }: { active: 'family' | 'hangout' }) {
+/**
+ * Switches between the level feed and the anything-goes feed. Without
+ * `onSelect` it navigates; with it, the caller swaps its own two lists.
+ */
+export function Tabs({
+  active,
+  onSelect,
+}: {
+  active: 'family' | 'hangout';
+  onSelect?: (key: 'family' | 'hangout') => void;
+}) {
   const router = useRouter();
   return (
     <View style={styles.wrap}>
       {TABS.map((tab) => (
         <Pressable
           key={tab.key}
-          onPress={() => router.replace(tab.href)}
+          onPress={() => (onSelect ? onSelect(tab.key) : router.replace(tab.href))}
           style={[styles.tab, active === tab.key && styles.tabActive]}
         >
           <Text style={[styles.text, active === tab.key && styles.textActive]}>{tab.label}</Text>
