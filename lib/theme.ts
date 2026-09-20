@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 /** Wonderland palette — twilight purple, tea-party gold, cheshire teal. */
 export const colors = {
-  bg: '#F7F1FF',
+  bg: '#FCF9EE',
   card: '#FFFFFF',
   text: '#2A1B3D',
   muted: '#7B6A93',
