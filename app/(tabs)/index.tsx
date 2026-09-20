@@ -72,16 +72,17 @@ export default function Home() {
 
   return (
     <ScrollView style={[styles.wrap, { paddingTop: insets.top }]} contentContainerStyle={styles.body}>
+      {/* The title sits on the avatar's line, the way the map's family name does. */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.grow}>
           <GreenStar size={58} style={styles.starTitle} />
           <Text style={styles.title}>this week</Text>
-          <Text style={styles.dates}>
-            {dayMonth(start)}–{dayMonth(end)}
-          </Text>
         </View>
         <AvatarButton />
       </View>
+      <Text style={styles.dates}>
+        {dayMonth(start)}–{dayMonth(end)}
+      </Text>
 
       <View
         style={{
@@ -90,7 +91,7 @@ export default function Home() {
           marginTop:
             thisWeek.length === 0
               ? spacing.md
-              : Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 150),
+              : Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 124),
         }}
         onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
       >
@@ -153,14 +154,15 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  // The star hangs above the title, and a scroll view clips whatever is drawn
-  // past its top edge, so the page starts low enough to hold it.
-  body: { padding: spacing.md, paddingTop: spacing.md + 26, paddingBottom: spacing.lg },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  body: { padding: spacing.md, paddingBottom: spacing.lg },
+  header: { flexDirection: 'row', alignItems: 'center' },
+  grow: { flex: 1 },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
   emptyCard: { marginBottom: spacing.sm + 7 },
-  starTitle: { position: 'absolute', left: -20, top: -24 },
+  // A scroll view clips whatever is drawn past its top edge, so the star
+  // hangs off the title by less than the page's own padding.
+  starTitle: { position: 'absolute', left: -20, top: -12 },
   statWrap: { marginBottom: spacing.sm },
   stat: {
     padding: spacing.md,
