@@ -37,7 +37,8 @@ export default function Plus() {
   const shares = withinLevel(
     [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))],
     tasks,
-    level
+    level,
+    posts
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   // Answer the family first: hangout opens once your task post is in (a level
   // that hasn't started has no task to answer, so there is nothing to wait on).

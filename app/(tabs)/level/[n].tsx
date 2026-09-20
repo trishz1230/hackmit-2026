@@ -58,7 +58,8 @@ export default function Level() {
   const shares = withinLevel(
     [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))],
     tasks,
-    level
+    level,
+    posts
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   // Only the level being played is still live; the rest are a record.
   const open = currentTask.level === level && !taskLocked;
