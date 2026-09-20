@@ -8,7 +8,13 @@ import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
 const shortDate = (iso?: string) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }) : '';
+  iso
+    ? new Date(iso).toLocaleDateString(undefined, {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '';
 
 /** One level's page: its symbol, the day it ran, and everyone's posts. */
 export default function Level() {
@@ -71,7 +77,9 @@ export default function Level() {
 
       {live ? (
         <Pressable style={styles.fab} onPress={() => router.push('/capture')}>
-          <Text style={styles.fabText}>+</Text>
+          {/* Drawn rather than typed: the handwriting font sits its + off-centre. */}
+          <View style={styles.plusBar} />
+          <View style={[styles.plusBar, styles.plusBarUp]} />
         </Pressable>
       ) : null}
     </View>
@@ -120,5 +128,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.accent,
   },
-  fabText: { color: '#fff', fontSize: 30, lineHeight: 34 },
+  plusBar: { position: 'absolute', width: 24, height: 3, borderRadius: 2, backgroundColor: '#fff' },
+  plusBarUp: { transform: [{ rotate: '90deg' }] },
 });
