@@ -96,7 +96,7 @@ type State = {
     caption?: string,
     /** The task being answered, when it isn't the family's current one. */
     taskId?: string
-  ) => { completedGoal: boolean };
+  ) => Promise<{ completedGoal: boolean }>;
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   /** Emoji are one per member per emoji: reacting again takes it back. */
   toggleEmoji: (postId: string, value: string) => void;
@@ -448,9 +448,11 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
-      addPost: (kind, content, channel = 'task', caption, taskId) => {
+      addPost: async (kind, content, channel = 'task', caption, taskId) => {
         if (!group) return { completedGoal: false };
-        run(async () => {
+        // Awaited rather than fired off: a post the backend refuses has to be
+        // told to whoever wrote it, not quietly dropped.
+        try {
           await api.createPost({
             taskId: channel === 'hangout' ? null : (taskId ?? task.id),
             groupId: group.id,
@@ -460,7 +462,11 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
             caption,
           });
           await refresh(group.id);
-        });
+          setError(null);
+        } catch (e) {
+          setError(describeError(e));
+          throw e;
+        }
         return { completedGoal: false };
       },
       addReaction: (postId, kind, val) => {
@@ -899,12 +905,12 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         clearTimers();
         setGroup((g) => (g ? { ...g, pendingCadence: undefined, cadenceApprovals: [] } : g));
       },
-      addPost: (kind, content, channel = 'task', caption) => {
+      addPost: async (kind, content, channel = 'task', caption, taskId) => {
         if (channel === 'hangout') {
           appendPost(me.id, kind, content, '', caption);
           return { completedGoal: false };
         }
-        appendPost(me.id, kind, content, task.id, caption);
+        appendPost(me.id, kind, content, taskId ?? task.id, caption);
         setMissedReset(false);
 
         if (hasPostedThisCycle) return { completedGoal: false };

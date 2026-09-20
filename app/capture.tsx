@@ -89,6 +89,8 @@ export default function Capture() {
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
   const [voiceError, setVoiceError] = useState('');
   const [micBlocked, setMicBlocked] = useState(false);
+  const [postError, setPostError] = useState('');
+  const [posting, setPosting] = useState(false);
   const recorder = useAudioRecorder(VOICE);
   const recorderState = useAudioRecorderState(recorder);
   const started = useRef(false);
@@ -219,19 +221,28 @@ export default function Capture() {
   const words = text.trim();
   const canPost = Boolean(photoUri || voiceUri || words) && !recorderState.isRecording;
 
-  const post = () => {
-    if (!canPost) return;
+  const post = async () => {
+    if (!canPost || posting) return;
     // An extra share isn't an answer, so it belongs in the hangout feed.
     const to = hangout || extra ? 'hangout' : 'task';
     // A recording or a photo carries the words as its caption; text posts are the words.
     const kind = voiceUri ? 'voice' : photoUri ? 'photo' : 'text';
-    addPost(
-      kind,
-      voiceUri ?? photoUri ?? words,
-      to,
-      kind === 'text' ? undefined : words || undefined,
-      asked.id
-    );
+    setPosting(true);
+    setPostError('');
+    try {
+      await addPost(
+        kind,
+        voiceUri ?? photoUri ?? words,
+        to,
+        kind === 'text' ? undefined : words || undefined,
+        asked.id
+      );
+    } catch (e) {
+      // Leaving for the feed would lose the post and say nothing about why.
+      setPosting(false);
+      setPostError(e instanceof Error ? e.message : String(e));
+      return;
+    }
     if (hangout || extra) {
       router.replace('/(tabs)/plus');
       return;
@@ -340,15 +351,18 @@ export default function Capture() {
         />
 
         <Pressable
-          style={[styles.cta, !canPost && styles.ctaDisabled]}
-          disabled={!canPost}
+          style={[styles.cta, (!canPost || posting) && styles.ctaDisabled]}
+          disabled={!canPost || posting}
           onPress={() => {
             dismissKeyboard();
-            post();
+            void post();
           }}
         >
-          <Text style={styles.ctaText}>{hangout || extra ? 'Post to hangout' : 'Post to family'}</Text>
+          <Text style={styles.ctaText}>
+            {posting ? 'Posting…' : hangout || extra ? 'Post to hangout' : 'Post to family'}
+          </Text>
         </Pressable>
+        {postError ? <Text style={styles.error}>{postError}</Text> : null}
       </KeyboardScreen>
     </View>
   );
