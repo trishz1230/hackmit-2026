@@ -8,7 +8,7 @@ import { PostCard } from '../../../components/PostCard';
 import { Tabs } from '../../../components/Tabs';
 import { levelSymbol } from '../../../components/LevelMap';
 import { AvatarButton } from '../../../components/AvatarButton';
-import { EXTRA_PROMPT, isExtraPost } from '../../../lib/posts';
+import { EXTRA_PROMPT, isExtraPost, withinLevel } from '../../../lib/posts';
 import { useApp } from '../../../lib/store';
 import { colors, radius, spacing } from '../../../lib/theme';
 
@@ -51,28 +51,15 @@ export default function Level() {
   if (!Number.isInteger(level)) return <Redirect href="/(tabs)/path" />;
 
   const task = taskForLevel(level);
-  const levelTaskIds = tasks.filter((t) => t.level === level).map((t) => t.id);
   // A re-issued level keeps its row but moves its start, so earlier posts stay
   // in the feed but don't belong to this round of the level.
-  const since = task?.createdAt ? Date.parse(task.createdAt) : 0;
-  const levelPosts = posts.filter(
-    (p) =>
-      levelTaskIds.includes(p.taskId) &&
-      Date.parse(p.createdAt) >= since &&
-      !isExtraPost(p, posts)
-  );
+  const levelPosts = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts));
   // Everything shared while this level ran, task answers aside.
-  const next = tasks
-    .filter((t) => t.level > level && t.createdAt)
-    .map((t) => Date.parse(t.createdAt ?? ''))
-    .sort((a, b) => a - b)[0];
-  const within = (iso: string) => {
-    const at = Date.parse(iso);
-    return at >= since && (next === undefined || at < next);
-  };
-  const shares = [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))]
-    .filter((p) => within(p.createdAt))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const shares = withinLevel(
+    [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))],
+    tasks,
+    level
+  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   // Only the level being played is still live; the rest are a record.
   const open = currentTask.level === level && !taskLocked;
   const done = open && hasPostedThisCycle;

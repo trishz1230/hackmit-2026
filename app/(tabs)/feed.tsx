@@ -7,7 +7,7 @@ import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
-import { isExtraPost } from '../../lib/posts';
+import { feedLevel, isExtraPost, withinLevel } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { paper, radius, spacing } from '../../lib/theme';
 
@@ -16,6 +16,7 @@ export default function Feed() {
   const {
     group,
     posts,
+    tasks,
     task,
     hasPostedThisCycle,
     pending,
@@ -33,8 +34,11 @@ export default function Feed() {
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
 
-  // Only answers to a task belong here; extra shares live in hangout.
-  const answers = posts.filter((p) => !isExtraPost(p, posts));
+  // Only answers to a task belong here; extra shares live in hangout. The feed
+  // follows the level being played, and holds on the last answered one until
+  // somebody starts the new level.
+  const level = feedLevel(tasks, posts, Math.min(group.level, group.goal));
+  const answers = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts));
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
