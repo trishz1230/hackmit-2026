@@ -15,6 +15,17 @@ export const colors = {
   nightSoft: '#3A2459',
 };
 
+/** The drawn-on-paper screens: welcome, start and the family forms. */
+export const paper = {
+  page: '#FAF8F0',
+  ink: '#2A2A2A',
+  muted: '#8A8275',
+  button: '#FBE7BE',
+  buttonOn: '#F2D294',
+  field: '#FFFDF6',
+  line: '#E6DFCD',
+};
+
 const handwriting = 'Schoolbell_400Regular';
 
 /**

@@ -58,7 +58,7 @@ const TITLE_INTRO_SCALE = 1.9;
 
 export default function MakeAYou() {
   const router = useRouter();
-  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const { edit, mode } = useLocalSearchParams<{ edit?: string; mode?: string }>();
   const editing = edit === '1';
   const { me, updateAvatar } = useApp();
   const saveAvatar = useRef(updateAvatar);
@@ -133,9 +133,9 @@ export default function MakeAYou() {
     // Saving re-renders this screen, so the hand-off must not be cancellable.
     setTimeout(() => {
       if (editing) router.back();
-      else router.replace('/onboarding');
+      else router.replace(mode ? `/onboarding?mode=${mode}` : '/onboarding');
     }, 1600);
-  }, [editing, eyes, finish, hair, mouth, router, started, step]);
+  }, [editing, eyes, finish, hair, mode, mouth, router, started, step]);
 
   return (
     <View style={styles.screen}>
