@@ -7,6 +7,7 @@ import { AvatarButton } from '../../components/AvatarButton';
 import { EmojiPicker } from '../../components/EmojiPicker';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { VoiceNote } from '../../components/VoiceNote';
+import { EXTRA_PROMPT, isExtraPost } from '../../lib/posts';
 import { tallyEmoji } from '../../lib/reactions';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -34,7 +35,7 @@ export default function PostDetail() {
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
 
   const author = memberById(post.userId);
-  const prompt = promptFor(post.taskId);
+  const prompt = isExtraPost(post, posts) ? EXTRA_PROMPT : promptFor(post.taskId);
   const reactions = reactionsFor(post.id);
   const comments = reactions.filter((r) => r.kind === 'comment');
   const likes = reactions.filter((r) => r.kind === 'like').length;
