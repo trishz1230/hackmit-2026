@@ -93,7 +93,9 @@ type State = {
     kind: Post['kind'],
     content: string,
     channel?: Channel,
-    caption?: string
+    caption?: string,
+    /** The task being answered, when it isn't the family's current one. */
+    taskId?: string
   ) => { completedGoal: boolean };
   addReaction: (postId: string, kind: Reaction['kind'], value: string) => void;
   /** Emoji are one per member per emoji: reacting again takes it back. */
@@ -446,11 +448,11 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
-      addPost: (kind, content, channel = 'task', caption) => {
+      addPost: (kind, content, channel = 'task', caption, taskId) => {
         if (!group) return { completedGoal: false };
         run(async () => {
           await api.createPost({
-            taskId: channel === 'hangout' ? null : task.id,
+            taskId: channel === 'hangout' ? null : (taskId ?? task.id),
             groupId: group.id,
             userId,
             kind,

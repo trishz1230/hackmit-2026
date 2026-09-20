@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
+import { ProgressBar } from '../../components/ProgressBar';
 import { VoiceNote } from '../../components/VoiceNote';
 import { levelStreak, streakCount } from '../../lib/levels';
 import { useApp } from '../../lib/store';
@@ -85,14 +86,17 @@ export default function Path() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <View style={styles.grow}>
           <Text style={styles.family}>{group.name}</Text>
-          <Text style={styles.standing}>
-            {group.awaitingNextGoal
-              ? `${streak} levels done — pick what's next....`
-              : `currently on level ${current}....`}
-          </Text>
         </View>
         <AvatarButton />
       </View>
+
+      <ProgressBar
+        level={current}
+        cleared={cleared}
+        goal={group.goal}
+        reward={group.rewardText}
+        streak={streak}
+      />
 
       {waitingForPeriod ? (
         <View style={styles.waitBanner}>
@@ -199,13 +203,12 @@ const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },
   grow: { flex: 1 },
   family: { fontSize: 34, color: colors.text },
-  standing: { fontSize: 16, color: colors.muted, marginTop: 2 },
   resetBanner: {
     backgroundColor: '#FDE8E8',
     paddingHorizontal: spacing.md,

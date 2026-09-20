@@ -113,7 +113,7 @@ export default function Level() {
                   <Pressable
                     key={a.start}
                     style={styles.answerButton}
-                    onPress={() => router.push(`/capture?start=${a.start}`)}
+                    onPress={() => router.push(`/capture?start=${a.start}&level=${level}`)}
                   >
                     <Text style={styles.answerIcon}>{a.icon}</Text>
                     <Text style={styles.answerText}>{a.label}</Text>
