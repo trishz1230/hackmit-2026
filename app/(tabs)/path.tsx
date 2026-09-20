@@ -7,7 +7,7 @@ import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
 import { VoiceNote } from '../../components/VoiceNote';
-import { streakCount } from '../../lib/levels';
+import { levelStreak, streakCount } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import type { Post } from '../../lib/types';
@@ -72,7 +72,8 @@ export default function Path() {
   if (!group) return <Redirect href="/onboarding" />;
 
   const current = Math.min(group.level, group.goal);
-  const streak = streakCount(group, everyonePostedThisCycle);
+  const cleared = streakCount(group, everyonePostedThisCycle);
+  const streak = levelStreak(group, everyonePostedThisCycle);
   const isCurrent = shown === current && !group.awaitingNextGoal;
   const isCleared = shown !== null && (shown < group.level || group.awaitingNextGoal);
   const isLocked = shown !== null && shown > current;
@@ -85,7 +86,7 @@ export default function Path() {
       <View style={{ paddingTop: insets.top, backgroundColor: colors.card }}>
         <ProgressBar
           level={current}
-          cleared={streak}
+          cleared={cleared}
           goal={group.goal}
           reward={group.rewardText}
           streak={streak}

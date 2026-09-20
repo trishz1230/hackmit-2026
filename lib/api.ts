@@ -469,23 +469,23 @@ export async function resetForMissedPeriod(group: Group): Promise<void> {
     .eq('id', group.id);
   if (error) throw error;
 
+  const now = await serverNow();
+  // The climb back up reuses the old task rows; re-stamp them first so posts
+  // from the failed run stop counting even if the new prompt never arrives.
+  await sb
+    .from('tasks')
+    .update({ created_at: now })
+    .eq('group_id', group.id)
+    .lte('level', group.goal);
+
   const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
   const recent = (previous ?? []).map((r: Row) => str(r.prompt));
   const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
-  const now = await serverNow();
   await sb
     .from('tasks')
     .update({ prompt, created_at: now })
     .eq('group_id', group.id)
     .eq('level', 1);
-  // The climb back up reuses the old task rows; re-stamp them so posts from
-  // the failed run stop counting.
-  await sb
-    .from('tasks')
-    .update({ created_at: now })
-    .eq('group_id', group.id)
-    .gt('level', 1)
-    .lte('level', group.goal);
 }
 
 /**
@@ -493,7 +493,8 @@ export async function resetForMissedPeriod(group: Group): Promise<void> {
  * restarts at level 1. Task rows are keyed (group_id, level), so the new map
  * would reuse last cycle's rows — and postsForTask would count the old
  * answers. Every row the new map can reach is re-stamped so its posts start
- * counting from now; level 1 also gets a fresh prompt.
+ * counting from now; level 1 also gets a fresh prompt. The streak carries
+ * over: only a missed period breaks it.
  */
 export async function startNextGoal(
   group: Group,
@@ -503,11 +504,19 @@ export async function startNextGoal(
   const sb = getSupabase();
   const { error } = await sb
     .from('groups')
-    .update({ reward_text: rewardText, goal: levelCount, level: 1, current_streak: 0 })
+    .update({ reward_text: rewardText, goal: levelCount, level: 1 })
     .eq('id', group.id);
   if (error) throw error;
 
   const now = await serverNow();
+  // Re-stamp before writing the prompt: a prompt that fails to generate must
+  // not leave the old answers counting, which would clear the new map at once.
+  await sb
+    .from('tasks')
+    .update({ created_at: now })
+    .eq('group_id', group.id)
+    .lte('level', levelCount);
+
   const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
   const recent = (previous ?? []).map((r: Row) => str(r.prompt));
   const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
@@ -516,12 +525,6 @@ export async function startNextGoal(
     .update({ prompt, created_at: now })
     .eq('group_id', group.id)
     .eq('level', 1);
-  await sb
-    .from('tasks')
-    .update({ created_at: now })
-    .eq('group_id', group.id)
-    .gt('level', 1)
-    .lte('level', levelCount);
 }
 
 export async function getTasks(groupId: string): Promise<Task[]> {
