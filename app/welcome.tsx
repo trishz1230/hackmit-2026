@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, ImageBackground, Pressable, StyleSheet } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
 import { colors } from '../lib/theme';
-
-const paper = require('../assets/welcome/paper.png');
 
 /** The drawn animation, frame by frame: the face fills in, then it sparkles. */
 const frames = [
@@ -27,6 +25,8 @@ const FACE_H = FACE_W * (570 / 645);
 const FRAME_MS = 130;
 /** Beat on the last drawn frame before the app opens. */
 const SETTLE_MS = 700;
+/** The page colour the animation was drawn on. */
+const PAGE = '#FAF8F0';
 
 export default function Welcome() {
   const router = useRouter();
@@ -57,7 +57,7 @@ export default function Welcome() {
   const release = useCallback(() => setHolding(false), []);
 
   return (
-    <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
+    <View style={styles.screen}>
       <Pressable onPressIn={hold} onPressOut={release} style={styles.stage}>
         {/* Every frame stays mounted so stepping through them never waits on a load. */}
         {frames.map((source, i) => (
@@ -71,13 +71,14 @@ export default function Welcome() {
       </Pressable>
 
       {frame === 0 ? <Text style={styles.hint}>press to get started...</Text> : null}
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: PAGE,
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 72,
