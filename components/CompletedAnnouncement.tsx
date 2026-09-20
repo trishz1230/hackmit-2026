@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Handwriting';
-import { colors, radius, spacing } from '../lib/theme';
+import { colors, paper, spacing } from '../lib/theme';
 import type { Profile } from '../lib/types';
 
 /** After you post: name who still owes a post, or celebrate that everyone has. */
@@ -50,17 +50,17 @@ export function CompletedAnnouncement({
 
 const styles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, gap: spacing.xs },
-  complete: { color: colors.success, fontWeight: '800' },
-  waiting: { color: colors.muted, fontWeight: '600', marginTop: 2 },
+  complete: { color: colors.success, fontSize: 17 },
+  waiting: { color: paper.muted, marginTop: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { flex: 1, color: colors.text, fontWeight: '600' },
+  name: { flex: 1, color: paper.ink },
   remind: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: paper.button,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  reminded: { backgroundColor: colors.accentSoft },
-  remindText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  remindedText: { color: colors.accent },
+  reminded: { backgroundColor: paper.field, borderWidth: 1, borderColor: paper.line },
+  remindText: { color: paper.ink, fontSize: 15 },
+  remindedText: { color: paper.muted },
 });
