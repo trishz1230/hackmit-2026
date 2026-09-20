@@ -69,7 +69,9 @@ export default function Level() {
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/path'))}
+          // A level is only ever opened from the map, so back belongs there
+          // rather than wherever the tab stack came from.
+          onPress={() => router.replace('/(tabs)/path')}
           hitSlop={12}
           style={styles.backRow}
         >
