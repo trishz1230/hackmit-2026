@@ -4,13 +4,14 @@ import { Text, TextInput } from '../../components/Handwriting';
 import { useLocalSearchParams } from 'expo-router';
 import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
+import { EmojiPicker } from '../../components/EmojiPicker';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { VoiceNote } from '../../components/VoiceNote';
-import { firstEmoji, tallyEmoji } from '../../lib/reactions';
+import { tallyEmoji } from '../../lib/reactions';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
-const EMOJIS = ['❤️', '😂', '🔥', '🥹', '👏', '🍜'];
+const EMOJIS = ['❤️', '😂', '🔥', '🥹', '👏'];
 
 function e164(phone: string) {
   const digits = phone.replace(/\D/g, '');
@@ -23,7 +24,6 @@ export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { posts, hangoutPosts, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
   const [comment, setComment] = useState('');
-  const [ownEmoji, setOwnEmoji] = useState('');
   const [picking, setPicking] = useState(false);
 
   useEffect(() => {
@@ -40,6 +40,8 @@ export default function PostDetail() {
   const likes = reactions.filter((r) => r.kind === 'like').length;
   const liked = likedByMe(post.id);
   const emojis = tallyEmoji(reactions, me.id);
+  // Liking or ringing yourself is noise, so your own post only shows its tally.
+  const mine = post.userId === me.id;
 
   const call = () => {
     if (author?.phone) void Linking.openURL(`tel:${e164(author.phone)}`);
@@ -48,13 +50,6 @@ export default function PostDetail() {
   const facetime = () => {
     if (!author?.phone) return;
     void Linking.openURL(`facetime://${e164(author.phone)}`);
-  };
-
-  const sendOwnEmoji = () => {
-    const emoji = firstEmoji(ownEmoji);
-    setOwnEmoji('');
-    setPicking(false);
-    if (emoji) toggleEmoji(post.id, emoji);
   };
 
   const sendComment = () => {
@@ -88,22 +83,30 @@ export default function PostDetail() {
       {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <View style={styles.actions}>
-        <Pressable
-          style={[styles.action, liked && styles.actionOn]}
-          onPress={() => toggleLike(post.id)}
-        >
-          <Text style={[styles.actionText, liked && styles.actionTextOn]}>
-            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'} ({likes})
-          </Text>
-        </Pressable>
-        <Pressable style={styles.action} onPress={call} disabled={!author?.phone}>
-          <Text style={styles.actionText}>📞 Call</Text>
-        </Pressable>
-        {Platform.OS === 'ios' ? (
-          <Pressable style={styles.action} onPress={facetime} disabled={!author?.phone}>
-            <Text style={styles.actionText}>📹 FaceTime</Text>
-          </Pressable>
-        ) : null}
+        {mine ? (
+          <View style={styles.action}>
+            <Text style={styles.actionText}>❤️ {likes}</Text>
+          </View>
+        ) : (
+          <>
+            <Pressable
+              style={[styles.action, liked && styles.actionOn]}
+              onPress={() => toggleLike(post.id)}
+            >
+              <Text style={[styles.actionText, liked && styles.actionTextOn]}>
+                {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'} ({likes})
+              </Text>
+            </Pressable>
+            <Pressable style={styles.action} onPress={call} disabled={!author?.phone}>
+              <Text style={styles.actionText}>📞 Call</Text>
+            </Pressable>
+            {Platform.OS === 'ios' ? (
+              <Pressable style={styles.action} onPress={facetime} disabled={!author?.phone}>
+                <Text style={styles.actionText}>📹 FaceTime</Text>
+              </Pressable>
+            ) : null}
+          </>
+        )}
       </View>
 
       <View style={styles.emojiRow}>
@@ -118,20 +121,12 @@ export default function PostDetail() {
       </View>
 
       {picking ? (
-        <View style={styles.commentRow}>
-          <TextInput
-            style={styles.input}
-            value={ownEmoji}
-            onChangeText={setOwnEmoji}
-            autoFocus
-            placeholder="Any emoji from your keyboard…"
-            placeholderTextColor={colors.muted}
-            onSubmitEditing={sendOwnEmoji}
-          />
-          <Pressable style={styles.send} onPress={sendOwnEmoji}>
-            <Text style={styles.sendText}>Add</Text>
-          </Pressable>
-        </View>
+        <EmojiPicker
+          onPick={(e) => {
+            setPicking(false);
+            toggleEmoji(post.id, e);
+          }}
+        />
       ) : null}
 
       {emojis.length > 0 && (

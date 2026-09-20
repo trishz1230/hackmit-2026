@@ -34,21 +34,3 @@ export function tallyEmoji(reactions: Reaction[], userId: string): EmojiTally[] 
     .map((v) => byValue.get(v) as EmojiTally)
     .sort((a, b) => b.count - a.count || order.indexOf(a.value) - order.indexOf(b.value));
 }
-
-/** Keeps what someone typed to a single emoji, so pills stay readable. */
-export function firstEmoji(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const chars = Array.from(trimmed);
-  const emoji: string[] = [];
-  for (const ch of chars) {
-    const code = ch.codePointAt(0) ?? 0;
-    const joiner = code === 0x200d || code === 0xfe0f;
-    const modifier = code >= 0x1f3fb && code <= 0x1f3ff;
-    if (emoji.length > 0 && !joiner && !modifier && emoji[emoji.length - 1] !== '\u200d') break;
-    emoji.push(ch);
-  }
-  const value = emoji.join('');
-  // Letters and digits aren't emoji, so don't let them become a reaction.
-  return /\p{Extended_Pictographic}/u.test(value) ? value : null;
-}
