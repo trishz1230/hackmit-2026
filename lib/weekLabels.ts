@@ -14,7 +14,10 @@ const STATS_API = process.env.EXPO_PUBLIC_STATS_API || DEPLOYED_STATS_API;
 
 export type StatLabels = { talked: string; quiet: string };
 
-export const DEFAULT_LABELS: StatLabels = { talked: 'Most talked', quiet: 'Least responsive' };
+export const DEFAULT_LABELS: StatLabels = {
+  talked: 'most talked about topic!',
+  quiet: 'who is the least responsive??',
+};
 
 const keyFor = (groupId: string, weekStart: Date) =>
   `famstreak.weekLabels.${groupId}.${weekStart.toDateString()}`;

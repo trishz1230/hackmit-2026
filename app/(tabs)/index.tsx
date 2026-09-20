@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
 import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
+import { PostStack } from '../../components/PostStack';
+import { GreenStar, HeartsDoodle, YellowStar } from '../../components/Doodles';
 import { weekRange, weekStats } from '../../lib/week';
 import { DEFAULT_LABELS, weekLabels, type StatLabels } from '../../lib/weekLabels';
 import { familyContext } from '../../lib/prompts';
@@ -19,8 +21,19 @@ export default function Home() {
   const { group, members, posts, hangoutPosts, reactions, memberById, loading } = useApp();
   const insets = useSafeAreaInsets();
   const [labels, setLabels] = useState<StatLabels>(DEFAULT_LABELS);
+  const { height: screenHeight } = useWindowDimensions();
+  // Wakes the screen once the week rolls over, so the dates and the photo pile
+  // restart even if the app stays open through Sunday night.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setTimeout(
+      () => setNow(new Date()),
+      Math.max(1, weekRange().end.getTime() - Date.now()) + 1000
+    );
+    return () => clearTimeout(id);
+  }, [now]);
 
-  const { start, end } = weekRange();
+  const { start, end } = weekRange(now);
   const all = [...posts, ...hangoutPosts];
   const thisWeek = all.filter((p) => {
     const at = new Date(p.createdAt).getTime();
@@ -50,6 +63,7 @@ export default function Home() {
     <ScrollView style={[styles.wrap, { paddingTop: insets.top }]} contentContainerStyle={styles.body}>
       <View style={styles.header}>
         <View>
+          <GreenStar size={42} style={styles.starTitle} />
           <Text style={styles.title}>this week</Text>
           <Text style={styles.dates}>
             {dayMonth(start)}–{dayMonth(end)}
@@ -58,43 +72,51 @@ export default function Home() {
         <AvatarButton />
       </View>
 
-      <View style={styles.collage}>
-        {thisWeek.length === 0 ? (
-          <Text style={styles.empty}>Nothing from the family yet this week.</Text>
-        ) : (
-          thisWeek.map((post, i) => (
-            <Pressable
-              key={post.id}
-              onPress={() => router.push(`/post/${post.id}`)}
-              style={[styles.tile, { transform: [{ rotate: `${(i % 2 ? 1 : -1) * 3}deg` }] }]}
-            >
-              {post.kind === 'photo' ? (
-                <Image source={{ uri: post.content }} style={styles.tileArt} resizeMode="cover" />
-              ) : (
-                <Text style={styles.tileText} numberOfLines={4}>
-                  {post.kind === 'voice' ? `🎙 ${post.caption || 'Voice message'}` : post.content}
-                </Text>
-              )}
-              <Text style={styles.tileName}>{memberById(post.userId)?.name ?? 'Someone'}</Text>
-            </Pressable>
-          ))
-        )}
-      </View>
+      {thisWeek.length === 0 ? (
+        <Text style={styles.empty}>Nothing from the family yet this week.</Text>
+      ) : (
+        <View
+          style={{
+            // The pile starts about a quarter of the way down the screen.
+            marginTop: Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 109),
+          }}
+        >
+          <PostStack
+            key={start.getTime()}
+            posts={thisWeek}
+            nameOf={(id) => memberById(id)?.name ?? 'Someone'}
+            onOpen={(post) => router.push(`/post/${post.id}`)}
+          />
+        </View>
+      )}
 
-      {stats.map((stat) => (
-        <View key={stat.metric} style={styles.stat}>
-          <Text style={styles.statLabel}>{labels[stat.metric]}</Text>
-          <View style={styles.statWho}>
-            <AvatarFace value={stat.member.avatar} size={28} />
-            <Text style={styles.statName}>{stat.member.name}</Text>
+      {[
+        {
+          label: labels.quiet,
+          member: stats.find((s) => s.metric === 'quiet')?.member,
+        },
+        {
+          label: labels.talked,
+          member: stats.find((s) => s.metric === 'talked')?.member,
+        },
+      ].map((box, i) => (
+        <View key={box.label} style={styles.statWrap}>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>{box.label}</Text>
+            {box.member && (
+              <View style={styles.statWho}>
+                <AvatarFace value={box.member.avatar} size={28} />
+                <Text style={styles.statName}>{box.member.name}</Text>
+              </View>
+            )}
           </View>
+          {i === 0 && <YellowStar size={38} style={styles.starBox} />}
+          {i === 1 && <HeartsDoodle size={54} style={styles.heartsBox} />}
         </View>
       ))}
     </ScrollView>
   );
 }
-
-const TILE = 96;
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
@@ -102,37 +124,23 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
-  collage: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginVertical: spacing.md,
-  },
-  tile: {
-    width: TILE,
-    height: TILE + 18,
-    padding: 4,
-    backgroundColor: colors.card,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tileArt: { flex: 1, borderRadius: 4 },
-  tileText: { flex: 1, fontSize: 13, color: colors.text },
-  tileName: { fontSize: 12, color: colors.muted },
-  empty: { color: colors.muted },
+  empty: { color: colors.muted, marginVertical: spacing.md },
+  starTitle: { position: 'absolute', left: -16, top: -18 },
+  statWrap: { marginBottom: spacing.sm },
   stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     padding: spacing.md,
-    marginBottom: spacing.sm,
+    minHeight: 92,
     backgroundColor: colors.card,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  statLabel: { fontSize: 15, color: colors.text, textTransform: 'uppercase', letterSpacing: 0.5 },
-  statWho: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  starBox: { position: 'absolute', right: -8, top: '35%' },
+  heartsBox: { position: 'absolute', left: 22, bottom: -12 },
+  statLabel: { fontSize: 18, color: colors.text },
+  statWho: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
   statName: { fontSize: 16, color: colors.accent },
 });

@@ -12,7 +12,8 @@ const SYSTEM = [
   'The first goes to whoever posted and commented the most; the second to whoever reacted the least.',
   'Base the wording on what the family actually posted that week when you can',
   '(a trip, a pet, a meal, a running joke), otherwise keep it general.',
-  'Each name is at most 22 characters, warm and playful, no names of people, no quotes.',
+  'Each name is at most 30 characters, lowercase, warm and playful, like a question or an exclamation.',
+  'No names of people, no quotes.',
   'Reply with exactly two lines: the first category, then the second.',
 ].join(' ');
 
@@ -77,5 +78,5 @@ export default async function handler(req: Request): Promise<Response> {
     .filter(Boolean);
   if (lines.length < 2) return json({ error: 'Empty completion' }, 502);
 
-  return json({ talked: lines[0].slice(0, 22), quiet: lines[1].slice(0, 22) });
+  return json({ talked: lines[0].slice(0, 30), quiet: lines[1].slice(0, 30) });
 }
