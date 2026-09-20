@@ -113,7 +113,7 @@ export default function Onboarding() {
       </Text>
 
       <View style={styles.toggle}>
-        {(['create', 'join'] as const).map((m) => (
+        {(['join', 'create'] as const).map((m) => (
           <Pressable
             key={m}
             onPress={() => setMode(m)}
