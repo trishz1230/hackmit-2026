@@ -19,6 +19,9 @@ const keyFor = (postId: string) => `famstreak.described.${postId}`;
 
 const memory = new Map<string, string>();
 
+/** One failed call is enough: the endpoint stays unreachable for this session. */
+let unavailable = false;
+
 async function cached(postId: string): Promise<string | null> {
   const held = memory.get(postId);
   if (held !== undefined) return held;
@@ -48,7 +51,7 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
       missing.push({ id: post.id, kind: post.kind as 'photo' | 'voice', url: post.content });
     }
   }
-  if (missing.length === 0) return described;
+  if (missing.length === 0 || unavailable) return described;
 
   try {
     const res = await fetch(DESCRIBE_API, {
@@ -56,7 +59,10 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: missing }),
     });
-    if (!res.ok) return described;
+    if (!res.ok) {
+      unavailable = true;
+      return described;
+    }
 
     const data = (await res.json()) as { described?: Record<string, string> };
     for (const item of missing) {
@@ -69,6 +75,7 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
     }
     return described;
   } catch {
+    unavailable = true;
     return described;
   }
 }

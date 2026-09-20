@@ -19,6 +19,9 @@ export type WeekCard = { label: string; who: string };
 const keyFor = (groupId: string, weekStart: Date) =>
   `famstreak.weekCards.${groupId}.${weekStart.toDateString()}`;
 
+/** One failed call is enough: the endpoint stays unreachable for this session. */
+let unavailable = false;
+
 const valid = (cards: unknown): cards is WeekCard[] =>
   Array.isArray(cards) &&
   cards.length === 2 &&
@@ -37,13 +40,18 @@ export async function weekCards(
     if (valid(saved)) return saved;
   }
 
+  if (unavailable) return null;
+
   try {
     const res = await fetch(STATS_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ context: { family: context.family, said: context.said }, tallies }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      unavailable = true;
+      return null;
+    }
 
     const { cards } = (await res.json()) as { cards?: unknown };
     if (!valid(cards)) return null;
@@ -51,6 +59,7 @@ export async function weekCards(
     await AsyncStorage.setItem(key, JSON.stringify(cards)).catch(() => {});
     return cards;
   } catch {
+    unavailable = true;
     return null;
   }
 }

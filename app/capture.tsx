@@ -205,6 +205,13 @@ export default function Capture() {
     router.replace('/(tabs)/feed');
   };
 
+  // Opened straight from the tab bar there is nothing to go back to, so fall
+  // back to the feed this share belongs in.
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace(hangout || extra ? '/(tabs)/plus' : '/(tabs)/feed');
+  };
+
   if (!hangout && taskLocked) {
     return (
       <View style={styles.wrap}>
@@ -221,7 +228,7 @@ export default function Capture() {
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.bar, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable style={styles.backRow} onPress={() => router.back()} hitSlop={8}>
+        <Pressable style={styles.backRow} onPress={goBack} hitSlop={8}>
           <Text style={styles.back}>←</Text>
           <Text style={styles.barTitle}>{extra ? 'Share more' : "Today's task"}</Text>
         </Pressable>
