@@ -53,10 +53,10 @@ export default function Level() {
   const task = taskForLevel(level);
   // A re-issued level keeps its row but moves its start, so earlier posts stay
   // in the feed but don't belong to this round of the level.
-  const levelPosts = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts));
+  const levelPosts = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts, tasks));
   // Everything shared while this level ran, task answers aside.
   const shares = withinLevel(
-    [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))],
+    [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts, tasks))],
     tasks,
     level,
     posts

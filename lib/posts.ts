@@ -127,13 +127,20 @@ export function withinLevel(
   });
 }
 
-/** An extra share: a hangout post, or anything after your first answer to the same task. */
-export function isExtraPost(post: Post, posts: Post[]): boolean {
+/**
+ * An extra share: a hangout post, or anything after your first answer to the
+ * same task. A task row outlives a reset, so answers from before it was
+ * re-stamped belong to the lost run and don't make this one an extra.
+ */
+export function isExtraPost(post: Post, posts: Post[], tasks: Task[]): boolean {
   if (post.taskId === '') return true;
+  const stamp = tasks.find((t) => t.id === post.taskId)?.createdAt;
+  const since = stamp ? Date.parse(stamp) : 0;
   return posts.some(
     (p) =>
       p.userId === post.userId &&
       p.taskId === post.taskId &&
+      Date.parse(p.createdAt) >= since &&
       (p.createdAt < post.createdAt || (p.createdAt === post.createdAt && p.id < post.id))
   );
 }

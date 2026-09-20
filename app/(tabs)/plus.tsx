@@ -34,7 +34,7 @@ export default function Plus() {
   // and hangout follows the same level as the family feed.
   const level = feedLevel(tasks, posts, Math.min(group.level, group.goal));
   const shares = withinLevel(
-    [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))],
+    [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts, tasks))],
     tasks,
     level,
     posts

@@ -24,7 +24,7 @@ function e164(phone: string) {
 
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, hangoutPosts, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
+  const { posts, hangoutPosts, tasks, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
   const insets = useSafeAreaInsets();
   const [comment, setComment] = useState('');
   const [picking, setPicking] = useState(false);
@@ -37,7 +37,7 @@ export default function PostDetail() {
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
 
   const author = memberById(post.userId);
-  const prompt = isExtraPost(post, posts) ? EXTRA_PROMPT : promptFor(post.taskId);
+  const prompt = isExtraPost(post, posts, tasks) ? EXTRA_PROMPT : promptFor(post.taskId);
   const reactions = reactionsFor(post.id);
   const comments = reactions.filter((r) => r.kind === 'comment');
   const likes = reactions.filter((r) => r.kind === 'like').length;
