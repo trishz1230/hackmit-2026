@@ -24,7 +24,7 @@ const FACE_W = 250;
 const FACE_H = FACE_W * (570 / 645);
 const FRAME_MS = 130;
 /** Beat on the last drawn frame before the app opens. */
-const SETTLE_MS = 700;
+const SETTLE_MS = 1000;
 /** The page colour the animation was drawn on. */
 const PAGE = '#FAF8F0';
 
@@ -48,9 +48,10 @@ export default function Welcome() {
       return () => clearTimeout(next);
     }
 
+    // Letting go on the last frame re-runs this effect, so the hand-off is
+    // left running rather than cleaned up.
     done.current = true;
-    const open = setTimeout(() => router.replace('/start'), SETTLE_MS);
-    return () => clearTimeout(open);
+    setTimeout(() => router.replace('/start'), SETTLE_MS);
   }, [frame, holding, router]);
 
   const hold = useCallback(() => setHolding(true), []);
