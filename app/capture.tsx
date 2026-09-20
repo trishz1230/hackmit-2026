@@ -187,7 +187,8 @@ export default function Capture() {
 
   const post = () => {
     if (!canPost) return;
-    const to = hangout ? 'hangout' : 'task';
+    // An extra share isn't an answer, so it belongs in the hangout feed.
+    const to = hangout || extra ? 'hangout' : 'task';
     // A recording or a photo carries the words as its caption; text posts are the words.
     const kind = voiceUri ? 'voice' : photoUri ? 'photo' : 'text';
     const { completedGoal } = addPost(
@@ -196,7 +197,7 @@ export default function Capture() {
       to,
       kind === 'text' ? undefined : words || undefined
     );
-    if (hangout) {
+    if (hangout || extra) {
       router.replace('/(tabs)/plus');
       return;
     }
@@ -293,7 +294,7 @@ export default function Capture() {
             post();
           }}
         >
-          <Text style={styles.ctaText}>{hangout ? 'Post to hangout' : 'Post to family'}</Text>
+          <Text style={styles.ctaText}>{hangout || extra ? 'Post to hangout' : 'Post to family'}</Text>
         </Pressable>
       </KeyboardScreen>
       <KeyboardDismissLayer armed={textFocused} />

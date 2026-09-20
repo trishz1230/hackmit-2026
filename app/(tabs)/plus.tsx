@@ -5,6 +5,8 @@ import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PostCard } from '../../components/PostCard';
 import { AvatarButton } from '../../components/AvatarButton';
+import { Tabs } from '../../components/Tabs';
+import { EXTRA_PROMPT } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -27,6 +29,7 @@ export default function Plus() {
             <View style={styles.topBar}>
               <AvatarButton />
             </View>
+            <Tabs active="hangout" />
             <View style={styles.header}>
               <Text style={styles.title}>Hangout</Text>
               <Text style={styles.body}>
@@ -44,6 +47,7 @@ export default function Plus() {
             post={item}
             author={memberById(item.userId)}
             reactions={reactionsFor(item.id)}
+            prompt={EXTRA_PROMPT}
             onPress={() => router.push(`/post/${item.id}`)}
             onLike={() => toggleLike(item.id)}
             liked={likedByMe(item.id)}
