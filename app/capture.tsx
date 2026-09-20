@@ -3,6 +3,7 @@ import {
   ActionSheetIOS,
   Alert,
   Image,
+  InteractionManager,
   Platform,
   Pressable,
   StyleSheet,
@@ -22,7 +23,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarButton } from '../components/AvatarButton';
-import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { dismissKeyboard } from '../lib/keyboard';
@@ -73,7 +73,6 @@ export default function Capture() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
-  const [textFocused, setTextFocused] = useState(false);
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
   const [voiceError, setVoiceError] = useState('');
   const recorder = useAudioRecorder(VOICE);
@@ -177,13 +176,18 @@ export default function Capture() {
     }
   };
 
-  // Arriving from a level's photo / voice / write button opens that one.
+  // Arriving from a level's photo / voice / write button opens that one, once
+  // the screen has finished sliding in — a sheet or a keyboard raised during
+  // the transition fights it and flickers.
   useEffect(() => {
     if (opened.current || shut) return;
     opened.current = true;
-    if (start === 'photo') addPhoto();
-    else if (start === 'voice') void startRecording();
-    else if (start === 'text') input.current?.focus();
+    const run = InteractionManager.runAfterInteractions(() => {
+      if (start === 'photo') addPhoto();
+      else if (start === 'voice') void startRecording();
+      else if (start === 'text') input.current?.focus();
+    });
+    return () => run.cancel();
     // Only ever the arrival, so the pickers don't reopen on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [start]);
@@ -294,8 +298,6 @@ export default function Capture() {
           style={styles.input}
           value={text}
           onChangeText={setText}
-          onFocus={() => setTextFocused(true)}
-          onBlur={() => setTextFocused(false)}
           multiline
           placeholder={
             photoUri || voiceUri
@@ -318,7 +320,6 @@ export default function Capture() {
           <Text style={styles.ctaText}>{hangout || extra ? 'Post to hangout' : 'Post to family'}</Text>
         </Pressable>
       </KeyboardScreen>
-      <KeyboardDismissLayer armed={textFocused} />
     </View>
   );
 }
