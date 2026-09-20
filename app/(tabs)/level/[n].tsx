@@ -27,11 +27,13 @@ export default function Level() {
     group,
     tasks,
     posts,
+    task: currentTask,
     taskForLevel,
     reactionsFor,
     memberById,
     toggleLike,
     likedByMe,
+    taskLocked,
     loading,
   } = useApp();
   const insets = useSafeAreaInsets();
@@ -48,6 +50,8 @@ export default function Level() {
   const levelPosts = posts.filter(
     (p) => levelTaskIds.includes(p.taskId) && Date.parse(p.createdAt) >= since
   );
+  // Only the level being played can still be answered; the rest are a record.
+  const open = currentTask.level === level && !taskLocked;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -71,6 +75,21 @@ export default function Level() {
 
       {task ? <Text style={styles.prompt}>{task.prompt}</Text> : null}
 
+      {open ? (
+        <View style={styles.answer}>
+          {ANSWERS.map((a) => (
+            <Pressable
+              key={a.start}
+              style={styles.answerButton}
+              onPress={() => router.push(`/capture?start=${a.start}`)}
+            >
+              <Text style={styles.answerIcon}>{a.icon}</Text>
+              <Text style={styles.answerText}>{a.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       <FlatList
         data={levelPosts}
         keyExtractor={(p) => p.id}
@@ -90,6 +109,12 @@ export default function Level() {
     </View>
   );
 }
+
+const ANSWERS = [
+  { start: 'photo', icon: '📷', label: 'photo' },
+  { start: 'voice', icon: '🎙', label: 'voice' },
+  { start: 'text', icon: '✎', label: 'write' },
+] as const;
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
@@ -135,5 +160,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
+  answer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+  },
+  answerButton: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  answerIcon: { fontSize: 20 },
+  answerText: { fontSize: 15, color: colors.text },
   empty: { margin: spacing.lg, color: colors.muted, textAlign: 'center' },
 });

@@ -1,5 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActionSheetIOS, Alert, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActionSheetIOS,
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  type TextInput as RNTextInput,
+  View,
+} from 'react-native';
 import { Text, TextInput } from '../components/Handwriting';
 import {
   AudioModule,
@@ -48,7 +57,7 @@ const VOICE = {
 
 export default function Capture() {
   const router = useRouter();
-  const { channel } = useLocalSearchParams<{ channel?: string }>();
+  const { channel, start } = useLocalSearchParams<{ channel?: string; start?: string }>();
   const hangout = channel === 'hangout';
   const { task, addPost, taskLocked, opensAt, hasPostedThisCycle } = useApp();
   // The prompt is only asked once; anything after it is a free extra share.
@@ -62,6 +71,8 @@ export default function Capture() {
   const recorder = useAudioRecorder(VOICE);
   const recorderState = useAudioRecorderState(recorder);
   const started = useRef(false);
+  const input = useRef<RNTextInput>(null);
+  const opened = useRef(false);
 
   // The recorder stops itself at MAX_RECORDING_SECONDS, with nobody to catch it.
   useEffect(() => {
@@ -101,6 +112,13 @@ export default function Capture() {
     const album = { text: 'Add from album', onPress: () => void pick('library') };
     const remove = { text: 'Remove photo', style: 'destructive' as const, onPress: () => setPhotoUri(null) };
     const cancel = { text: 'Cancel', style: 'cancel' as const };
+
+    // A browser has no camera roll and no Alert to choose with, so the file
+    // picker (which offers the camera on a phone) is the whole chooser.
+    if (Platform.OS === 'web') {
+      void pick('library');
+      return;
+    }
 
     if (Platform.OS === 'ios') {
       const options = photoUri ? [take.text, album.text, remove.text, cancel.text] : [take.text, album.text, cancel.text];
@@ -150,6 +168,17 @@ export default function Capture() {
       setVoiceError('Could not save that recording. Try again.');
     }
   };
+
+  // Arriving from a level's photo / voice / write button opens that one.
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    if (start === 'photo') addPhoto();
+    else if (start === 'voice') void startRecording();
+    else if (start === 'text') input.current?.focus();
+    // Only ever the arrival, so the pickers don't reopen on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start]);
 
   const words = text.trim();
   const canPost = Boolean(photoUri || voiceUri || words) && !recorderState.isRecording;
@@ -236,6 +265,7 @@ export default function Capture() {
         {voiceError ? <Text style={styles.error}>{voiceError}</Text> : null}
 
         <TextInput
+          ref={input}
           style={styles.input}
           value={text}
           onChangeText={setText}
