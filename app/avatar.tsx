@@ -43,7 +43,8 @@ const OPTIONS: Record<Step, Part[]> = { eyes: EYES, mouth: MOUTHS, hair: HAIR };
 const SLOT: Record<Step, { top: number; height: number }> = {
   eyes: { top: 0.32, height: 0.22 },
   mouth: { top: 0.5, height: 0.26 },
-  hair: { top: 0, height: 0.46 },
+  // Long hair hangs past the chin, so its slice is nearly the whole face.
+  hair: { top: 0, height: 0.96 },
 };
 /** Gap between the head and the option peeking above or below it. */
 const PEEK_GAP = 22;
@@ -245,8 +246,10 @@ function FaceReel({
   // Shove each neighbour clear of the head rather than a fixed distance, so it
   // lands above the hair or below the chin whichever feature is being chosen.
   const middle = (slot.top + slot.height / 2) * FACE;
-  const pushUp = Math.max(0, middle + PEEK_GAP - row);
-  const pushDown = Math.max(0, FACE - middle + PEEK_GAP - row);
+  // Negative for a slice as tall as the hair's, pulling its neighbours back in
+  // rather than leaving them a whole row away.
+  const pushUp = middle + PEEK_GAP - row;
+  const pushDown = FACE - middle + PEEK_GAP - row;
   const len = options.length;
   const loop = len * row;
   const reel = [...options, ...options, ...options];
