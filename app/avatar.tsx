@@ -47,7 +47,7 @@ const SLOT: Record<Step, { top: number; height: number }> = {
   hair: { top: 0, height: 0.96 },
 };
 /** Gap between the head and the option peeking above or below it. */
-const PEEK_GAP = 22;
+const PEEK_GAP = 44;
 const DOUBLE_TAP_MS = 450;
 /** A tap this soon after the reel moved is the end of a scroll, not a tap. */
 const SETTLE_MS = 300;
@@ -397,6 +397,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 72,
   },
   title: {
     fontSize: 24,
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   footer: {
-    marginTop: 64,
+    marginTop: 96,
     alignSelf: 'stretch',
     alignItems: 'center',
     paddingHorizontal: 36,
