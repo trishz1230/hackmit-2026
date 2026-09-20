@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
 import { useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
 import { EmojiPicker } from '../../components/EmojiPicker';
@@ -24,6 +25,7 @@ function e164(phone: string) {
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { posts, hangoutPosts, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
+  const insets = useSafeAreaInsets();
   const [comment, setComment] = useState('');
   const [picking, setPicking] = useState(false);
 
@@ -60,7 +62,7 @@ export default function PostDetail() {
   };
 
   return (
-    <KeyboardScreen contentContainerStyle={styles.wrap}>
+    <KeyboardScreen contentContainerStyle={[styles.wrap, { paddingTop: insets.top + spacing.md }]}>
       <View style={styles.authorRow}>
         <AvatarFace value={author?.avatar} size={30} />
         <Text style={styles.author}>{author?.name}</Text>

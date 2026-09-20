@@ -5,7 +5,7 @@ import { AvatarFace } from './AvatarFace';
 import { useApp } from '../lib/store';
 
 /** One size everywhere, so your face doesn't change between screens. */
-export const AVATAR_SIZE = 42;
+export const AVATAR_SIZE = 54;
 
 /** Your face in the top right of a screen; it stands in for the settings icon. */
 export function AvatarButton({ size = AVATAR_SIZE }: { size?: number }) {

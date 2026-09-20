@@ -12,6 +12,10 @@ export function KeyboardScreen({
   contentContainerStyle?: StyleProp<ViewStyle>;
 }) {
   const insets = useSafeAreaInsets();
+  // The home indicator's strip is added on top of whatever the screen asked
+  // for, so a `padding` shorthand from the caller can't swallow it.
+  const asked = StyleSheet.flatten(contentContainerStyle) ?? {};
+  const bottom = asked.paddingBottom ?? asked.padding ?? spacing.md;
   return (
     <ScrollView
       style={styles.flex}
@@ -19,8 +23,8 @@ export function KeyboardScreen({
       keyboardDismissMode="on-drag"
       automaticallyAdjustKeyboardInsets
       contentContainerStyle={[
-        { paddingBottom: spacing.md + insets.bottom },
         contentContainerStyle,
+        { paddingBottom: (typeof bottom === 'number' ? bottom : spacing.md) + insets.bottom },
       ]}
     >
       {children}

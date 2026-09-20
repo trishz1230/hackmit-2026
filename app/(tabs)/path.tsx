@@ -91,7 +91,7 @@ export default function Path() {
               : `currently on level ${current}....`}
           </Text>
         </View>
-        <AvatarButton size={54} />
+        <AvatarButton />
       </View>
 
       {waitingForPeriod ? (
