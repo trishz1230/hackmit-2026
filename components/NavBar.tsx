@@ -34,7 +34,7 @@ export function NavBar({ state, navigation }: NavBarProps) {
           onPress={() => navigation.navigate('index')}
           hitSlop={6}
         >
-          <HouseIcon size={30} dim={active !== 'index'} />
+          <HouseIcon size={38} dim={active !== 'index'} />
         </Pressable>
         <View style={styles.divider} />
         <Pressable
@@ -42,12 +42,12 @@ export function NavBar({ state, navigation }: NavBarProps) {
           onPress={() => navigation.navigate('path')}
           hitSlop={6}
         >
-          <RoadIcon size={30} dim={active !== 'path'} />
+          <RoadIcon size={58} dim={active !== 'path'} />
         </Pressable>
       </View>
       <View style={styles.spacer} />
       <Pressable style={styles.plus} onPress={() => router.push(`/level/${level}`)}>
-        <PlusIcon size={56} />
+        <PlusIcon size={32} />
       </Pressable>
     </View>
   );
@@ -78,6 +78,12 @@ const styles = StyleSheet.create({
   divider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border },
   spacer: { flex: 1 },
   plus: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 10,

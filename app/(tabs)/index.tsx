@@ -45,7 +45,7 @@ export default function Home() {
     <ScrollView style={[styles.wrap, { paddingTop: insets.top }]} contentContainerStyle={styles.body}>
       <View style={styles.header}>
         <View>
-          <GreenStar size={42} style={styles.starTitle} />
+          <GreenStar size={58} style={styles.starTitle} />
           <Text style={styles.title}>this week</Text>
           <Text style={styles.dates}>
             {dayMonth(start)}–{dayMonth(end)}
@@ -92,7 +92,7 @@ export default function Home() {
               </View>
             )}
           </View>
-          {i === 0 && <YellowStar size={38} style={styles.starBox} />}
+          {i === 0 && <YellowStar size={54} style={styles.starBox} />}
           {i === 1 && <HeartsDoodle size={54} style={styles.heartsBox} />}
         </View>
       ))}
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
   empty: { color: colors.muted, marginVertical: spacing.md },
-  starTitle: { position: 'absolute', left: -16, top: -18 },
+  starTitle: { position: 'absolute', left: -20, top: -24 },
   statWrap: { marginBottom: spacing.sm },
   stat: {
     padding: spacing.md,
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radius.md,
   },
-  starBox: { position: 'absolute', right: -8, top: '35%' },
+  starBox: { position: 'absolute', right: -12, top: '35%' },
   heartsBox: { position: 'absolute', left: 22, bottom: -12 },
   statLabel: { fontSize: 18, color: colors.text },
   statWho: {
