@@ -3,17 +3,38 @@ import type { Post, Task } from './types';
 /** Shown instead of the prompt on a share made after the task was answered. */
 export const EXTRA_PROMPT = 'btw...also...';
 
+const stampOf = (tasks: Task[], level: number): number => {
+  const stamps = tasks
+    .filter((t) => t.level === level)
+    .map((t) => (t.createdAt ? Date.parse(t.createdAt) : 0));
+  return stamps.length ? Math.max(...stamps) : 0;
+};
+
+/**
+ * When a level began for the family. A row is stamped as soon as the family
+ * can reach it — and a reset re-stamps every row it will climb back through
+ * with the same time — so a level only really begins once somebody answers it.
+ */
+function levelStart(tasks: Task[], answers: Post[], level: number): number {
+  const stamped = stampOf(tasks, level);
+  const ids = new Set(tasks.filter((t) => t.level === level).map((t) => t.id));
+  const first = answers
+    .filter((p) => ids.has(p.taskId) && Date.parse(p.createdAt) >= stamped)
+    .map((p) => Date.parse(p.createdAt))
+    .sort((a, b) => a - b)[0];
+  return first ?? stamped;
+}
+
 /** When a level started and when the next one took over, as timestamps. */
-export function levelWindow(tasks: Task[], level: number): { since: number; until: number } {
-  const at = (t: Task) => (t.createdAt ? Date.parse(t.createdAt) : 0);
-  const starts = tasks.filter((t) => t.level === level).map(at);
-  const since = starts.length ? Math.max(...starts) : 0;
-  // A level row is stamped when the family reaches it, but a reset re-stamps
-  // every row it will climb back through, so only a later level stamped after
-  // this one actually took over from it.
+export function levelWindow(
+  tasks: Task[],
+  answers: Post[],
+  level: number
+): { since: number; until: number } {
+  const since = levelStart(tasks, answers, level);
   const later = tasks
     .filter((t) => t.level > level)
-    .map(at)
+    .map((t) => levelStart(tasks, answers, t.level))
     .filter((start) => start > since)
     .sort((a, b) => a - b);
   return { since, until: later[0] ?? Infinity };
@@ -38,11 +59,23 @@ export function feedLevel(tasks: Task[], posts: Post[], current: number): number
   return answered.length ? Math.max(...answered) : current;
 }
 
-/** Posts made while a level was the current one. */
-export function withinLevel(posts: Post[], tasks: Task[], level: number): Post[] {
-  const { since, until } = levelWindow(tasks, level);
+/**
+ * Posts belonging to a level: an answer belongs to the level of the task it
+ * answers, whatever the clock says, and a hangout post to the level that was
+ * running when it was made.
+ */
+export function withinLevel(
+  posts: Post[],
+  tasks: Task[],
+  level: number,
+  answers: Post[] = posts
+): Post[] {
+  const { since, until } = levelWindow(tasks, answers, level);
+  const task = tasks.find((t) => t.level === level);
+  const stamped = stampOf(tasks, level);
   return posts.filter((p) => {
     const at = Date.parse(p.createdAt);
+    if (p.taskId !== '') return p.taskId === task?.id && at >= stamped;
     return at >= since && at < until;
   });
 }
