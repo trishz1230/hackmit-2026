@@ -45,7 +45,9 @@ export default function Feed() {
     ? Math.max(1, Math.min(feedLevel(tasks, posts, current), task.level - 1))
     : feedLevel(tasks, posts, current);
   const answers = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts));
-  const shown = taskForLevel(level) ?? task;
+  // The card is the task to answer, so while the next level is open it runs
+  // ahead of the posts below it, which stay on the level the family answered.
+  const shown = (taskLocked ? taskForLevel(level) : task) ?? task;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -66,7 +68,7 @@ export default function Feed() {
               <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
             </View>
             <View style={styles.task}>
-              <Text style={styles.taskLabel}>Level {level} task</Text>
+              <Text style={styles.taskLabel}>Level {shown.level} task</Text>
               {taskLocked ? (
                 <>
                   <Text style={styles.taskPrompt}>{shown.prompt}</Text>
@@ -77,7 +79,7 @@ export default function Feed() {
                 </>
               ) : (
                 <>
-                  <Text style={styles.taskPrompt}>{task.prompt}</Text>
+                  <Text style={styles.taskPrompt}>{shown.prompt}</Text>
                   {hasPostedThisCycle ? (
                     <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
                   ) : (

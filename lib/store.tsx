@@ -730,7 +730,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
     setWaived(false);
     const prompt = await generatePrompt(
       seenPrompts.current.slice(-5),
-      familyContext(group?.name ?? '', members, posts, await describeMedia(posts)),
+      familyContext(group?.name ?? '', members, posts, await describeMedia(posts).catch(() => ({}))),
     );
     seenPrompts.current.push(prompt);
     let completedGoal = false;
