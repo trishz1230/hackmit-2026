@@ -1,15 +1,10 @@
 import React from 'react';
 import { Text } from '../../components/Handwriting';
 import { NextGoalPopup } from '../../components/NextGoalPopup';
-import { Tabs, useRouter } from 'expo-router';
-import { useApp } from '../../lib/store';
+import { Tabs } from 'expo-router';
 import { colors, fonts } from '../../lib/theme';
 
 export default function TabLayout() {
-  const router = useRouter();
-  const { group } = useApp();
-  const currentLevel = group ? Math.min(group.level, group.goal) : 1;
-
   return (
     <>
     <Tabs
@@ -43,18 +38,11 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◈</Text>,
         }}
       />
-      {/* Not a screen of its own — it drops you on the level you're posting to. */}
       <Tabs.Screen
         name="plus"
         options={{
           title: 'Post',
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>＋</Text>,
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push(`/level/${currentLevel}`);
-          },
         }}
       />
       <Tabs.Screen

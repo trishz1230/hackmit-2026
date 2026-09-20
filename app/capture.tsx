@@ -151,7 +151,7 @@ export default function Capture() {
       kind === 'text' ? undefined : words || undefined
     );
     if (hangout) {
-      router.replace('/(tabs)/hangout');
+      router.replace('/(tabs)/plus');
       return;
     }
     router.replace(completedGoal ? '/(tabs)/path' : '/(tabs)/feed');
