@@ -1,7 +1,7 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
+import { Schoolbell_400Regular } from '@expo-google-fonts/schoolbell';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NotificationController } from '../components/NotificationController';
@@ -13,7 +13,7 @@ import { colors, fonts } from '../lib/theme';
 export default function RootLayout() {
   // Not gated on: a font that never resolves would otherwise leave a white
   // screen. Text falls back to the system face until it arrives.
-  useFonts({ PatrickHand_400Regular });
+  useFonts({ Schoolbell_400Regular });
 
   return (
     <SafeAreaProvider>

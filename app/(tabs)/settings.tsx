@@ -284,10 +284,7 @@ export default function Settings() {
 
       <View style={styles.card}>
         <Text style={styles.label}>History</Text>
-        <Text style={styles.meta}>Every day the family posted, kept after the path restarts.</Text>
-        {history.length === 0 ? (
-          <Text style={styles.meta}>Nothing yet.</Text>
-        ) : (
+        {history.length === 0 ? null : (
           <View style={styles.historyGrid}>
             {history.map((day) => {
               const date = dayDate(day.key);
