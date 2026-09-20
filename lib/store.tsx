@@ -83,7 +83,8 @@ type State = {
   dismissError: () => void;
   dismissCelebration: () => void;
   createGroup: (opts: CreateOptions) => void;
-  joinGroup: (opts: JoinOptions) => void;
+  /** Resolves once the family is loaded; rejects with the reason it wasn't. */
+  joinGroup: (opts: JoinOptions) => Promise<void>;
   updateSettings: (patch: { rewardText: string; goal: number; name?: string }) => void;
   /** Members who still have to approve the pending cadence change. */
   cadencePendingOn: Profile[];
@@ -413,11 +414,17 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(created.id, true);
         });
       },
-      joinGroup: (opts) => {
-        run(async () => {
+      joinGroup: async (opts) => {
+        // Awaited rather than watched for a new group id: rejoining the family
+        // you are already in changes no id, and used to leave the form hanging.
+        try {
           const joined = await api.joinGroup(userId, opts);
           await refresh(joined.id, true);
-        });
+          setError(null);
+        } catch (e) {
+          setError(describeError(e));
+          throw e;
+        }
       },
       updateSettings: (patch) => {
         if (!group) return;
@@ -866,7 +873,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setSeenReactionIds([]);
         rememberTask(newTask(mockTask.prompt, 1), true);
       },
-      joinGroup: ({ myName, phone }) => {
+      joinGroup: async ({ myName, phone }) => {
         setGroup({ ...mockGroup, awaitingNextGoal: false });
         setMembers(withMe(myName, phone));
         setMissedReset(false);
