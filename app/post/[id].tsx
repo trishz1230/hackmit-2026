@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
@@ -24,7 +24,8 @@ function e164(phone: string) {
 
 export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, hangoutPosts, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
+  const router = useRouter();
+  const { posts, hangoutPosts, tasks, me, memberById, reactionsFor, addReaction, toggleEmoji, toggleLike, likedByMe, markPostSeen, promptFor } = useApp();
   const insets = useSafeAreaInsets();
   const [comment, setComment] = useState('');
   const [picking, setPicking] = useState(false);
@@ -37,7 +38,7 @@ export default function PostDetail() {
   if (!post) return <Text style={styles.missing}>Post not found</Text>;
 
   const author = memberById(post.userId);
-  const prompt = isExtraPost(post, posts) ? EXTRA_PROMPT : promptFor(post.taskId);
+  const prompt = isExtraPost(post, posts, tasks) ? EXTRA_PROMPT : promptFor(post.taskId);
   const reactions = reactionsFor(post.id);
   const comments = reactions.filter((r) => r.kind === 'comment');
   const likes = reactions.filter((r) => r.kind === 'like').length;
@@ -63,11 +64,16 @@ export default function PostDetail() {
 
   return (
     <KeyboardScreen contentContainerStyle={[styles.wrap, { paddingTop: insets.top + spacing.md }]}>
+      <View style={styles.topBar}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Text style={styles.back}>← back</Text>
+        </Pressable>
+        <AvatarButton />
+      </View>
+
       <View style={styles.authorRow}>
         <AvatarFace value={author?.avatar} size={30} />
         <Text style={styles.author}>{author?.name}</Text>
-        <View style={styles.spacer} />
-        <AvatarButton />
       </View>
 
       {post.kind === 'photo' ? (
@@ -176,8 +182,14 @@ export default function PostDetail() {
 const styles = StyleSheet.create({
   wrap: { padding: spacing.md, gap: spacing.sm },
   missing: { padding: spacing.lg, color: colors.muted },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  back: { fontSize: 17, color: colors.muted },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  spacer: { flex: 1 },
   author: { fontSize: 18, fontWeight: '700', color: colors.text },
   photo: { width: '100%', height: 260, borderRadius: radius.md },
   prompt: { fontSize: 14, color: colors.muted, lineHeight: 20 },

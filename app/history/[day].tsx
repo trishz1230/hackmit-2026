@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
@@ -44,10 +44,13 @@ export default function HistoryDayScreen() {
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.titleRow, { paddingTop: insets.top + spacing.md }]}>
-        <Text style={styles.title}>{longDate(day)}</Text>
+      <View style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Text style={styles.back}>← back</Text>
+        </Pressable>
         <AvatarButton />
       </View>
+      <Text style={styles.title}>{longDate(day)}</Text>
       {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <FlatList
@@ -72,15 +75,16 @@ export default function HistoryDayScreen() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  titleRow: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     gap: spacing.md,
   },
-  title: { flex: 1, fontSize: 20, color: colors.text },
+  back: { fontSize: 17, color: colors.muted },
+  title: { fontSize: 20, color: colors.text, paddingHorizontal: spacing.md },
   prompt: { color: colors.muted, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
   empty: { margin: spacing.lg, color: colors.muted, textAlign: 'center' },
 });

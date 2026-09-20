@@ -48,9 +48,9 @@ export default function RootLayout() {
               name="capture"
               options={{ headerShown: false, presentation: 'modal' }}
             />
-            <Stack.Screen name="post/[id]" options={{ title: 'Reactions' }} />
-            <Stack.Screen name="history/index" options={{ title: 'History' }} />
-            <Stack.Screen name="history/[day]" options={{ title: 'History' }} />
+            <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="history/index" options={{ headerShown: false }} />
+            <Stack.Screen name="history/[day]" options={{ headerShown: false }} />
           </Stack>
           <OpeningSmiley />
         </PhoneFrame>

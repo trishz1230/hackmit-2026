@@ -44,7 +44,7 @@ export default function Feed() {
   const level = taskLocked
     ? Math.max(1, Math.min(feedLevel(tasks, posts, current), task.level - 1))
     : feedLevel(tasks, posts, current);
-  const answers = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts));
+  const answers = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts, tasks));
   // The card is the task to answer, so while the next level is open it runs
   // ahead of the posts below it, which stay on the level the family answered.
   const shown = (taskLocked ? taskForLevel(level) : task) ?? task;
