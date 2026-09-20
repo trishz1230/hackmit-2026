@@ -3,8 +3,10 @@
  * api/prompt.ts. The app works out who each card points at from real counts;
  * this only invents what the two categories are called this week.
  *
- * Deploy: `npx vercel --prod`, then set OPENAI_API_KEY in the project settings.
+ * Deploy: `npx vercel --prod`, then set MODEL_API_KEY in the project settings.
  */
+import { chat, provider } from './_model';
+
 export const config = { runtime: 'edge' };
 
 const SYSTEM = [
@@ -30,16 +32,14 @@ function json(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
-type ChatCompletion = { choices?: { message?: { content?: string } }[] };
-
 const clean = (line: string) => line.replace(/^[-*\d.\s]+/, '').replace(/^["']|["']$/g, '').trim();
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return json({ error: 'OPENAI_API_KEY is not set on the server' }, 500);
+  const model = provider();
+  if (!model) return json({ error: 'MODEL_API_KEY is not set on the server' }, 500);
 
   const { context = {} } = (await req.json().catch(() => ({}))) as {
     context?: { family?: string; members?: string[]; said?: string[] };
@@ -55,24 +55,16 @@ export default async function handler(req: Request): Promise<Response> {
     .filter(Boolean)
     .join('\n');
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 1,
-      max_tokens: 30,
-      messages: [
-        { role: 'system', content: SYSTEM },
-        { role: 'user', content: ask },
-      ],
-    }),
-  });
+  const said = await chat(
+    model,
+    [
+      { role: 'system', content: SYSTEM },
+      { role: 'user', content: ask },
+    ],
+    { maxTokens: 30, temperature: 1 },
+  );
 
-  if (!res.ok) return json({ error: `OpenAI returned ${res.status}` }, 502);
-
-  const data = (await res.json()) as ChatCompletion;
-  const lines = (data.choices?.[0]?.message?.content ?? '')
+  const lines = said
     .split('\n')
     .map(clean)
     .filter(Boolean);

@@ -30,17 +30,34 @@ export type FamilyContext = {
 };
 
 /**
- * The last dozen things the family wrote, as "Name: words". A photo only
- * contributes its caption — the image itself is a data URL nobody can read.
+ * The last dozen things the family shared, as "Name: words". Photos and voice
+ * notes contribute their caption plus, when `described` has been fetched
+ * (lib/describe.ts), what the image shows or the recording says.
  */
-export function familyContext(family: string, members: Profile[], posts: Post[]): FamilyContext {
+export function familyContext(
+  family: string,
+  members: Profile[],
+  posts: Post[],
+  described: Record<string, string> = {},
+): FamilyContext {
   const said = [...posts]
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     .slice(0, 12)
     .map((p) => {
-      const words = (p.kind === 'text' ? p.content : (p.caption ?? '')).trim();
       const who = members.find((m) => m.id === p.userId)?.name;
-      return words && who ? `${who}: ${words.slice(0, 140)}` : '';
+      if (!who) return '';
+
+      const words = (p.kind === 'text' ? p.content : (p.caption ?? '')).trim().slice(0, 140);
+      const read = described[p.id]?.trim().slice(0, 200) ?? '';
+      const media =
+        p.kind === 'photo' && read
+          ? `(photo: ${read})`
+          : p.kind === 'voice' && read
+            ? `(said out loud: ${read})`
+            : '';
+
+      const line = [words, media].filter(Boolean).join(' ');
+      return line ? `${who}: ${line}` : '';
     })
     .filter(Boolean);
 

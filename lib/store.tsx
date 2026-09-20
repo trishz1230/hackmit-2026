@@ -11,6 +11,7 @@ import * as api from './api';
 import { clampLevelCount, levelOpensAt, levelUnlocksAt, postsForTask, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { nudgeContent, nudgeTargetId } from './nudge';
+import { describeMedia } from './describe';
 import { familyContext, generatePrompt } from './prompts';
 import { getPushToken, sendExpoPush } from './push';
 import { isSupabaseConfigured } from './supabase';
@@ -729,7 +730,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
     setWaived(false);
     const prompt = await generatePrompt(
       seenPrompts.current.slice(-5),
-      familyContext(group?.name ?? '', members, posts),
+      familyContext(group?.name ?? '', members, posts, await describeMedia(posts)),
     );
     seenPrompts.current.push(prompt);
     let completedGoal = false;
