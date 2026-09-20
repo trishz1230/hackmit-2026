@@ -22,6 +22,8 @@ export default function Plus() {
     memberById,
     toggleLike,
     likedByMe,
+    hasPostedThisCycle,
+    taskLocked,
     loading,
   } = useApp();
   const insets = useSafeAreaInsets();
@@ -37,11 +39,14 @@ export default function Plus() {
     tasks,
     level
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  // Answer the family first: hangout opens once your task post is in (a level
+  // that hasn't started has no task to answer, so there is nothing to wait on).
+  const locked = !taskLocked && !hasPostedThisCycle;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <FlatList
-        data={shares}
+        data={locked ? [] : shares}
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View>
@@ -55,15 +60,24 @@ export default function Plus() {
             <View style={styles.header}>
               <Text style={styles.title}>hangout</Text>
               <Text style={styles.body}>
-                Share whatever you want with {group.name} — nothing here counts toward the level.
+                {locked
+                  ? '🔒 Locked! Answer the family task first, then hangout is all yours.'
+                  : `Share whatever you want with ${group.name} — nothing here counts toward the level.`}
               </Text>
-              <Pressable style={styles.cta} onPress={() => router.push('/capture?channel=hangout')}>
-                <Text style={styles.ctaText}>Share something</Text>
-              </Pressable>
+              {locked ? null : (
+                <Pressable
+                  style={styles.cta}
+                  onPress={() => router.push('/capture?channel=hangout')}
+                >
+                  <Text style={styles.ctaText}>Share something</Text>
+                </Pressable>
+              )}
             </View>
           </View>
         }
-        ListEmptyComponent={<Text style={styles.empty}>Nothing yet — be the first.</Text>}
+        ListEmptyComponent={
+          locked ? null : <Text style={styles.empty}>Nothing yet — be the first.</Text>
+        }
         renderItem={({ item }) => (
           <PostCard
             post={item}

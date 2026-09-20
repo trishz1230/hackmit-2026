@@ -63,13 +63,18 @@ export default function Level() {
   // Only the level being played is still live; the rest are a record.
   const open = currentTask.level === level && !taskLocked;
   const done = open && hasPostedThisCycle;
-  const shown = tab === 'family' ? levelPosts : shares;
+  // Hangout opens on the level being played once you've answered it; a level
+  // already behind the family stays a record either way.
+  const lockedHangout = tab === 'hangout' && open && !done;
+  const shown = tab === 'family' ? levelPosts : lockedHangout ? [] : shares;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/path'))}
+          // A level is only ever opened from the map, so back belongs there
+          // rather than wherever the tab stack came from.
+          onPress={() => router.replace('/(tabs)/path')}
           hitSlop={12}
           style={styles.backRow}
         >
@@ -123,7 +128,9 @@ export default function Level() {
           <Text style={styles.empty}>
             {tab === 'family'
               ? 'Nobody has posted for this level yet.'
-              : 'Nothing else was shared during this level.'}
+              : lockedHangout
+                ? '🔒 Locked! Answer the family task first, then hangout is all yours.'
+                : 'Nothing else was shared during this level.'}
           </Text>
         }
         renderItem={({ item }) => (

@@ -19,8 +19,25 @@ const keyFor = (postId: string) => `famstreak.described.${postId}`;
 
 const memory = new Map<string, string>();
 
-/** One failed call is enough: the endpoint stays unreachable for this session. */
-let unavailable = false;
+const UNAVAILABLE_KEY = 'famstreak.described.unavailable';
+
+/**
+ * One failed call is enough: an undeployed endpoint stays unreachable, so the
+ * device remembers it and stops asking on every prompt and every reload.
+ */
+let unavailable: boolean | null = null;
+
+async function givenUp(): Promise<boolean> {
+  if (unavailable === null) {
+    unavailable = (await AsyncStorage.getItem(UNAVAILABLE_KEY).catch(() => null)) !== null;
+  }
+  return unavailable;
+}
+
+async function giveUp(): Promise<void> {
+  unavailable = true;
+  await AsyncStorage.setItem(UNAVAILABLE_KEY, '1').catch(() => {});
+}
 
 async function cached(postId: string): Promise<string | null> {
   const held = memory.get(postId);
@@ -51,7 +68,7 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
       missing.push({ id: post.id, kind: post.kind as 'photo' | 'voice', url: post.content });
     }
   }
-  if (missing.length === 0 || unavailable) return described;
+  if (missing.length === 0 || (await givenUp())) return described;
 
   try {
     const res = await fetch(DESCRIBE_API, {
@@ -60,7 +77,7 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
       body: JSON.stringify({ items: missing }),
     });
     if (!res.ok) {
-      unavailable = true;
+      await giveUp();
       return described;
     }
 
@@ -75,7 +92,7 @@ export async function describeMedia(posts: Post[]): Promise<Record<string, strin
     }
     return described;
   } catch {
-    unavailable = true;
+    await giveUp();
     return described;
   }
 }
