@@ -61,8 +61,9 @@ export default function Capture() {
   const { channel, start } = useLocalSearchParams<{ channel?: string; start?: string }>();
   const hangout = channel === 'hangout';
   const { task, addPost, taskLocked, hasPostedThisCycle } = useApp();
-  // The prompt is only asked once; anything after it is a free extra share.
-  const extra = !hangout && hasPostedThisCycle;
+  // The prompt is only asked once, and a locked level has no prompt to answer;
+  // either way what you write is a free share rather than an answer.
+  const extra = !hangout && (hasPostedThisCycle || taskLocked);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -212,25 +213,13 @@ export default function Capture() {
     else router.replace(hangout || extra ? '/(tabs)/plus' : '/(tabs)/feed');
   };
 
-  if (!hangout && taskLocked) {
-    return (
-      <View style={styles.wrap}>
-        <Text style={styles.prompt}>Wait till the next time for a new conversation!</Text>
-        <Text style={styles.locked}>We&apos;ll let you know when this level starts.</Text>
-        <Pressable style={styles.cta} onPress={() => router.replace('/(tabs)/feed')}>
-          <Text style={styles.ctaText}>Back to the family</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.bar, { paddingTop: insets.top + spacing.md }]}>
         <Pressable style={styles.backRow} onPress={goBack} hitSlop={8}>
           <Text style={styles.back}>←</Text>
-          <Text style={styles.barTitle}>{extra ? 'Share more' : "Today's task"}</Text>
+          <Text style={styles.barTitle}>{hangout || extra ? 'Share more' : "Today's task"}</Text>
         </Pressable>
         <AvatarButton />
       </View>
@@ -325,7 +314,6 @@ const styles = StyleSheet.create({
   barTitle: { fontSize: 17, color: colors.text },
   wrap: { flexGrow: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
   prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
-  locked: { flex: 1, color: colors.muted, fontSize: 16, lineHeight: 22 },
   square: {
     aspectRatio: 1,
     alignItems: 'center',
