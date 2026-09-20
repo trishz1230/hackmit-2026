@@ -83,12 +83,20 @@ create table if not exists reactions (
   created_at timestamptz default now()
 );
 
--- Realtime: every client refetches when any of these change.
-alter publication supabase_realtime add table groups;
-alter publication supabase_realtime add table profiles;
-alter publication supabase_realtime add table tasks;
-alter publication supabase_realtime add table posts;
-alter publication supabase_realtime add table reactions;
+-- Realtime: every client refetches when any of these change. Adding a table
+-- that is already published is an error, so this whole file stays re-runnable.
+do $$
+declare t text;
+begin
+  foreach t in array array['groups', 'profiles', 'tasks', 'posts', 'reactions'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
 
 -- Photo storage.
 insert into storage.buckets (id, name, public)
