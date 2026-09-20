@@ -1,8 +1,8 @@
 import React from 'react';
 import { Image, ImageStyle, StyleProp } from 'react-native';
 
-const houseImg = require('../assets/doodles/house.jpg');
-const roadImg = require('../assets/doodles/road.jpg');
+const houseImg = require('../assets/doodles/house.png');
+const roadImg = require('../assets/doodles/road.png');
 const plusImg = require('../assets/doodles/plus-sign.png');
 const starYellowImg = require('../assets/doodles/star-yellow.png');
 const starGreenImg = require('../assets/doodles/star-green.png');

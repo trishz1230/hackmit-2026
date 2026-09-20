@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
 import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
 import { PostStack } from '../../components/PostStack';
-import { GreenStar, HeartsDoodle, PhoneDoodle, YellowStar } from '../../components/Doodles';
+import { GreenStar, HeartsDoodle, YellowStar } from '../../components/Doodles';
 import { weekRange, weekStats, weekTallies } from '../../lib/week';
 import { weekCards, type WeekCard } from '../../lib/weekCards';
 import { describeMedia } from '../../lib/describe';
@@ -22,6 +22,7 @@ export default function Home() {
   const { group, members, posts, hangoutPosts, reactions, memberById, loading } = useApp();
   const insets = useSafeAreaInsets();
   const [cards, setCards] = useState<WeekCard[] | null>(null);
+  const [cardWidth, setCardWidth] = useState(0);
   const { height: screenHeight } = useWindowDimensions();
   // Wakes the screen once the week rolls over, so the dates and the photo pile
   // restart even if the app stays open through Sunday night.
@@ -79,29 +80,41 @@ export default function Home() {
             {dayMonth(start)}–{dayMonth(end)}
           </Text>
         </View>
-        <AvatarButton />
+        <View style={styles.avatarLift}>
+          <AvatarButton size={54} />
+        </View>
       </View>
 
-      {thisWeek.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.empty}>nothing shared yet... :(</Text>
-          <PhoneDoodle size={22} style={styles.emptyPhone} />
-        </View>
-      ) : (
-        <View
-          style={{
-            // The pile starts about a quarter of the way down the screen.
-            marginTop: Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 109),
-          }}
-        >
+      <View
+        style={{
+          // The pile hangs about a quarter of the way down the screen; the
+          // empty card just follows the dates.
+          marginTop:
+            thisWeek.length === 0
+              ? spacing.md
+              : Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 124),
+        }}
+        onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
+      >
+        {thisWeek.length === 0 ? (
+          // Sized off the measured row: the artwork's own pixel width would
+          // otherwise stretch the page wider than the phone.
+          cardWidth > 0 && (
+            <Image
+              source={require('../../assets/doodles/empty-week.png')}
+              style={[styles.emptyCard, { width: cardWidth, height: (cardWidth * 814) / 964 }]}
+              resizeMode="contain"
+            />
+          )
+        ) : (
           <PostStack
             key={start.getTime()}
             posts={thisWeek}
             nameOf={(id) => memberById(id)?.name ?? 'Someone'}
             onOpen={(post) => router.push(`/post/${post.id}`)}
           />
-        </View>
-      )}
+        )}
+      </View>
 
       {(cards
         ? cards.map((card) => ({
@@ -117,7 +130,13 @@ export default function Home() {
           }))
       ).map((box, i) => (
         <View key={box.label} style={styles.statWrap}>
-          <View style={styles.stat}>
+          <View
+            style={[
+              styles.stat,
+              { backgroundColor: i === 0 ? '#FDD98B4D' : '#E9B0B566' },
+              i === 1 && { minHeight: 107 },
+            ]}
+          >
             <Text style={styles.statLabel}>{box.label}</Text>
             {box.member && (
               <View style={styles.statWho}>
@@ -127,7 +146,7 @@ export default function Home() {
             )}
           </View>
           {i === 0 && <YellowStar size={54} style={styles.starBox} />}
-          {i === 1 && <HeartsDoodle size={54} style={styles.heartsBox} />}
+          {i === 1 && <HeartsDoodle size={68} style={styles.heartsBox} />}
         </View>
       ))}
     </ScrollView>
@@ -137,28 +156,21 @@ export default function Home() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.lg },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginTop: 25,
+  },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
-  empty: { fontSize: 18, color: colors.text },
-  emptyCard: {
-    // Sits straight on the stat cards, with only the receiver's headroom above.
-    marginTop: 52,
-    marginBottom: spacing.sm,
-    padding: spacing.md,
-    minHeight: 104,
-    justifyContent: 'center',
-    backgroundColor: '#F0F0F0',
-    borderRadius: radius.md,
-  },
-  // The receiver dangles into the card from above, cord and all.
-  emptyPhone: { position: 'absolute', right: 30, top: -46 },
+  emptyCard: { marginBottom: spacing.sm + 7 },
+  avatarLift: { marginTop: -3 },
   starTitle: { position: 'absolute', left: -20, top: -24 },
   statWrap: { marginBottom: spacing.sm },
   stat: {
     padding: spacing.md,
     minHeight: 92,
-    backgroundColor: colors.card,
     borderRadius: radius.md,
   },
   starBox: { position: 'absolute', right: -12, top: '35%' },

@@ -31,7 +31,7 @@ export function NavBar({ state, navigation }: NavBarProps) {
           onPress={() => navigation.navigate('index')}
           hitSlop={6}
         >
-          <HouseIcon size={44} dim={active !== 'index'} />
+          <HouseIcon size={34} dim={active !== 'index'} />
         </Pressable>
         <View style={styles.divider} />
         <Pressable
@@ -39,7 +39,7 @@ export function NavBar({ state, navigation }: NavBarProps) {
           onPress={() => navigation.navigate('path')}
           hitSlop={6}
         >
-          <RoadIcon size={48} dim={active !== 'path'} />
+          <RoadIcon size={36} dim={active !== 'path'} />
         </Pressable>
       </View>
       <View style={styles.spacer} />
