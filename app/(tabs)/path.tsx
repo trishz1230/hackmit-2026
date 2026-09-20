@@ -48,12 +48,15 @@ export default function Path() {
   const insets = useSafeAreaInsets();
   // Only levels that can't be opened use the sheet; the rest have their own page.
   const [selected, setSelected] = useState<number | null>(null);
+  // The sheet keeps its content while it fades out, so it doesn't blank first.
+  const [shown, setShown] = useState<number | null>(null);
 
   const openLevel = (n: number) => {
     if (!group) return;
     const currentLevel = Math.min(group.level, group.goal);
     const reachable = n < group.level || (n === currentLevel && !taskLocked);
     if (!reachable) {
+      setShown(n);
       setSelected(n);
       return;
     }
@@ -70,11 +73,11 @@ export default function Path() {
 
   const current = Math.min(group.level, group.goal);
   const streak = streakCount(group, everyonePostedThisCycle);
-  const isCurrent = selected === current && !group.awaitingNextGoal;
-  const isCleared = selected !== null && (selected < group.level || group.awaitingNextGoal);
-  const isLocked = selected !== null && selected > current;
-  const remembered = selected !== null ? taskForLevel(selected) : undefined;
-  const myPost = selected !== null ? myPostForLevel(selected) : undefined;
+  const isCurrent = shown === current && !group.awaitingNextGoal;
+  const isCleared = shown !== null && (shown < group.level || group.awaitingNextGoal);
+  const isLocked = shown !== null && shown > current;
+  const remembered = shown !== null ? taskForLevel(shown) : undefined;
+  const myPost = shown !== null ? myPostForLevel(shown) : undefined;
   const prompt = isCurrent ? task.prompt : remembered?.prompt;
 
   return (
@@ -132,7 +135,7 @@ export default function Path() {
         <Pressable style={styles.backdrop} onPress={() => setSelected(null)}>
           <Pressable style={styles.sheet} onPress={() => undefined}>
             <ScrollView bounces={false}>
-              <Text style={styles.sheetTitle}>Level {selected}</Text>
+              <Text style={styles.sheetTitle}>Level {shown}</Text>
               {isCurrent && taskLocked ? (
                 <>
                   <Text style={styles.taskLabel}>🔒 Locked</Text>
@@ -169,7 +172,7 @@ export default function Path() {
                     <Text style={styles.sheetBody}>Your post from this level is gone.</Text>
                   )}
                 </>
-              ) : isLocked && selected === current + 1 && waitingForPeriod ? (
+              ) : isLocked && shown === current + 1 && waitingForPeriod ? (
                 <>
                   <Text style={styles.taskLabel}>🔒 Locked</Text>
                   <Text style={styles.sheetBody}>
