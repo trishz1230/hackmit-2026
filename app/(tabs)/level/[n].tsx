@@ -128,7 +128,7 @@ export default function Level() {
             {tab === 'family'
               ? 'Nobody has posted for this level yet.'
               : lockedHangout
-                ? '🔒 Locked! Answer the family task first, then hangout is all yours.'
+                ? `🔒 Locked! Answer the level ${level} task first, then hangout is all yours.`
                 : 'Nothing else was shared during this level.'}
           </Text>
         }
