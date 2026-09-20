@@ -92,18 +92,36 @@ export function answeredLevel(
 }
 
 /**
+ * The level every screen shows: the newest answered one, held back to the
+ * level before the current task while that task is still locked, since a
+ * prompt nobody can read yet is not a level the family is playing.
+ */
+export function shownLevel(
+  tasks: Task[],
+  posts: Post[],
+  current: number,
+  taskLevel: number,
+  taskLocked: boolean
+): number {
+  const answered = feedLevel(tasks, posts, current);
+  return taskLocked ? Math.max(1, Math.min(answered, taskLevel - 1)) : answered;
+}
+
+/**
  * Whether hangout (and the ＋ share it takes) is still closed to a member: it
  * opens once they have answered the level the feeds are showing, so nobody
  * shares before the family has been answered — including on level 1, where the
- * next level being locked used to leave nothing to answer.
+ * next level being locked used to leave nothing to answer. `level` is the
+ * level on screen, not the family's: a locked one can't be answered, so
+ * reading against it would shut hangout until the level opens.
  */
 export function hangoutLocked(
   tasks: Task[],
   posts: Post[],
-  current: number,
+  level: number,
   userId: string
 ): boolean {
-  return !answeredLevel(tasks, posts, feedLevel(tasks, posts, current), userId);
+  return !answeredLevel(tasks, posts, level, userId);
 }
 
 /**

@@ -28,7 +28,7 @@ import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { dismissKeyboard } from '../lib/keyboard';
-import { answeredLevel, hangoutLocked } from '../lib/posts';
+import { answeredLevel, hangoutLocked, shownLevel } from '../lib/posts';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -89,7 +89,18 @@ export default function Capture() {
   // does: on level 1 nothing can be shared until that task is answered.
   const shut =
     (hangout || extra) &&
-    hangoutLocked(tasks, posts, Math.min(group?.level ?? 1, group?.goal ?? 1), me.id);
+    hangoutLocked(
+      tasks,
+      posts,
+      shownLevel(
+        tasks,
+        posts,
+        Math.min(group?.level ?? 1, group?.goal ?? 1),
+        task.level,
+        taskLocked
+      ),
+      me.id
+    );
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');

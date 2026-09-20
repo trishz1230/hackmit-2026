@@ -7,7 +7,7 @@ import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
-import { answeredLevel, feedLevel, isExtraPost, withinLevel } from '../../lib/posts';
+import { answeredLevel, isExtraPost, shownLevel, withinLevel } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { paper, radius, spacing } from '../../lib/theme';
 
@@ -41,9 +41,7 @@ export default function Feed() {
   const current = Math.min(group.level, group.goal);
   // A locked level keeps its prompt hidden, so the feed stays on the level
   // before it rather than showing a card nobody can answer.
-  const level = taskLocked
-    ? Math.max(1, Math.min(feedLevel(tasks, posts, current), task.level - 1))
-    : feedLevel(tasks, posts, current);
+  const level = shownLevel(tasks, posts, current, task.level, taskLocked);
   const answers = withinLevel(posts, tasks, level).filter((p) => !isExtraPost(p, posts, tasks));
   // The card is the task to answer, so while the next level is open it runs
   // ahead of the posts below it, which stay on the level the family answered.
