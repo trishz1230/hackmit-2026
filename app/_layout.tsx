@@ -31,7 +31,12 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
+            {/* iOS's swipe back beats the card pile's own drag, so flicking a
+                photo sideways would slide the whole app off instead. */}
+            <Stack.Screen
+              name="(tabs)"
+              options={{ headerShown: false, title: 'Home', gestureEnabled: false }}
+            />
             <Stack.Screen name="welcome" options={{ headerShown: false }} />
             <Stack.Screen name="start" options={{ headerShown: false }} />
             <Stack.Screen name="avatar" options={{ headerShown: false }} />
