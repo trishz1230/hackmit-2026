@@ -120,7 +120,7 @@ export function LevelMap({
   const levels = Array.from({ length: goal }, (_, i) => i + 1);
 
   return (
-    <LinearGradient colors={[colors.night, colors.nightSoft, colors.accent]} style={styles.fill}>
+    <LinearGradient colors={[colors.bg, colors.nightSoft, colors.gold]} style={styles.fill}>
       <ScrollView
         ref={scrollRef}
         onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     height: NODE,
     borderRadius: NODE / 2,
     borderWidth: 2,
-    borderColor: colors.gold,
+    borderColor: colors.accent,
   },
   node: {
     width: NODE,
@@ -202,23 +202,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
-  nodeDone: { backgroundColor: colors.success, borderColor: '#9BF0E4' },
+  nodeDone: { backgroundColor: '#E8C98A', borderColor: '#D8B471' },
   nodeCurrent: { backgroundColor: colors.gold, borderColor: '#FFF3D4' },
-  nodeLocked: { backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.22)' },
+  nodeLocked: { backgroundColor: colors.card, borderColor: colors.border },
   nodeMilestone: { width: NODE + 12, height: NODE + 12, borderRadius: (NODE + 12) / 2 },
-  nodeLabel: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  nodeLabelLocked: { color: 'rgba(255,255,255,0.45)' },
-  milestoneCaption: { color: '#E8DCFF', fontSize: 11, marginTop: 4 },
+  nodeLabel: { fontSize: 22, fontWeight: '800', color: colors.text },
+  nodeLabelLocked: { color: colors.muted },
+  milestoneCaption: { color: colors.muted, fontSize: 11, marginTop: 4 },
   dot: {
     position: 'absolute',
     left: '50%',
     width: DOT,
     height: DOT,
     borderRadius: DOT / 2,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: colors.border,
   },
   goalFlag: {
     position: 'absolute',
@@ -226,11 +226,13 @@ const styles = StyleSheet.create({
     width: 200,
     marginLeft: -100,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   goalIcon: { fontSize: 30 },
-  goalText: { color: '#fff', fontWeight: '700', textAlign: 'center' },
+  goalText: { color: colors.text, fontWeight: '700', textAlign: 'center' },
 });
