@@ -74,7 +74,7 @@ export default function Welcome() {
         ))}
       </View>
 
-      {frame === 0 ? <Text style={styles.hint}>press to get started...</Text> : null}
+      {frame === 0 ? <Text style={styles.hint}>hold to get started...</Text> : null}
     </Pressable>
   );
 }

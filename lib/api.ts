@@ -451,9 +451,10 @@ export async function getCurrentTask(group: Group): Promise<Task> {
  */
 async function serverNow(): Promise<string> {
   try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+    // A real table, not the API root: the root answers 401 and logs an error.
+    const res = await fetch(`${supabaseUrl}/rest/v1/groups?select=id&limit=1`, {
       method: 'HEAD',
-      headers: { apikey: supabaseAnonKey },
+      headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` },
     });
     const stamp = res.headers.get('date');
     if (stamp) return new Date(stamp).toISOString();
