@@ -39,8 +39,8 @@ const SLOT = {
   mouth: { top: 0.5, height: 0.3, art: { top: 0.06, width: 0.34, height: 0.18 } },
   hair: { top: 0, height: 0.42, art: { top: 0, width: 1, height: 1 } },
 } as const;
-/** How far the neighbouring options are pushed out, so they clear the face. */
-const PEEK_PUSH = 34;
+/** Gap between the head and the option peeking above or below it. */
+const PEEK_GAP = 22;
 const DOUBLE_TAP_MS = 320;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 2000;
@@ -197,6 +197,11 @@ function FaceReel({
   const placed = useRef(false);
   const resting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const row = slot.height * FACE;
+  // Shove each neighbour clear of the head rather than a fixed distance, so it
+  // lands above the hair or below the chin whichever feature is being chosen.
+  const middle = (slot.top + slot.height / 2) * FACE;
+  const pushUp = Math.max(0, middle + PEEK_GAP - row);
+  const pushDown = Math.max(0, FACE - middle + PEEK_GAP - row);
   const len = options.length;
   const loop = len * row;
   const reel = [...options, ...options, ...options];
@@ -228,7 +233,7 @@ function FaceReel({
     <View
       style={[
         styles.reelWindow,
-        { top: slot.top * FACE - row - PEEK_PUSH, height: row * 3 + PEEK_PUSH * 2 },
+        { top: slot.top * FACE - row - pushUp, height: row * 3 + pushUp + pushDown },
       ]}
     >
       <Animated.ScrollView
@@ -237,7 +242,7 @@ function FaceReel({
         snapToInterval={row}
         decelerationRate="fast"
         // A row of padding each side keeps the chosen option in the middle band.
-        contentContainerStyle={{ paddingVertical: row + PEEK_PUSH }}
+        contentContainerStyle={{ paddingTop: row + pushUp, paddingBottom: row + pushDown }}
         onContentSizeChange={() => {
           // Start on the middle copy; contentOffset isn't honoured everywhere.
           if (placed.current) return;
@@ -269,7 +274,7 @@ function FaceReel({
                 {
                   translateY: offset.interpolate({
                     inputRange: [(i - 1) * row, i * row, (i + 1) * row],
-                    outputRange: [PEEK_PUSH, 0, -PEEK_PUSH],
+                    outputRange: [pushDown, 0, -pushUp],
                     extrapolate: 'clamp',
                   }),
                 },
@@ -334,7 +339,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     color: '#2F2A26',
-    marginBottom: 24,
+    marginBottom: 56,
   },
   stage: {
     width: FACE,
@@ -352,7 +357,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   footer: {
-    marginTop: 32,
+    marginTop: 64,
     alignSelf: 'stretch',
     alignItems: 'flex-start',
     paddingLeft: 36,
