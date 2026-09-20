@@ -153,14 +153,13 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  // The star hangs above the title, and a scroll view clips whatever is drawn
-  // past its top edge, so the page starts low enough to hold it.
-  body: { padding: spacing.md, paddingTop: spacing.md + 26, paddingBottom: spacing.lg },
+  body: { padding: spacing.md, paddingBottom: spacing.lg },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
   emptyCard: { marginBottom: spacing.sm + 7 },
-  starTitle: { position: 'absolute', left: -20, top: -24 },
+  // Kept inside the page: a scroll view clips whatever is drawn past its top.
+  starTitle: { position: 'absolute', left: -20, top: -6 },
   statWrap: { marginBottom: spacing.sm },
   stat: {
     padding: spacing.md,
