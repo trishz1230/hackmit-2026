@@ -62,13 +62,17 @@ create table if not exists posts (
   task_id uuid references tasks(id) on delete cascade,
   group_id uuid references groups(id) on delete cascade,
   user_id uuid,
-  kind text not null check (kind in ('photo', 'text')),
+  kind text not null check (kind in ('photo', 'voice', 'text')),
   content text not null,
   caption text,
   created_at timestamptz default now()
 );
 
 alter table posts add column if not exists caption text;
+
+-- Voice notes came later than the table.
+alter table posts drop constraint if exists posts_kind_check;
+alter table posts add constraint posts_kind_check check (kind in ('photo', 'voice', 'text'));
 
 create table if not exists reactions (
   id uuid primary key default gen_random_uuid(),
