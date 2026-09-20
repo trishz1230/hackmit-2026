@@ -52,9 +52,19 @@ export default function Path() {
   const [selected, setSelected] = useState<number | null>(null);
 
   const openLevel = (n: number) => {
-    const reachable = group ? n < group.level || (n === Math.min(group.level, group.goal) && !taskLocked) : false;
-    if (reachable) router.push(`/level/${n}`);
-    else setSelected(n);
+    if (!group) return;
+    const currentLevel = Math.min(group.level, group.goal);
+    const reachable = n < group.level || (n === currentLevel && !taskLocked);
+    if (!reachable) {
+      setSelected(n);
+      return;
+    }
+    // Nothing left to do on the level you've answered, so go to the feed.
+    if (n === currentLevel && hasPostedThisCycle) {
+      router.push('/(tabs)/feed');
+      return;
+    }
+    router.push(`/level/${n}`);
   };
 
   if (loading) return <View style={styles.fill} />;

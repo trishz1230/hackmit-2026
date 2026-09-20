@@ -282,7 +282,7 @@ export default function Capture() {
             photoUri || voiceUri
               ? 'Add a caption…'
               : hangout || extra
-                ? 'What\u2019s going on?'
+                ? 'by the way\u2026'
                 : 'Tell them about your day…'
           }
           placeholderTextColor={colors.muted}
