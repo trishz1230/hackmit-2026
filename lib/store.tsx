@@ -11,6 +11,7 @@ import * as api from './api';
 import { clampLevelCount, levelOpensAt, levelUnlocksAt, postsForTask, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { nudgeContent, nudgeTargetId } from './nudge';
+import { taskFor } from './posts';
 import { describeMedia } from './describe';
 import { familyContext, generatePrompt } from './prompts';
 import { getPushToken, sendExpoPush } from './push';
@@ -164,8 +165,7 @@ function unseenReactionNags(
 
 const promptForTasks = (tasks: Task[], taskId: string) => tasks.find((t) => t.id === taskId)?.prompt;
 
-const latestTaskForLevel = (tasks: Task[], level: number) =>
-  [...tasks].reverse().find((t) => t.level === level);
+const latestTaskForLevel = (tasks: Task[], level: number) => taskFor(tasks, level);
 
 /** Keep the same array when nothing new was seen so we don't retrigger effects. */
 function mergeSeenIds(prev: string[], extra: string[]) {

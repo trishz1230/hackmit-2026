@@ -3,11 +3,25 @@ import type { Post, Task } from './types';
 /** Shown instead of the prompt on a share made after the task was answered. */
 export const EXTRA_PROMPT = 'btw...also...';
 
-const stampOf = (tasks: Task[], level: number): number => {
-  const stamps = tasks
+/**
+ * The row a level is currently being played on. A reset writes a fresh row for
+ * every level it climbs back through, so older rows with the same level are
+ * runs the family has lost and answers to them no longer count.
+ */
+export function taskFor(tasks: Task[], level: number): Task | undefined {
+  return tasks
     .filter((t) => t.level === level)
-    .map((t) => (t.createdAt ? Date.parse(t.createdAt) : 0));
-  return stamps.length ? Math.max(...stamps) : 0;
+    .reduce<Task | undefined>((newest, t) => {
+      if (!newest) return t;
+      const at = t.createdAt ? Date.parse(t.createdAt) : 0;
+      const best = newest.createdAt ? Date.parse(newest.createdAt) : 0;
+      return at >= best ? t : newest;
+    }, undefined);
+}
+
+const stampOf = (tasks: Task[], level: number): number => {
+  const at = taskFor(tasks, level)?.createdAt;
+  return at ? Date.parse(at) : 0;
 };
 
 /**
@@ -19,9 +33,9 @@ const stampOf = (tasks: Task[], level: number): number => {
  */
 function levelStart(tasks: Task[], answers: Post[], level: number): number | null {
   const stamped = stampOf(tasks, level);
-  const ids = new Set(tasks.filter((t) => t.level === level).map((t) => t.id));
+  const id = taskFor(tasks, level)?.id;
   const first = answers
-    .filter((p) => ids.has(p.taskId) && Date.parse(p.createdAt) >= stamped)
+    .filter((p) => p.taskId === id && Date.parse(p.createdAt) >= stamped)
     .map((p) => Date.parse(p.createdAt))
     .sort((a, b) => a - b)[0];
   return first ?? null;
@@ -49,6 +63,7 @@ export function levelWindow(
 export function feedLevel(tasks: Task[], posts: Post[], current: number): number {
   const answered = tasks
     .filter((t) => {
+      if (taskFor(tasks, t.level)?.id !== t.id) return false;
       const since = t.createdAt ? Date.parse(t.createdAt) : 0;
       // An answer from before the row was stamped belongs to a run the family
       // has since lost, so it doesn't count as having started this level.
@@ -68,13 +83,12 @@ export function answeredLevel(
   level: number,
   userId: string
 ): boolean {
-  return tasks.some((t) => {
-    if (t.level !== level) return false;
-    const since = t.createdAt ? Date.parse(t.createdAt) : 0;
-    return posts.some(
-      (p) => p.taskId === t.id && p.userId === userId && Date.parse(p.createdAt) >= since
-    );
-  });
+  const task = taskFor(tasks, level);
+  if (!task) return false;
+  const since = task.createdAt ? Date.parse(task.createdAt) : 0;
+  return posts.some(
+    (p) => p.taskId === task.id && p.userId === userId && Date.parse(p.createdAt) >= since
+  );
 }
 
 /**
@@ -104,7 +118,7 @@ export function withinLevel(
   answers: Post[] = posts
 ): Post[] {
   const { since, until } = levelWindow(tasks, answers, level);
-  const task = tasks.find((t) => t.level === level);
+  const task = taskFor(tasks, level);
   const stamped = stampOf(tasks, level);
   return posts.filter((p) => {
     const at = Date.parse(p.createdAt);
