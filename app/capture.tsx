@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Text, TextInput } from '../components/Handwriting';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { describeWait } from '../lib/levels';
 import { dismissKeyboard } from '../lib/keyboard';
@@ -22,7 +22,9 @@ export default function Capture() {
   const router = useRouter();
   const { channel } = useLocalSearchParams<{ channel?: string }>();
   const hangout = channel === 'hangout';
-  const { task, addPost, taskLocked, opensAt } = useApp();
+  const { task, addPost, taskLocked, opensAt, hasPostedThisCycle } = useApp();
+  // The prompt is only asked once; anything after it is a free extra share.
+  const extra = !hangout && hasPostedThisCycle;
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -109,13 +111,18 @@ export default function Capture() {
 
   return (
     <View style={styles.screen}>
+      <Stack.Screen options={{ title: extra ? 'Share more' : "Today's task" }} />
       <KeyboardAvoidingView
         style={styles.wrap}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
         <Text style={styles.prompt}>
-          {hangout ? 'Share anything with the family' : task.prompt}
+          {hangout
+            ? 'Share anything with the family'
+            : extra
+              ? 'What else would you like to share with your family?'
+              : task.prompt}
         </Text>
 
         <Pressable style={styles.square} onPress={addPhoto}>
@@ -138,7 +145,11 @@ export default function Capture() {
           onBlur={() => setTextFocused(false)}
           multiline
           placeholder={
-            photoUri ? 'Add a caption…' : hangout ? 'What\u2019s going on?' : 'Tell them about your day…'
+            photoUri
+              ? 'Add a caption…'
+              : hangout || extra
+                ? 'What\u2019s going on?'
+                : 'Tell them about your day…'
           }
           placeholderTextColor={colors.muted}
         />
