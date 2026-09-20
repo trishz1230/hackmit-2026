@@ -23,17 +23,19 @@ export default function Plus() {
         data={hangoutPosts}
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <Text style={styles.title}>Hangout</Text>
+          <View>
+            <View style={styles.topBar}>
               <AvatarButton />
             </View>
-            <Text style={styles.body}>
-              Share whatever you want with {group.name}. Nothing here counts toward the level.
-            </Text>
-            <Pressable style={styles.cta} onPress={() => router.push('/capture?channel=hangout')}>
-              <Text style={styles.ctaText}>Share something</Text>
-            </Pressable>
+            <View style={styles.header}>
+              <Text style={styles.title}>Hangout</Text>
+              <Text style={styles.body}>
+                Share whatever you want with {group.name}. Nothing here counts toward the level.
+              </Text>
+              <Pressable style={styles.cta} onPress={() => router.push('/capture?channel=hangout')}>
+                <Text style={styles.ctaText}>Share something</Text>
+              </Pressable>
+            </View>
           </View>
         }
         ListEmptyComponent={<Text style={styles.empty}>Nothing yet — be the first.</Text>}
@@ -55,9 +57,10 @@ export default function Plus() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topBar: { alignItems: 'flex-end', paddingHorizontal: spacing.md, paddingTop: spacing.md },
   header: {
     margin: spacing.md,
+    marginTop: spacing.sm,
     marginBottom: 0,
     padding: spacing.md,
     backgroundColor: colors.accentSoft,

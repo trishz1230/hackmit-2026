@@ -191,6 +191,8 @@ export default function Capture() {
           title: extra ? 'Share more' : "Today's task",
           headerShadowVisible: false,
           headerRight: () => <AvatarButton />,
+          // Sit the avatar where the tabs put it, not tight against the edge.
+          headerRightContainerStyle: { paddingRight: spacing.md },
         }}
       />
       <KeyboardScreen contentContainerStyle={styles.wrap}>

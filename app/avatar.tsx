@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   Image,
-  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,11 +24,12 @@ import {
 import { savePendingAvatar } from '../lib/api';
 import { useApp } from '../lib/store';
 
-const paper = require('../assets/welcome/paper.png');
 const sparkleBig = require('../assets/welcome/sparkle-big.png');
 const sparklePair = require('../assets/welcome/sparkle-pair.png');
 const starArt = require('../assets/welcome/star.png');
 
+/** The page colour the drawings were made on. */
+const PAGE = '#FAF8F0';
 const FACE = 230;
 const STEPS = ['eyes', 'mouth', 'hair'] as const;
 type Step = (typeof STEPS)[number];
@@ -51,9 +51,9 @@ const PEEK_GAP = 44;
 const DOUBLE_TAP_MS = 450;
 /** A tap this soon after the reel moved is the end of a scroll, not a tap. */
 const SETTLE_MS = 300;
-/** The title sits alone on the paper before the face appears. */
+/** The title sits alone on the page before the face appears. */
 const INTRO_MS = 1000;
-/** How much bigger the title is while it has the paper to itself. */
+/** How much bigger the title is while it has the page to itself. */
 const TITLE_INTRO_SCALE = 1.9;
 
 export default function MakeAYou() {
@@ -138,7 +138,7 @@ export default function MakeAYou() {
   }, [editing, eyes, finish, hair, mouth, router, started, step]);
 
   return (
-    <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
+    <View style={styles.screen}>
       <Animated.View
         style={[styles.stage, { opacity: reveal }, done && { transform: [{ scale: finish }] }]}
         pointerEvents={started ? 'auto' : 'none'}
@@ -182,7 +182,7 @@ export default function MakeAYou() {
       </Animated.View>
 
       <View style={styles.footer}>
-        {/* Alone on the paper the title is the whole screen; it shrinks into a
+        {/* Alone on the page the title is the whole screen; it shrinks into a
             caption as the face arrives. */}
         <Animated.View
           style={{
@@ -213,7 +213,7 @@ export default function MakeAYou() {
           <Text style={styles.hint}>that&apos;s you!</Text>
         )}
       </View>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -395,6 +395,7 @@ function Spark({ source, at, width, height, delay }: SparkProps) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: PAGE,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 72,
