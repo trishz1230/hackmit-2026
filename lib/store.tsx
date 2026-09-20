@@ -11,7 +11,7 @@ import * as api from './api';
 import { clampLevelCount, levelOpensAt, levelUnlocksAt, postsForTask, todayKey } from './levels';
 import { familyReplies, mockGroup, mockPosts, mockProfiles, mockReactions, mockTask, taskPrompts } from './mockData';
 import { nudgeContent, nudgeTargetId } from './nudge';
-import { generatePrompt } from './prompts';
+import { familyContext, generatePrompt } from './prompts';
 import { getPushToken, sendExpoPush } from './push';
 import { isSupabaseConfigured } from './supabase';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
@@ -723,7 +723,10 @@ function MockProvider({ children }: { children: React.ReactNode }) {
 
   const completeLevel = useCallback(async () => {
     setWaived(false);
-    const prompt = await generatePrompt(seenPrompts.current.slice(-5));
+    const prompt = await generatePrompt(
+      seenPrompts.current.slice(-5),
+      familyContext(group?.name ?? '', members, posts),
+    );
     seenPrompts.current.push(prompt);
     let completedGoal = false;
     let nextLevel = 0;
@@ -740,7 +743,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       };
     });
     if (!completedGoal) rememberTask(newTask(prompt, nextLevel));
-  }, [rememberTask]);
+  }, [rememberTask, group?.name, members, posts]);
 
   const appendPost = useCallback(
     (userId: string, kind: Post['kind'], content: string, taskId: string, caption?: string) => {

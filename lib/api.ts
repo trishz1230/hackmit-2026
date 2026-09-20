@@ -8,7 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { levelUnlocksAt, postsForTask } from './levels';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabase';
-import { generatePrompt } from './prompts';
+import { familyContext, generatePrompt, type FamilyContext } from './prompts';
 import { sendExpoPush } from './push';
 import { nudgeContent } from './nudge';
 import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
@@ -373,6 +373,26 @@ export async function getPastAuthors(groupId: string, members: Profile[]): Promi
   return (past.data ?? []).map(toProfile).map((m) => ({ ...m, groupId }));
 }
 
+/**
+ * What the family has been sharing lately, so the next prompt can follow on
+ * from it rather than being generic. Photos come through as their caption
+ * only — the image itself is a data URL nobody can read.
+ */
+async function contextFor(group: Group): Promise<FamilyContext> {
+  const sb = getSupabase();
+  const [members, posts] = await Promise.all([
+    getMembers(group.id).catch(() => [] as Profile[]),
+    sb
+      .from('posts')
+      .select()
+      .eq('group_id', group.id)
+      .order('created_at', { ascending: false })
+      .limit(12),
+  ]);
+
+  return familyContext(group.name, members, (posts.data ?? []).map(toPost));
+}
+
 /** The task for the group's current level, created on demand. */
 export async function getCurrentTask(group: Group): Promise<Task> {
   const sb = getSupabase();
@@ -386,7 +406,7 @@ export async function getCurrentTask(group: Group): Promise<Task> {
 
   const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
   const recent = (previous ?? []).map((r: Row) => str(r.prompt));
-  const prompt = await generatePrompt(recent.slice(-5));
+  const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
 
   const { data: created, error } = await sb
     .from('tasks')
@@ -432,7 +452,7 @@ export async function resetForMissedPeriod(group: Group): Promise<void> {
 
   const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
   const recent = (previous ?? []).map((r: Row) => str(r.prompt));
-  const prompt = await generatePrompt(recent.slice(-5));
+  const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
   await sb
     .from('tasks')
     .update({ prompt, created_at: await serverNow() })
