@@ -83,7 +83,10 @@ export default function Feed() {
                   {hasPostedThisCycle ? (
                     <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
                   ) : (
-                    <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
+                    <Pressable
+                      style={styles.cta}
+                      onPress={() => router.push(`/capture?level=${shown.level}`)}
+                    >
                       <Text style={styles.ctaText}>Complete task</Text>
                     </Pressable>
                   )}

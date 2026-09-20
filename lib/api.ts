@@ -6,6 +6,8 @@
  * Run that file in the Supabase SQL editor, then fill in lib/supabase.ts.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import { File } from 'expo-file-system';
 import { levelUnlocksAt, postsForTask } from './levels';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabase';
 import { describeMedia } from './describe';
@@ -595,17 +597,53 @@ export async function createPost(
  * are stored as WAV wherever that is possible, because Muse Voice Transcribe
  * reads nothing else.
  */
-async function uploadMedia(kind: 'photo' | 'voice', uri: string, userId: string): Promise<string> {
-  if (uri.startsWith('http')) return uri;
-  const sb = getSupabase();
+const MIME: Record<string, string> = {
+  wav: 'audio/wav',
+  m4a: 'audio/m4a',
+  mp4: 'audio/mp4',
+  caf: 'audio/x-caf',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  heic: 'image/heic',
+};
+
+/**
+ * The bytes to upload. On a device the recording and the photo are files, and
+ * `fetch(file://…)` hands back a blob the storage client uploads empty, so
+ * they are read off disk instead; only the browser, where a recording is a
+ * blob: url in WebM, needs the WAV conversion.
+ */
+async function readMedia(
+  kind: 'photo' | 'voice',
+  uri: string
+): Promise<{ body: Blob | Uint8Array; extension: string; type: string }> {
+  if (Platform.OS !== 'web') {
+    const extension = uri.split('?')[0].split('.').pop()?.toLowerCase() || (kind === 'photo' ? 'jpg' : 'wav');
+    return {
+      body: await new File(uri).bytes(),
+      extension,
+      type: MIME[extension] ?? (kind === 'photo' ? 'image/jpeg' : 'audio/wav'),
+    };
+  }
+
   const recorded = await (await fetch(uri)).blob();
   const wav = kind === 'voice' && !recorded.type.includes('wav') ? await toWav(recorded) : null;
   const blob = wav ?? recorded;
+  const type = kind === 'photo' ? 'image/jpeg' : blob.type || 'audio/wav';
+  return {
+    body: blob,
+    extension: kind === 'photo' ? 'jpg' : (type.split('/')[1]?.split(';')[0] ?? 'wav'),
+    type,
+  };
+}
 
-  const type = kind === 'photo' ? 'image/jpeg' : blob.type || 'audio/m4a';
-  const extension = kind === 'photo' ? 'jpg' : (type.split('/')[1]?.split(';')[0] ?? 'm4a');
+async function uploadMedia(kind: 'photo' | 'voice', uri: string, userId: string): Promise<string> {
+  if (uri.startsWith('http')) return uri;
+  const sb = getSupabase();
+  const { body, extension, type } = await readMedia(kind, uri);
   const path = `${userId}/${Date.now()}.${extension}`;
-  const { error } = await sb.storage.from('photos').upload(path, blob, { contentType: type });
+  const { error } = await sb.storage.from('photos').upload(path, body, { contentType: type });
   if (error) throw error;
   return sb.storage.from('photos').getPublicUrl(path).data.publicUrl;
 }
