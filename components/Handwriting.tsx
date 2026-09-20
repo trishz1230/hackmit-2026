@@ -16,6 +16,9 @@ export function Text({ style, ...rest }: TextProps) {
   return <RNText {...rest} style={[{ fontFamily: fonts.body }, style]} />;
 }
 
-export function TextInput({ style, ...rest }: TextInputProps) {
-  return <RNTextInput {...rest} style={[{ fontFamily: fonts.body }, style]} />;
-}
+export const TextInput = React.forwardRef<RNTextInput, TextInputProps>(function TextInput(
+  { style, ...rest },
+  ref
+) {
+  return <RNTextInput ref={ref} {...rest} style={[{ fontFamily: fonts.body }, style]} />;
+});
