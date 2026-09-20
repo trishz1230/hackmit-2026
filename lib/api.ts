@@ -28,7 +28,9 @@ const toGroup = (r: Row): Group => ({
   cadence: (str(r.cadence) || 'daily') as Cadence,
   rewardText: str(r.reward_text),
   currentStreak: num(r.current_streak),
-  awaitingNextGoal: Boolean(r.awaiting_next_goal),
+  // Clearing the last level pushes level past goal: that's the "pick a new
+  // goal" state, so no extra column is needed.
+  awaitingNextGoal: num(r.level) > num(r.goal),
   pendingCadence: (str(r.pending_cadence) || undefined) as Cadence | undefined,
   cadenceApprovals: strs(r.cadence_approvals),
 });
@@ -396,11 +398,13 @@ async function contextFor(group: Group): Promise<FamilyContext> {
 /** The task for the group's current level, created on demand. */
 export async function getCurrentTask(group: Group): Promise<Task> {
   const sb = getSupabase();
+  // A finished map sits one past the goal but still shows the last task.
+  const level = Math.min(group.level, group.goal);
   const { data } = await sb
     .from('tasks')
     .select()
     .eq('group_id', group.id)
-    .eq('level', group.level)
+    .eq('level', level)
     .maybeSingle();
   if (data) return toTask(data);
 
@@ -410,7 +414,7 @@ export async function getCurrentTask(group: Group): Promise<Task> {
 
   const { data: created, error } = await sb
     .from('tasks')
-    .insert({ group_id: group.id, level: group.level, prompt })
+    .insert({ group_id: group.id, level, prompt })
     .select()
     .single();
   // Another member created it first — the unique (group_id, level) index fired.
@@ -453,11 +457,56 @@ export async function resetForMissedPeriod(group: Group): Promise<void> {
   const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
   const recent = (previous ?? []).map((r: Row) => str(r.prompt));
   const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
+  const now = await serverNow();
   await sb
     .from('tasks')
-    .update({ prompt, created_at: await serverNow() })
+    .update({ prompt, created_at: now })
     .eq('group_id', group.id)
     .eq('level', 1);
+  // The climb back up reuses the old task rows; re-stamp them so posts from
+  // the failed run stop counting.
+  await sb
+    .from('tasks')
+    .update({ created_at: now })
+    .eq('group_id', group.id)
+    .gt('level', 1)
+    .lte('level', group.goal);
+}
+
+/**
+ * The map is finished: the family picks a new reward and level count, then
+ * restarts at level 1. Task rows are keyed (group_id, level), so the new map
+ * would reuse last cycle's rows — and postsForTask would count the old
+ * answers. Every row the new map can reach is re-stamped so its posts start
+ * counting from now; level 1 also gets a fresh prompt.
+ */
+export async function startNextGoal(
+  group: Group,
+  rewardText: string,
+  levelCount: number
+): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('groups')
+    .update({ reward_text: rewardText, goal: levelCount, level: 1, current_streak: 0 })
+    .eq('id', group.id);
+  if (error) throw error;
+
+  const now = await serverNow();
+  const { data: previous } = await sb.from('tasks').select('prompt').eq('group_id', group.id);
+  const recent = (previous ?? []).map((r: Row) => str(r.prompt));
+  const prompt = await generatePrompt(recent.slice(-5), await contextFor(group));
+  await sb
+    .from('tasks')
+    .update({ prompt, created_at: now })
+    .eq('group_id', group.id)
+    .eq('level', 1);
+  await sb
+    .from('tasks')
+    .update({ created_at: now })
+    .eq('group_id', group.id)
+    .gt('level', 1)
+    .lte('level', levelCount);
 }
 
 export async function getTasks(groupId: string): Promise<Task[]> {
@@ -616,6 +665,7 @@ export async function clearLevelIfDone(
   posts: Post[],
   ignoreWait = false
 ): Promise<number | null> {
+  if (group.awaitingNextGoal) return null;
   const posted = new Set(postsForTask(posts, task).map((p) => p.userId));
   if (members.length === 0 || !members.every((m) => posted.has(m.id))) return null;
   if (!ignoreWait && Date.now() < levelUnlocksAt(task.createdAt, group.cadence, task.level))
@@ -624,7 +674,8 @@ export async function clearLevelIfDone(
   const sb = getSupabase();
   const { data } = await sb
     .from('groups')
-    .update({ level: Math.min(group.level + 1, group.goal), current_streak: group.currentStreak + 1 })
+    // Clearing the last level leaves level = goal + 1, marking the map done.
+    .update({ level: group.level + 1, current_streak: group.currentStreak + 1 })
     .eq('id', group.id)
     .eq('level', group.level)
     .select()

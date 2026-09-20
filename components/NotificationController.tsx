@@ -21,6 +21,9 @@ export function NotificationController() {
   const unseenAuthor = unseen ? memberById(unseen.userId) : undefined;
   const reactionNag = unseenReactions[0];
   const handledNudge = useRef<string | null>(null);
+  /** Which nag is scheduled — refresh hands us a new `group` each time, and
+   * re-arming would cancel the pending nag and re-send the instant ping. */
+  const armedNag = useRef<string | null>(null);
 
   useEffect(() => {
     return onNotificationTap((data) => {
@@ -38,7 +41,19 @@ export function NotificationController() {
 
   useEffect(() => {
     if (incomingNudge) return;
-    if (!group || group.awaitingNextGoal) {
+    const key = !group || group.awaitingNextGoal
+      ? 'none'
+      : reactionNag
+        ? `reaction:${reactionNag.id}`
+        : !hasPostedThisCycle && !taskLocked
+          ? `task:${task.id}`
+          : unseen
+            ? `post:${unseen.id}`
+            : 'none';
+    if (armedNag.current === key) return;
+    armedNag.current = key;
+
+    if (!group || key === 'none') {
       void stopNags();
       return;
     }
@@ -47,7 +62,7 @@ export function NotificationController() {
       return;
     }
     if (!hasPostedThisCycle && !taskLocked) {
-      void startTaskNag(task.prompt);
+      void startTaskNag(task.prompt, group.cadence);
       return;
     }
     void stopNags();
@@ -58,6 +73,7 @@ export function NotificationController() {
     group,
     hasPostedThisCycle,
     taskLocked,
+    task.id,
     task.prompt,
     reactionNag?.id,
     unseen?.id,

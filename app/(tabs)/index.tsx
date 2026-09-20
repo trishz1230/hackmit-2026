@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
 import { AvatarFace } from '../../components/AvatarFace';
 import { weekRange, weekStats } from '../../lib/week';
@@ -13,6 +14,7 @@ const dayMonth = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
 export default function Home() {
   const router = useRouter();
   const { group, members, me, posts, hangoutPosts, reactions, memberById, loading } = useApp();
+  const insets = useSafeAreaInsets();
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
@@ -26,7 +28,7 @@ export default function Home() {
   const stats = weekStats(thisWeek, reactions, members);
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.body}>
+    <ScrollView style={[styles.wrap, { paddingTop: insets.top }]} contentContainerStyle={styles.body}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>This week</Text>

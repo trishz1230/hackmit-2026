@@ -6,6 +6,7 @@ import { colors, radius, spacing } from '../lib/theme';
 
 export function ProgressBar({
   level,
+  cleared,
   goal,
   reward,
   streak,
@@ -14,6 +15,8 @@ export function ProgressBar({
   onPressAvatar,
 }: {
   level: number;
+  /** Levels fully done — counts the current one once everybody posted. */
+  cleared: number;
   goal: number;
   reward: string;
   streak: number;
@@ -21,8 +24,8 @@ export function ProgressBar({
   myAvatar?: string;
   onPressAvatar?: () => void;
 }) {
-  const cleared = Math.max(0, level - 1);
-  const pct = Math.max(0, Math.min(1, goal === 0 ? 0 : cleared / goal));
+  const done = Math.max(0, Math.min(goal, cleared));
+  const pct = goal === 0 ? 0 : done / goal;
   return (
     <Pressable style={styles.wrap} onPress={onPress} disabled={!onPress}>
       <View style={styles.row}>
@@ -40,7 +43,7 @@ export function ProgressBar({
         <View style={[styles.fill, { width: `${pct * 100}%` }]} />
       </View>
       <Text style={styles.reward}>
-        {goal <= cleared ? `You earned ${reward}` : `${Math.max(0, goal - cleared)} levels to go → ${reward || 'your reward'}`}
+        {goal <= done ? `You earned ${reward}` : `${Math.max(0, goal - done)} levels to go → ${reward || 'your reward'}`}
       </Text>
       {onPress && <Text style={styles.link}>See the level map →</Text>}
     </Pressable>

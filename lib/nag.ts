@@ -94,27 +94,38 @@ async function fire(content: Notifications.NotificationContentInput, cadence: Ca
 }
 
 /**
- * Unlike the post and reaction pings, the task reminder doesn't fire straight
- * away: it lands once at an unpredictable time of day so the nudge feels like
- * a person remembering rather than an alarm clock.
+ * The task reminder first lands at an unpredictable moment (capped at one
+ * reminder interval so a demo still shows it), then keeps coming back every
+ * interval until the member posts — posting flips hasPostedThisCycle, which
+ * makes the controller call stopNags.
  */
-export async function startTaskNag(prompt: string) {
+export async function startTaskNag(prompt: string, cadence: Cadence = 'daily') {
   if (!(await ensurePermission())) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 
+  const content: Notifications.NotificationContentInput = {
+    title: 'Your family is waiting 👀',
+    body: prompt,
+    data: { type: 'capture' },
+    sound: true,
+    sticky: true,
+    autoDismiss: false,
+  };
+  const trigger = (seconds: number, repeats: boolean): Notifications.TimeIntervalTriggerInput => ({
+    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+    seconds,
+    repeats,
+    ...(Platform.OS === 'android' ? { channelId: 'nags' } : {}),
+  });
+
+  const firstIn = Math.min(secondsUntilRandomNag(), REMINDER_INTERVAL_SECONDS[cadence]);
   await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Your family is waiting 👀',
-      body: prompt,
-      data: { type: 'capture' },
-      sound: true,
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: secondsUntilRandomNag(),
-      repeats: false,
-      ...(Platform.OS === 'android' ? { channelId: 'nags' } : {}),
-    },
+    content,
+    trigger: trigger(firstIn, false),
+  });
+  await Notifications.scheduleNotificationAsync({
+    content,
+    trigger: trigger(REMINDER_INTERVAL_SECONDS[cadence], true),
   });
 }
 

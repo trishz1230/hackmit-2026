@@ -8,6 +8,8 @@ create table if not exists groups (
   name text not null,
   join_code text unique not null,
   goal int not null default 50,
+  -- Clearing the last level advances level to goal + 1: that means the map is
+  -- finished and the family is picking its next goal.
   level int not null default 1,
   cadence text not null default 'daily',
   reward_text text,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../components/Handwriting';
 import { PostCard } from '../../components/PostCard';
 import { levelSymbol } from '../../components/LevelMap';
@@ -33,6 +34,7 @@ export default function Level() {
     taskLocked,
     loading,
   } = useApp();
+  const insets = useSafeAreaInsets();
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
@@ -40,7 +42,12 @@ export default function Level() {
 
   const task = taskForLevel(level);
   const levelTaskIds = tasks.filter((t) => t.level === level).map((t) => t.id);
-  const levelPosts = posts.filter((p) => levelTaskIds.includes(p.taskId));
+  // A re-issued level keeps its row but moves its start, so earlier posts stay
+  // in the feed but don't belong to this round of the level.
+  const since = task?.createdAt ? Date.parse(task.createdAt) : 0;
+  const levelPosts = posts.filter(
+    (p) => levelTaskIds.includes(p.taskId) && Date.parse(p.createdAt) >= since
+  );
   // The ＋ is only there while this level is the one the family is on.
   const live = level === Math.min(group.level, group.goal) && !taskLocked;
 
@@ -76,7 +83,10 @@ export default function Level() {
       />
 
       {live ? (
-        <Pressable style={styles.fab} onPress={() => router.push('/capture')}>
+        <Pressable
+          style={[styles.fab, { bottom: insets.bottom + spacing.lg }]}
+          onPress={() => router.push('/capture')}
+        >
           {/* Drawn rather than typed: the handwriting font sits its + off-centre. */}
           <View style={styles.plusBar} />
           <View style={[styles.plusBar, styles.plusBarUp]} />

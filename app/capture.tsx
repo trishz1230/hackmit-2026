@@ -19,6 +19,7 @@ import {
 } from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { describeWait } from '../lib/levels';
@@ -34,6 +35,7 @@ export default function Capture() {
   const { channel } = useLocalSearchParams<{ channel?: string }>();
   const hangout = channel === 'hangout';
   const { task, addPost, taskLocked, opensAt, hasPostedThisCycle } = useApp();
+  const insets = useSafeAreaInsets();
   // The prompt is only asked once; anything after it is a free extra share.
   const extra = !hangout && hasPostedThisCycle;
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -152,12 +154,12 @@ export default function Capture() {
       router.replace('/(tabs)/hangout');
       return;
     }
-    router.replace(completedGoal ? '/next-goal' : '/(tabs)/feed');
+    router.replace(completedGoal ? '/(tabs)/path' : '/(tabs)/feed');
   };
 
   if (!hangout && taskLocked) {
     return (
-      <View style={styles.wrap}>
+      <View style={[styles.wrap, { paddingBottom: insets.bottom + spacing.md }]}>
         <Text style={styles.prompt}>Wait till the next time for a new conversation!</Text>
         <Text style={styles.locked}>This level starts {describeWait(opensAt)}.</Text>
         <Pressable style={styles.cta} onPress={() => router.replace('/(tabs)/feed')}>
@@ -171,7 +173,7 @@ export default function Capture() {
     <View style={styles.screen}>
       <Stack.Screen options={{ title: extra ? 'Share more' : "Today's task" }} />
       <KeyboardAvoidingView
-        style={styles.wrap}
+        style={[styles.wrap, { paddingBottom: insets.bottom + spacing.md }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >

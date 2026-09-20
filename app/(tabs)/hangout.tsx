@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
 import { useApp } from '../../lib/store';
@@ -12,12 +13,13 @@ export default function Hangout() {
   const router = useRouter();
   const { group, hangoutPosts, reactionsFor, memberById, toggleLike, likedByMe, loading } =
     useApp();
+  const insets = useSafeAreaInsets();
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <Tabs active="hangout" />
 
       <FlatList

@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
@@ -25,19 +26,20 @@ export default function Feed() {
     promptFor,
     loading,
   } = useApp();
+  const insets = useSafeAreaInsets();
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <Tabs active="family" />
       <View style={styles.header}>
         <Text style={styles.title}>{group.name}</Text>
         <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
       </View>
       <View style={styles.task}>
-        <Text style={styles.taskLabel}>Level {group.level} task</Text>
+        <Text style={styles.taskLabel}>Level {Math.min(group.level, group.goal)} task</Text>
         {taskLocked ? (
           <Text style={styles.taskPrompt}>
             🔒 Locked! Wait till the next notification for a new conversation :)

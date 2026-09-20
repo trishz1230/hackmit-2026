@@ -519,10 +519,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       startNextGoal: (reward, levelCount) => {
         if (!group) return;
         run(async () => {
-          await api.updateGroup(group.id, {
-            rewardText: reward.trim(),
-            goal: clampLevelCount(levelCount),
-          });
+          await api.startNextGoal(group, reward.trim(), clampLevelCount(levelCount));
           await refresh(group.id);
         });
       },

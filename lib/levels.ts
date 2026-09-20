@@ -1,4 +1,4 @@
-import type { Cadence, Post, Task } from './types';
+import type { Cadence, Group, Post, Task } from './types';
 
 /**
  * Posts that count towards a task. A re-issued task (the missed-period reset)
@@ -57,6 +57,16 @@ export function levelUnlocksAt(
   const at = startOfDay(new Date(levelOpensAt(startedAt, level)));
   at.setDate(at.getDate() + CADENCE_DAYS[cadence]);
   return at.getTime();
+}
+
+/**
+ * Displayed streak: every level below the current one, plus the current level
+ * once everybody has answered it. The count pins at the goal once the map is
+ * finished, so the bar, the streak and the map all agree.
+ */
+export function streakCount(group: Group, everyonePosted: boolean): number {
+  const done = group.level - 1 + (everyonePosted || group.awaitingNextGoal ? 1 : 0);
+  return Math.max(0, Math.min(group.goal, done));
 }
 
 export function describeWait(unlocksAt: number, now = Date.now()): string {

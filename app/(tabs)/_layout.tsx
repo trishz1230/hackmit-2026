@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text } from '../../components/Handwriting';
+import { NextGoalPopup } from '../../components/NextGoalPopup';
 import { Tabs, useRouter } from 'expo-router';
 import { useApp } from '../../lib/store';
 import { colors, fonts } from '../../lib/theme';
@@ -10,6 +11,7 @@ export default function TabLayout() {
   const currentLevel = group ? Math.min(group.level, group.goal) : 1;
 
   return (
+    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -66,5 +68,7 @@ export default function TabLayout() {
       <Tabs.Screen name="feed" options={{ href: null }} />
       <Tabs.Screen name="hangout" options={{ href: null }} />
     </Tabs>
+    <NextGoalPopup />
+    </>
   );
 }

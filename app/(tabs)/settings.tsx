@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarFace } from '../../components/AvatarFace';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
 import { dayDate, historyDays } from '../../lib/history';
@@ -54,6 +55,7 @@ export default function Settings() {
     loading,
     error,
   } = useApp();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(me.name);
   const [phone, setPhone] = useState(me.phone ?? '');
   const [editingProfile, setEditingProfile] = useState(false);
@@ -112,7 +114,9 @@ export default function Settings() {
   if (!group) return <Redirect href="/onboarding" />;
 
   return (
-    <KeyboardScreen contentContainerStyle={styles.content}>
+    <KeyboardScreen
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
+    >
       <Text style={styles.title}>Settings</Text>
 
       <View style={styles.card}>

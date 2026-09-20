@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Handwriting';
 import { Redirect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
 import { VoiceNote } from '../../components/VoiceNote';
-import { describeWait } from '../../lib/levels';
+import { describeWait, streakCount } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import type { Post } from '../../lib/types';
@@ -32,6 +33,7 @@ export default function Path() {
     group,
     task,
     hasPostedThisCycle,
+    everyonePostedThisCycle,
     pending,
     remindToPost,
     missedReset,
@@ -45,6 +47,7 @@ export default function Path() {
     me,
     loading,
   } = useApp();
+  const insets = useSafeAreaInsets();
   // Only levels that can't be opened use the sheet; the rest have their own page.
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -54,14 +57,11 @@ export default function Path() {
     else setSelected(n);
   };
 
-  useEffect(() => {
-    if (group?.awaitingNextGoal) router.replace('/next-goal');
-  }, [group?.awaitingNextGoal, router]);
-
   if (loading) return <View style={styles.fill} />;
   if (!group) return <Redirect href="/onboarding" />;
 
   const current = Math.min(group.level, group.goal);
+  const streak = streakCount(group, everyonePostedThisCycle);
   const isCurrent = selected === current && !group.awaitingNextGoal;
   const isCleared = selected !== null && (selected < group.level || group.awaitingNextGoal);
   const isLocked = selected !== null && selected > current;
@@ -71,20 +71,25 @@ export default function Path() {
 
   return (
     <View style={styles.fill}>
-      <ProgressBar
-        level={group.level}
-        goal={group.goal}
-        reward={group.rewardText}
-        streak={group.currentStreak}
-        myAvatar={me.avatar}
-        onPressAvatar={() => router.push('/family')}
-      />
+      <View style={{ paddingTop: insets.top, backgroundColor: colors.card }}>
+        <ProgressBar
+          level={current}
+          cleared={streak}
+          goal={group.goal}
+          reward={group.rewardText}
+          streak={streak}
+          myAvatar={me.avatar}
+          onPressAvatar={() => router.push('/family')}
+        />
+      </View>
 
       {waitingForPeriod ? (
         <View style={styles.waitBanner}>
           <Text style={styles.waitTitle}>Everyone posted</Text>
           <Text style={styles.waitBody}>
-            Level {group.level + 1} will open {describeWait(unlocksAt)}.
+            {group.level < group.goal
+              ? `Level ${group.level + 1} will open ${describeWait(unlocksAt)}.`
+              : `${group.rewardText || 'Your reward'} unlocks ${describeWait(unlocksAt)}.`}
           </Text>
         </View>
       ) : hasPostedThisCycle ? (
@@ -111,7 +116,7 @@ export default function Path() {
         goal={group.goal}
         reward={group.rewardText}
         locked={taskLocked}
-        cleared={waitingForPeriod}
+        cleared={waitingForPeriod || group.awaitingNextGoal}
         onSelectLevel={openLevel}
       />
 
