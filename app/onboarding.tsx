@@ -33,12 +33,17 @@ export default function Onboarding() {
   const fresh = group && group.id !== priorGroupId ? group : null;
 
   useEffect(() => {
-    if (working && mode === 'join' && fresh) router.replace('/avatar?next=family');
-  }, [working, mode, fresh, router]);
-
-  useEffect(() => {
     if (working && error) setWorking(false);
   }, [working, error]);
+
+  if (working && mode === 'join') {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.logo}>One moment</Text>
+        <Text style={styles.tagline}>Finding your family…</Text>
+      </View>
+    );
+  }
 
   if (working && mode === 'create' && !fresh) {
     return (
@@ -95,7 +100,10 @@ export default function Onboarding() {
         goal: clampLevelCount(Number(levels)),
       });
     } else {
-      joinGroup({ myName: who, phone: tel, code: trimmedCode.toUpperCase() });
+      joinGroup({ myName: who, phone: tel, code: trimmedCode.toUpperCase() }).then(
+        () => router.replace('/avatar?next=family'),
+        () => setWorking(false)
+      );
     }
   };
 
