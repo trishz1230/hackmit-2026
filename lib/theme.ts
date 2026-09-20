@@ -15,7 +15,7 @@ export const colors = {
   nightSoft: '#3A2459',
 };
 
-const handwriting = 'PatrickHand_400Regular';
+const handwriting = 'Schoolbell_400Regular';
 
 /**
  * Loaded in app/_layout.tsx; the name must match the useFonts key. The web
