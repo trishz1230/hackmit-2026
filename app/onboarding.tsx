@@ -158,7 +158,7 @@ export default function Onboarding() {
             style={styles.input}
             value={familyName}
             onChangeText={setFamilyName}
-            placeholder="No.1 Family"
+            placeholder="family"
             placeholderTextColor={paper.muted}
           />
 

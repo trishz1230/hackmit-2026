@@ -10,7 +10,7 @@ export const CADENCE_LABELS: Record<Cadence, string> = {
 /** Everything the create-a-family form collects. */
 export type CreateOptions = {
   myName: string;
-  /** What the family calls itself; defaults to "<myName>'s family". */
+  /** What the family calls itself; defaults to "family". */
   familyName?: string;
   phone?: string;
   cadence: Cadence;

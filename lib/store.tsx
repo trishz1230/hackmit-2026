@@ -843,7 +843,7 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       createGroup: ({ myName, familyName, phone, goal, cadence, rewardText }) => {
         setGroup({
           ...mockGroup,
-          name: familyName?.trim() || `${myName}'s family`,
+          name: familyName?.trim() || api.DEFAULT_FAMILY_NAME,
           goal: clampLevelCount(goal),
           cadence,
           rewardText: rewardText || mockGroup.rewardText,
