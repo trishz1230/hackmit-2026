@@ -70,14 +70,21 @@ export default function Capture() {
   const { task, addPost, taskLocked, hasPostedThisCycle, group, tasks, posts, me, taskForLevel } =
     useApp();
   // Opened from a level page, the answer belongs to that level's task even if
-  // the map has since moved on to a level that hasn't opened yet.
-  const asked = (level ? taskForLevel(Number(level)) : undefined) ?? task;
+  // the map has since moved on to a level that hasn't opened yet. The family's
+  // current row wins when it is that level, so the answer carries the task id
+  // the feed reads back.
+  const asked =
+    (level && task.level !== Number(level) ? taskForLevel(Number(level)) : undefined) ?? task;
   const answered = level
     ? answeredLevel(tasks, posts, Number(level), me.id)
     : hasPostedThisCycle;
   // The prompt is only asked once, and a locked level has no prompt to answer;
   // either way what you write is a free share rather than an answer.
-  const extra = !hangout && (answered || (!level && taskLocked));
+  const live = !hangout && (answered || (!level && taskLocked));
+  // Posting makes `answered` true while the screen is still up, which rewrote
+  // the prompt into "what else would you like to share" as you watched.
+  const [sending, setSending] = useState<boolean | null>(null);
+  const extra = sending ?? live;
   // A share belongs to hangout, so it waits on the family task the way hangout
   // does: on level 1 nothing can be shared until that task is answered.
   const shut =
@@ -236,6 +243,7 @@ export default function Capture() {
     // A recording or a photo carries the words as its caption; text posts are the words.
     const kind = voiceUri ? 'voice' : photoUri ? 'photo' : 'text';
     setPosting(true);
+    setSending(extra);
     setPostError('');
     try {
       await addPost(
@@ -248,6 +256,7 @@ export default function Capture() {
     } catch (e) {
       // Leaving for the feed would lose the post and say nothing about why.
       setPosting(false);
+      setSending(null);
       setPostError(e instanceof Error ? e.message : String(e));
       return;
     }
