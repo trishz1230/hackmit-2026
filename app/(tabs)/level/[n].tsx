@@ -65,7 +65,11 @@ export default function Level() {
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backRow}>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/path'))}
+          hitSlop={12}
+          style={styles.backRow}
+        >
           <Text style={styles.back}>←</Text>
           <Text style={styles.barTitle}>back</Text>
         </Pressable>
