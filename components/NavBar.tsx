@@ -3,13 +3,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HouseIcon, PlusIcon, RoadIcon } from './Doodles';
-import { useApp } from '../lib/store';
 import { colors, spacing } from '../lib/theme';
 
 /**
  * The floating bottom bar: a pill holding Home and Journey, and a separate
- * round ＋ that drops you on the current level. Settings lives on the profile
- * avatar instead.
+ * round ＋ that opens the capture screen for the current level. Settings lives
+ * on the profile avatar instead.
  */
 type NavBarProps = {
   state: { index: number; routes: { key: string; name: string }[] };
@@ -18,9 +17,7 @@ type NavBarProps = {
 
 export function NavBar({ state, navigation }: NavBarProps) {
   const router = useRouter();
-  const { group } = useApp();
   const insets = useSafeAreaInsets();
-  const level = group ? Math.min(group.level, group.goal) : 1;
   const active = state.routes[state.index]?.name;
 
   return (
@@ -46,7 +43,7 @@ export function NavBar({ state, navigation }: NavBarProps) {
         </Pressable>
       </View>
       <View style={styles.spacer} />
-      <Pressable style={styles.plus} onPress={() => router.push(`/level/${level}`)}>
+      <Pressable style={styles.plus} onPress={() => router.push('/capture')}>
         <PlusIcon size={32} />
       </Pressable>
     </View>
