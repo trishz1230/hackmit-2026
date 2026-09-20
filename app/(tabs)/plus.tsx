@@ -47,9 +47,9 @@ export default function Plus() {
     level,
     posts
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  // Answer the family first: hangout opens once your answer to the level being
-  // shown is in.
-  const locked = hangoutLocked(tasks, posts, level, me.id);
+  // Answer the family first: hangout opens once your answer to the task that
+  // is open is in, and waits on nothing while the next level is locked.
+  const locked = hangoutLocked(tasks, posts, task.level, me.id, taskLocked);
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -69,7 +69,7 @@ export default function Plus() {
               <Text style={styles.title}>hangout</Text>
               <Text style={styles.body}>
                 {locked
-                  ? `🔒 Locked! Answer the level ${level} task first, then hangout is all yours.`
+                  ? '🔒 Locked! Answer the family task first, then hangout is all yours.'
                   : `Share whatever you want with ${group.name} — nothing here counts toward the level.`}
               </Text>
               {locked ? null : (

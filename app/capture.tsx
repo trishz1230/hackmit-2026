@@ -28,7 +28,7 @@ import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { dismissKeyboard } from '../lib/keyboard';
-import { answeredLevel, hangoutLocked, shownLevel } from '../lib/posts';
+import { answeredLevel, hangoutLocked } from '../lib/posts';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -87,14 +87,8 @@ export default function Capture() {
   const extra = sending ?? live;
   // A share belongs to hangout, so it waits on the family task the way hangout
   // does: on level 1 nothing can be shared until that task is answered.
-  const gate = shownLevel(
-    tasks,
-    posts,
-    Math.min(group?.level ?? 1, group?.goal ?? 1),
-    task.level,
-    taskLocked
-  );
-  const shut = (hangout || extra) && hangoutLocked(tasks, posts, gate, me.id);
+  const shut =
+    (hangout || extra) && hangoutLocked(tasks, posts, task.level, me.id, taskLocked);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -305,7 +299,7 @@ export default function Capture() {
         {bar}
         <View style={styles.wrap}>
           <Text style={styles.prompt}>
-            🔒 Locked! Answer the level {gate} task first, then sharing is all yours.
+            🔒 Locked! Answer the family task first, then sharing is all yours.
           </Text>
         </View>
       </View>
