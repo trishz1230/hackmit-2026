@@ -90,7 +90,7 @@ export default function Home() {
           marginTop:
             thisWeek.length === 0
               ? spacing.md
-              : Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 124),
+              : Math.max(spacing.sm, screenHeight * 0.25 - insets.top - 150),
         }}
         onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
       >
@@ -153,7 +153,9 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  body: { padding: spacing.md, paddingBottom: spacing.lg },
+  // The star hangs above the title, and a scroll view clips whatever is drawn
+  // past its top edge, so the page starts low enough to hold it.
+  body: { padding: spacing.md, paddingTop: spacing.md + 26, paddingBottom: spacing.lg },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },

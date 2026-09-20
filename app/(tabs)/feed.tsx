@@ -7,7 +7,7 @@ import { AvatarButton } from '../../components/AvatarButton';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { PostCard } from '../../components/PostCard';
 import { Tabs } from '../../components/Tabs';
-import { feedLevel, isExtraPost, withinLevel } from '../../lib/posts';
+import { answeredLevel, feedLevel, isExtraPost, withinLevel } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { paper, radius, spacing } from '../../lib/theme';
 
@@ -18,7 +18,7 @@ export default function Feed() {
     posts,
     tasks,
     task,
-    hasPostedThisCycle,
+    me,
     pending,
     remindToPost,
     taskLocked,
@@ -48,6 +48,9 @@ export default function Feed() {
   // The card is the task to answer, so while the next level is open it runs
   // ahead of the posts below it, which stay on the level the family answered.
   const shown = (taskLocked ? taskForLevel(level) : task) ?? task;
+  // Read against the level on the card: the family's current task can be a
+  // different row by the time an answer lands, which left the button up.
+  const mine = answeredLevel(tasks, posts, shown.level, me.id);
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -80,7 +83,7 @@ export default function Feed() {
               ) : (
                 <>
                   <Text style={styles.taskPrompt}>{shown.prompt}</Text>
-                  {hasPostedThisCycle ? (
+                  {mine ? (
                     <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
                   ) : (
                     <Pressable
