@@ -172,10 +172,12 @@ const artStyle = (step: Step) => {
 };
 
 /**
- * The feature being chosen, rolling in place on the face. Its options are laid
- * out three times over so the reel never ends: once a scroll settles outside
- * the middle copy it jumps back by one copy's height, which can't be seen
- * because the drawing at that offset is the same one.
+ * The feature being chosen, rolling in place on the face, with the option
+ * before it and the one after it faded in above and below so the whole reel
+ * can be read at a glance. Its options are laid out three times over so the
+ * reel never ends: once a scroll settles outside the middle copy it jumps back
+ * by one copy's height, which can't be seen because the drawing at that offset
+ * is the same one.
  */
 function FaceReel({
   slot,
@@ -189,6 +191,7 @@ function FaceReel({
   onSelect: (i: number) => void;
 }) {
   const scroller = useRef<ScrollView>(null);
+  const offset = useRef(new Animated.Value(0)).current;
   const placed = useRef(false);
   const resting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const row = slot.height * FACE;
@@ -220,12 +223,14 @@ function FaceReel({
   useEffect(() => () => clearTimeout(resting.current), []);
 
   return (
-    <View style={[styles.reelWindow, { top: slot.top * FACE, height: row }]}>
-      <ScrollView
-        ref={scroller}
+    <View style={[styles.reelWindow, { top: slot.top * FACE - row, height: row * 3 }]}>
+      <Animated.ScrollView
+        ref={scroller as never}
         showsVerticalScrollIndicator={false}
         snapToInterval={row}
         decelerationRate="fast"
+        // A row of padding each side keeps the chosen option in the middle band.
+        contentContainerStyle={{ paddingVertical: row }}
         onContentSizeChange={() => {
           // Start on the middle copy; contentOffset isn't honoured everywhere.
           if (placed.current) return;
@@ -233,10 +238,27 @@ function FaceReel({
           scroller.current?.scrollTo({ y: loop + selected * row, animated: false });
         }}
         scrollEventThrottle={16}
-        onScroll={(e) => onMove(e.nativeEvent.contentOffset.y)}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: offset } } }], {
+          useNativeDriver: false,
+          listener: (e: { nativeEvent: { contentOffset: { y: number } } }) =>
+            onMove(e.nativeEvent.contentOffset.y),
+        })}
       >
         {reel.map((option, i) => (
-          <View key={i} style={{ width: FACE, height: row, overflow: 'hidden' }}>
+          <Animated.View
+            key={i}
+            style={{
+              width: FACE,
+              height: row,
+              overflow: 'hidden',
+              // Faded while it's a neighbour, solid once it's the chosen one.
+              opacity: offset.interpolate({
+                inputRange: [(i - 1) * row, i * row, (i + 1) * row],
+                outputRange: [0.3, 1, 0.3],
+                extrapolate: 'clamp',
+              }),
+            }}
+          >
             <Image
               source={option ?? HEAD}
               resizeMode="contain"
@@ -249,9 +271,9 @@ function FaceReel({
                 },
               ]}
             />
-          </View>
+          </Animated.View>
         ))}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
