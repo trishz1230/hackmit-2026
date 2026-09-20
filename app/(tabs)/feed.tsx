@@ -38,39 +38,43 @@ export default function Feed() {
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.push('/(tabs)/path')} hitSlop={8}>
-          <Text style={styles.back}>← the map</Text>
-        </Pressable>
-        <AvatarButton />
-      </View>
-      <Tabs active="family" />
-      <View style={styles.header}>
-        <Text style={styles.title}>{group.name}</Text>
-        <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
-      </View>
-      <View style={styles.task}>
-        <Text style={styles.taskLabel}>Level {Math.min(group.level, group.goal)} task</Text>
-        {taskLocked ? (
-          <Text style={styles.taskPrompt}>
-            🔒 Locked! Wait till the next notification for a new conversation :)
-          </Text>
-        ) : (
-          <>
-            <Text style={styles.taskPrompt}>{task.prompt}</Text>
-            {hasPostedThisCycle ? (
-              <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
-            ) : (
-              <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
-                <Text style={styles.ctaText}>Complete task</Text>
-              </Pressable>
-            )}
-          </>
-        )}
-      </View>
       <FlatList
         data={answers}
         keyExtractor={(p) => p.id}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.topBar}>
+              <Pressable onPress={() => router.push('/(tabs)/path')} hitSlop={8}>
+                <Text style={styles.back}>← the map</Text>
+              </Pressable>
+              <AvatarButton />
+            </View>
+            <Tabs active="family" />
+            <View style={styles.header}>
+              <Text style={styles.title}>{group.name}</Text>
+              <Text style={styles.sub}>Invite code: {group.joinCode}</Text>
+            </View>
+            <View style={styles.task}>
+              <Text style={styles.taskLabel}>Level {Math.min(group.level, group.goal)} task</Text>
+              {taskLocked ? (
+                <Text style={styles.taskPrompt}>
+                  🔒 Locked! Wait till the next notification for a new conversation :)
+                </Text>
+              ) : (
+                <>
+                  <Text style={styles.taskPrompt}>{task.prompt}</Text>
+                  {hasPostedThisCycle ? (
+                    <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
+                  ) : (
+                    <Pressable style={styles.cta} onPress={() => router.push('/capture')}>
+                      <Text style={styles.ctaText}>Complete task</Text>
+                    </Pressable>
+                  )}
+                </>
+              )}
+            </View>
+          </View>
+        }
         ListEmptyComponent={
           <Text style={styles.empty}>No posts yet. Complete a level to share with family.</Text>
         }

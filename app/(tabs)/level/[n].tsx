@@ -92,43 +92,46 @@ export default function Level() {
         <AvatarButton />
       </View>
 
-      <View style={styles.header}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{levelSymbol(level) ?? level}</Text>
-        </View>
-        <View>
-          <Text style={styles.title}>Level {level}</Text>
-          <Text style={styles.date}>{shortDate(task?.createdAt)}</Text>
-        </View>
-      </View>
-
-      <Tabs active={tab} onSelect={setTab} />
-
-      {task && tab === 'family' ? (
-        <View style={styles.card}>
-          <Text style={styles.prompt}>{task.prompt}</Text>
-          {done ? <CompletedAnnouncement pending={pending} onRemind={remindToPost} /> : null}
-        </View>
-      ) : null}
-
-      {open && !done && tab === 'family' ? (
-        <View style={styles.answer}>
-          {ANSWERS.map((a) => (
-            <Pressable
-              key={a.start}
-              style={styles.answerButton}
-              onPress={() => router.push(`/capture?start=${a.start}`)}
-            >
-              <Text style={styles.answerIcon}>{a.icon}</Text>
-              <Text style={styles.answerText}>{a.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-
       <FlatList
         data={shown}
         keyExtractor={(p) => p.id}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.header}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{levelSymbol(level) ?? level}</Text>
+              </View>
+              <View>
+                <Text style={styles.title}>Level {level}</Text>
+                <Text style={styles.date}>{shortDate(task?.createdAt)}</Text>
+              </View>
+            </View>
+
+            <Tabs active={tab} onSelect={setTab} />
+
+            {task && tab === 'family' ? (
+              <View style={styles.card}>
+                <Text style={styles.prompt}>{task.prompt}</Text>
+                {done ? <CompletedAnnouncement pending={pending} onRemind={remindToPost} /> : null}
+              </View>
+            ) : null}
+
+            {open && !done && tab === 'family' ? (
+              <View style={styles.answer}>
+                {ANSWERS.map((a) => (
+                  <Pressable
+                    key={a.start}
+                    style={styles.answerButton}
+                    onPress={() => router.push(`/capture?start=${a.start}`)}
+                  >
+                    <Text style={styles.answerIcon}>{a.icon}</Text>
+                    <Text style={styles.answerText}>{a.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        }
         ListEmptyComponent={
           <Text style={styles.empty}>
             {tab === 'family'
