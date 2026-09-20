@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     minHeight: 140,
     justifyContent: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: '#F0F0F0',
     borderRadius: radius.md,
   },
   // The receiver dangles into the card from above, cord and all.
