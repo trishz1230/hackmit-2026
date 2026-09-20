@@ -134,7 +134,7 @@ export default function Home() {
             style={[
               styles.stat,
               { backgroundColor: i === 0 ? '#FDD98B4D' : '#E9B0B566' },
-              i === 1 && { minHeight: 107 },
+              i === 1 && { minHeight: 117 },
             ]}
           >
             <Text style={styles.statLabel}>{box.label}</Text>
@@ -156,12 +156,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.lg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginTop: 25,
-  },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   title: { fontSize: 34, color: colors.text },
   dates: { fontSize: 15, color: colors.muted },
   emptyCard: { marginBottom: spacing.sm + 7 },
