@@ -18,7 +18,7 @@ const STEP = 210;
 const AMPLITUDE = 82;
 /** Room under level 1, and the climb from the last level up to the reward. */
 const FOOT = 48;
-const REWARD_GAP = 110;
+const REWARD_GAP = 56;
 
 const artFor = (n: number) => ART[(n - 1) % ART.length];
 const sizeOf = (a: (typeof ART)[number]) => ({ width: a.size, height: (a.size * a.h) / a.w });
@@ -157,8 +157,9 @@ export function LevelMap({
     width: REWARD_ART.size,
     height: (REWARD_ART.size * REWARD_ART.h) / REWARD_ART.w,
   };
-  // The reward crowns the path, clear of the last level's artwork.
-  const rewardY = position(goal).y + REWARD_GAP;
+  // The reward crowns the path, clear of the last level's artwork — which is
+  // taller than the step between levels, so the gap is measured from its top.
+  const rewardY = position(goal).y + sizeOf(artFor(goal)).height + REWARD_GAP;
   const contentHeight = rewardY + rewardSize.height + 72;
 
   useEffect(() => {

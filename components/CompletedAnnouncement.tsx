@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { AvatarFace } from './AvatarFace';
 import { Text } from './Handwriting';
 import { colors, paper, spacing } from '../lib/theme';
 import type { Profile } from '../lib/types';
@@ -26,9 +27,8 @@ export function CompletedAnnouncement({
         const reminded = sent.includes(m.id);
         return (
           <View key={m.id} style={styles.row}>
-            <Text style={styles.name}>
-              {m.avatar} {m.name}
-            </Text>
+            <AvatarFace value={m.avatar} size={28} />
+            <Text style={styles.name}>{m.name}</Text>
             <Pressable
               style={[styles.remind, reminded && styles.reminded]}
               disabled={reminded}
