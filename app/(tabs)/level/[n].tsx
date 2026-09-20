@@ -31,7 +31,6 @@ export default function Level() {
     memberById,
     toggleLike,
     likedByMe,
-    taskLocked,
     loading,
   } = useApp();
   const insets = useSafeAreaInsets();
@@ -48,16 +47,14 @@ export default function Level() {
   const levelPosts = posts.filter(
     (p) => levelTaskIds.includes(p.taskId) && Date.parse(p.createdAt) >= since
   );
-  // The ＋ is only there while this level is the one the family is on.
-  const live = level === Math.min(group.level, group.goal) && !taskLocked;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backRow}>
           <Text style={styles.back}>←</Text>
+          <Text style={styles.barTitle}>back</Text>
         </Pressable>
-        <Text style={styles.barTitle}>Level</Text>
       </View>
 
       <View style={styles.header}>
@@ -88,17 +85,6 @@ export default function Level() {
         )}
         contentContainerStyle={{ paddingBottom: 96 }}
       />
-
-      {live ? (
-        <Pressable
-          style={[styles.fab, { bottom: spacing.lg }]}
-          onPress={() => router.push('/capture')}
-        >
-          {/* Drawn rather than typed: the handwriting font sits its + off-centre. */}
-          <View style={styles.plusBar} />
-          <View style={[styles.plusBar, styles.plusBarUp]} />
-        </Pressable>
-      ) : null}
     </View>
   );
 }
@@ -115,6 +101,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.card,
   },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   back: { fontSize: 22, color: colors.text },
   barTitle: { fontSize: 17, color: colors.text },
   header: {
@@ -146,17 +133,4 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   empty: { margin: spacing.lg, color: colors.muted, textAlign: 'center' },
-  fab: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.lg,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-  },
-  plusBar: { position: 'absolute', width: 24, height: 3, borderRadius: 2, backgroundColor: '#fff' },
-  plusBarUp: { transform: [{ rotate: '90deg' }] },
 });
