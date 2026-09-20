@@ -218,6 +218,12 @@ export default function Capture() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [start]);
 
+  // Picking photo/voice/write on the level page already chose the channel, so
+  // capture shows just that one instead of offering the three again.
+  const only = start === 'photo' || start === 'voice' || start === 'text' ? start : null;
+  const showPhoto = !only || only === 'photo' || Boolean(photoUri);
+  const showVoice = !only || only === 'voice' || Boolean(voiceUri);
+
   const words = text.trim();
   const canPost = Boolean(photoUri || voiceUri || words) && !recorderState.isRecording;
 
@@ -296,19 +302,21 @@ export default function Capture() {
               : asked.prompt}
         </Text>
 
-        <Pressable style={styles.square} onPress={addPhoto}>
-          {photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
-          ) : (
-            <>
-              <Text style={styles.squareIcon}>📷</Text>
-              <Text style={styles.squareText}>Add a photo</Text>
-            </>
-          )}
-        </Pressable>
+        {showPhoto ? (
+          <Pressable style={styles.square} onPress={addPhoto}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
+            ) : (
+              <>
+                <Text style={styles.squareIcon}>📷</Text>
+                <Text style={styles.squareText}>Add a photo</Text>
+              </>
+            )}
+          </Pressable>
+        ) : null}
         {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
 
-        {voiceUri ? (
+        {!showVoice ? null : voiceUri ? (
           <View style={styles.voice}>
             <VoiceNote uri={voiceUri} />
             <Pressable onPress={() => setVoiceUri(null)} hitSlop={8}>
