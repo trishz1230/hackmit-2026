@@ -53,6 +53,8 @@ const DOUBLE_TAP_MS = 450;
 const SETTLE_MS = 300;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 1000;
+/** How much bigger the title is while it has the paper to itself. */
+const TITLE_INTRO_SCALE = 1.9;
 
 export default function MakeAYou() {
   const router = useRouter();
@@ -180,7 +182,17 @@ export default function MakeAYou() {
       </Animated.View>
 
       <View style={styles.footer}>
-        <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
+        {/* Alone on the paper the title is the whole screen; it shrinks into a
+            caption as the face arrives. */}
+        <Animated.View
+          style={{
+            transform: [
+              { scale: reveal.interpolate({ inputRange: [0, 1], outputRange: [TITLE_INTRO_SCALE, 1] }) },
+            ],
+          }}
+        >
+          <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
+        </Animated.View>
 
         {!started ? null : current ? (
           <Animated.View
