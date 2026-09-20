@@ -11,7 +11,17 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
-import { EYES, HAIR, HEAD, MOUTHS, encodeFace, parseFace } from '../components/AvatarFace';
+import {
+  EYES,
+  HAIR,
+  HEAD,
+  MOUTHS,
+  type Part,
+  encodeFace,
+  headStyle,
+  parseFace,
+  partStyle,
+} from '../components/AvatarFace';
 import { savePendingAvatar } from '../lib/api';
 import { useApp } from '../lib/store';
 
@@ -24,22 +34,17 @@ const FACE = 230;
 const STEPS = ['eyes', 'mouth', 'hair'] as const;
 type Step = (typeof STEPS)[number];
 
-const LABEL: Record<Step, string> = {
-  eyes: 'eyes',
-  mouth: 'mouth',
-  hair: 'hair',
-};
+const OPTIONS: Record<Step, Part[]> = { eyes: EYES, mouth: MOUTHS, hair: HAIR };
 
 /**
- * Where each feature sits on the head, as a fraction of the face, and how tall
- * a row of its reel is. The reel rolls inside `window`, so only that slice of
- * the face moves while the rest of the drawing stays put.
+ * The slice of the face a feature's reel rolls inside, as a fraction of the
+ * face, so only that part of the drawing moves while the rest stays put.
  */
-const SLOT = {
-  eyes: { top: 0.3, height: 0.26, art: { top: 0.06, width: 0.46, height: 0.14 } },
-  mouth: { top: 0.5, height: 0.3, art: { top: 0.06, width: 0.34, height: 0.18 } },
-  hair: { top: 0, height: 0.42, art: { top: 0, width: 1, height: 1 } },
-} as const;
+const SLOT: Record<Step, { top: number; height: number }> = {
+  eyes: { top: 0.32, height: 0.22 },
+  mouth: { top: 0.5, height: 0.26 },
+  hair: { top: 0, height: 0.46 },
+};
 /** Gap between the head and the option peeking above or below it. */
 const PEEK_GAP = 22;
 const DOUBLE_TAP_MS = 450;
@@ -125,17 +130,19 @@ export default function MakeAYou() {
         pointerEvents={started ? 'auto' : 'none'}
       >
         <Pressable onPress={onTap} style={styles.face}>
-          {/* Hair carries its own head outline, so a locked one replaces the head. */}
-          <Image
-            source={(current ? null : HAIR[hair]) ?? HEAD}
-            resizeMode="contain"
-            style={[styles.layer, { width: FACE, height: FACE }]}
-          />
+          {current ? null : (
+            <Image source={HAIR[hair].src} resizeMode="contain" style={partStyle(HAIR[hair], FACE)} />
+          )}
+          <Image source={HEAD} resizeMode="contain" style={headStyle(FACE)} />
           {current === 'eyes' ? null : (
-            <Image source={EYES[eyes]} resizeMode="contain" style={artStyle('eyes')} />
+            <Image source={EYES[eyes].src} resizeMode="contain" style={partStyle(EYES[eyes], FACE)} />
           )}
           {step >= 1 && current !== 'mouth' ? (
-            <Image source={MOUTHS[mouth]} resizeMode="contain" style={artStyle('mouth')} />
+            <Image
+              source={MOUTHS[mouth].src}
+              resizeMode="contain"
+              style={partStyle(MOUTHS[mouth], FACE)}
+            />
           ) : null}
         </Pressable>
 
@@ -143,7 +150,7 @@ export default function MakeAYou() {
           <FaceReel
             key={current}
             slot={SLOT[current]}
-            options={current === 'eyes' ? EYES : current === 'mouth' ? MOUTHS : HAIR}
+            options={OPTIONS[current]}
             selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
             onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
             onTap={onTap}
@@ -161,7 +168,7 @@ export default function MakeAYou() {
 
       {!started ? null : current ? (
         <View style={styles.footer}>
-          <Text style={styles.hint}>scroll the {LABEL[current]} on the face</Text>
+          <Text style={styles.hint}>scroll the {current} on the face</Text>
           <Text style={styles.hint}>double tap the face to lock it in.</Text>
           <Text style={styles.steps}>
             {STEPS.map((s, i) => (i <= step ? `• ${s}  ` : `◦ ${s}  `)).join('')}
@@ -176,17 +183,11 @@ export default function MakeAYou() {
 
 type Slot = (typeof SLOT)[Step];
 
-const artStyle = (step: Step) => {
-  const { top, art } = SLOT[step];
-  return [
-    styles.layer,
-    {
-      top: (top + art.top) * FACE,
-      width: art.width * FACE,
-      height: art.height * FACE,
-    },
-  ];
-};
+/** A feature drawn where it sits on the face, but relative to its reel row. */
+function rowStyle(part: Part, slot: Slot) {
+  const style = partStyle(part, FACE);
+  return { ...style, top: Number(style.top) - slot.top * FACE };
+}
 
 /**
  * The feature being chosen, rolling in place on the face, with the option
@@ -204,7 +205,7 @@ function FaceReel({
   onTap,
 }: {
   slot: Slot;
-  options: (number | null)[];
+  options: Part[];
   selected: number;
   onSelect: (i: number) => void;
   onTap: () => void;
@@ -308,18 +309,7 @@ function FaceReel({
               ],
             }}
           >
-            <Image
-              source={option ?? HEAD}
-              resizeMode="contain"
-              style={[
-                styles.layer,
-                {
-                  top: slot.art.top * FACE,
-                  width: slot.art.width * FACE,
-                  height: slot.art.height * FACE,
-                },
-              ]}
-            />
+            <Image source={option.src} resizeMode="contain" style={rowStyle(option, slot)} />
           </Animated.View>
         ))}
       </Animated.ScrollView>
