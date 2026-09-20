@@ -53,7 +53,7 @@ export default function Home() {
                 <Image source={{ uri: post.content }} style={styles.tileArt} resizeMode="cover" />
               ) : (
                 <Text style={styles.tileText} numberOfLines={4}>
-                  {post.content}
+                  {post.kind === 'voice' ? `🎙 ${post.caption || 'Voice message'}` : post.content}
                 </Text>
               )}
               <Text style={styles.tileName}>{memberById(post.userId)?.name ?? 'Someone'}</Text>

@@ -5,9 +5,26 @@ import { Redirect, useRouter } from 'expo-router';
 import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
+import { VoiceNote } from '../../components/VoiceNote';
 import { describeWait } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
+import type { Post } from '../../lib/types';
+
+/** What you posted on a level, shown under its prompt. */
+function MyPost({ post }: { post: Post }) {
+  if (post.kind === 'text') return <Text style={styles.postText}>{post.content}</Text>;
+  return (
+    <>
+      {post.kind === 'photo' ? (
+        <Image source={{ uri: post.content }} style={styles.photo} resizeMode="cover" />
+      ) : (
+        <VoiceNote uri={post.content} />
+      )}
+      {post.caption ? <Text style={styles.postText}>{post.caption}</Text> : null}
+    </>
+  );
+}
 
 export default function Path() {
   const router = useRouter();
@@ -115,18 +132,7 @@ export default function Path() {
                 <>
                   <Text style={styles.taskLabel}>Today&apos;s task</Text>
                   <Text style={styles.sheetBody}>{prompt}</Text>
-                  {myPost ? (
-                    myPost.kind === 'photo' ? (
-                      <>
-                        <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
-                        {myPost.caption ? (
-                          <Text style={styles.postText}>{myPost.caption}</Text>
-                        ) : null}
-                      </>
-                    ) : (
-                      <Text style={styles.postText}>{myPost.content}</Text>
-                    )
-                  ) : null}
+                  {myPost ? <MyPost post={myPost} /> : null}
                   {hasPostedThisCycle ? (
                     <CompletedAnnouncement pending={pending} onRemind={remindToPost} />
                   ) : (
@@ -146,16 +152,7 @@ export default function Path() {
                   <Text style={styles.taskLabel}>That day&apos;s task</Text>
                   <Text style={styles.sheetBody}>{prompt ?? 'Cleared — your family posted that day.'}</Text>
                   {myPost ? (
-                    myPost.kind === 'photo' ? (
-                      <>
-                        <Image source={{ uri: myPost.content }} style={styles.photo} resizeMode="cover" />
-                        {myPost.caption ? (
-                          <Text style={styles.postText}>{myPost.caption}</Text>
-                        ) : null}
-                      </>
-                    ) : (
-                      <Text style={styles.postText}>{myPost.content}</Text>
-                    )
+                    <MyPost post={myPost} />
                   ) : (
                     <Text style={styles.sheetBody}>Your post from this level is gone.</Text>
                   )}

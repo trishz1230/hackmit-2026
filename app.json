@@ -45,6 +45,12 @@
         {
           "sounds": []
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow FamStreak to record a voice message for your family."
+        }
       ]
     ]
   }

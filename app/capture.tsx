@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   Alert,
@@ -10,13 +10,24 @@ import {
   View,
 } from 'react-native';
 import { Text, TextInput } from '../components/Handwriting';
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
+import { VoiceNote, clock } from '../components/VoiceNote';
 import { describeWait } from '../lib/levels';
 import { dismissKeyboard } from '../lib/keyboard';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
+
+/** Long enough to say something, short enough that nobody scrolls past it. */
+const MAX_RECORDING_SECONDS = 60;
 
 export default function Capture() {
   const router = useRouter();
@@ -29,6 +40,22 @@ export default function Capture() {
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
   const [textFocused, setTextFocused] = useState(false);
+  const [voiceUri, setVoiceUri] = useState<string | null>(null);
+  const [voiceError, setVoiceError] = useState('');
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder);
+  const started = useRef(false);
+
+  // The recorder stops itself at MAX_RECORDING_SECONDS, with nobody to catch it.
+  useEffect(() => {
+    if (recorderState.isRecording) {
+      started.current = true;
+      return;
+    }
+    if (!started.current) return;
+    started.current = false;
+    if (recorderState.url) setVoiceUri(recorderState.url);
+  }, [recorderState.isRecording, recorderState.url]);
 
   const pick = async (from: 'camera' | 'library') => {
     setPhotoError('');
@@ -78,17 +105,48 @@ export default function Capture() {
     Alert.alert('Add a photo', undefined, photoUri ? [take, album, remove, cancel] : [take, album, cancel]);
   };
 
+  const startRecording = async () => {
+    setVoiceError('');
+    try {
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        setVoiceError('Allow microphone access to record, or just write something instead.');
+        return;
+      }
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+      await recorder.prepareToRecordAsync();
+      setVoiceUri(null);
+      recorder.record({ forDuration: MAX_RECORDING_SECONDS });
+    } catch {
+      setVoiceError('Could not start recording. Try again, or just write something.');
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      started.current = false;
+      await recorder.stop();
+      // Leaving the session in recording mode makes playback inaudible on iOS.
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
+      setVoiceUri(recorder.uri);
+    } catch {
+      setVoiceError('Could not save that recording. Try again.');
+    }
+  };
+
   const words = text.trim();
-  const canPost = Boolean(photoUri || words);
+  const canPost = Boolean(photoUri || voiceUri || words) && !recorderState.isRecording;
 
   const post = () => {
     if (!canPost) return;
     const to = hangout ? 'hangout' : 'task';
+    // A recording or a photo carries the words as its caption; text posts are the words.
+    const kind = voiceUri ? 'voice' : photoUri ? 'photo' : 'text';
     const { completedGoal } = addPost(
-      photoUri ? 'photo' : 'text',
-      photoUri ?? words,
+      kind,
+      voiceUri ?? photoUri ?? words,
       to,
-      photoUri ? words || undefined : undefined
+      kind === 'text' ? undefined : words || undefined
     );
     if (hangout) {
       router.replace('/(tabs)/hangout');
@@ -137,6 +195,27 @@ export default function Capture() {
         </Pressable>
         {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
 
+        {voiceUri ? (
+          <View style={styles.voice}>
+            <VoiceNote uri={voiceUri} />
+            <Pressable onPress={() => setVoiceUri(null)} hitSlop={8}>
+              <Text style={styles.recordAgain}>Record again</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            style={[styles.record, recorderState.isRecording && styles.recording]}
+            onPress={() => void (recorderState.isRecording ? stopRecording() : startRecording())}
+          >
+            <Text style={styles.recordText}>
+              {recorderState.isRecording
+                ? `Stop recording · ${clock(recorderState.durationMillis / 1000)}`
+                : '🎙 Record a voice message'}
+            </Text>
+          </Pressable>
+        )}
+        {voiceError ? <Text style={styles.error}>{voiceError}</Text> : null}
+
         <TextInput
           style={styles.input}
           value={text}
@@ -145,7 +224,7 @@ export default function Capture() {
           onBlur={() => setTextFocused(false)}
           multiline
           placeholder={
-            photoUri
+            photoUri || voiceUri
               ? 'Add a caption…'
               : hangout || extra
                 ? 'What\u2019s going on?'
@@ -185,6 +264,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
+  record: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  recording: { borderColor: colors.accent },
+  recordText: { color: colors.text, fontWeight: '600' },
+  voice: { gap: spacing.xs },
+  recordAgain: { color: colors.muted, fontSize: 13, alignSelf: 'flex-end' },
   squareIcon: { fontSize: 40 },
   squareText: { color: colors.muted, fontWeight: '600', marginTop: spacing.xs },
   preview: { width: '100%', height: '100%' },

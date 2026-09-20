@@ -4,6 +4,7 @@ import { Text, TextInput } from '../../components/Handwriting';
 import { useLocalSearchParams } from 'expo-router';
 import { AvatarFace } from '../../components/AvatarFace';
 import { KeyboardScreen } from '../../components/KeyboardScreen';
+import { VoiceNote } from '../../components/VoiceNote';
 import { firstEmoji, tallyEmoji } from '../../lib/reactions';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -71,6 +72,11 @@ export default function PostDetail() {
       {post.kind === 'photo' ? (
         <>
           <Image source={{ uri: post.content }} style={styles.photo} resizeMode="cover" />
+          {post.caption ? <Text style={styles.body}>{post.caption}</Text> : null}
+        </>
+      ) : post.kind === 'voice' ? (
+        <>
+          <VoiceNote uri={post.content} />
           {post.caption ? <Text style={styles.body}>{post.caption}</Text> : null}
         </>
       ) : (

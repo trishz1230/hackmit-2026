@@ -56,7 +56,7 @@ const toPost = (r: Row): Post => ({
   taskId: str(r.task_id),
   groupId: str(r.group_id),
   userId: str(r.user_id),
-  kind: r.kind === 'photo' ? 'photo' : 'text',
+  kind: r.kind === 'photo' || r.kind === 'voice' ? r.kind : 'text',
   content: str(r.content),
   caption: str(r.caption) || undefined,
   createdAt: str(r.created_at),
@@ -465,7 +465,8 @@ export async function createPost(
   }
 ): Promise<Post> {
   const sb = getSupabase();
-  const content = input.kind === 'photo' ? await uploadPhoto(input.content, input.userId) : input.content;
+  const content =
+    input.kind === 'text' ? input.content : await uploadMedia(input.kind, input.content, input.userId);
   const row: Record<string, unknown> = {
     task_id: input.taskId,
     group_id: input.groupId,
@@ -501,13 +502,19 @@ export async function createPost(
   return post;
 }
 
-/** Uploads a local image uri to the public `photos` bucket, returning its url. */
-async function uploadPhoto(uri: string, userId: string): Promise<string> {
+/**
+ * Uploads a local photo or recording to the public `photos` bucket, returning
+ * its url. Recordings share the bucket so no new one has to be created; they
+ * keep the extension the recorder gave them (m4a on a phone, webm on the web).
+ */
+async function uploadMedia(kind: 'photo' | 'voice', uri: string, userId: string): Promise<string> {
   if (uri.startsWith('http')) return uri;
   const sb = getSupabase();
-  const path = `${userId}/${Date.now()}.jpg`;
-  const body = await (await fetch(uri)).arrayBuffer();
-  const { error } = await sb.storage.from('photos').upload(path, body, { contentType: 'image/jpeg' });
+  const blob = await (await fetch(uri)).blob();
+  const type = kind === 'photo' ? 'image/jpeg' : blob.type || 'audio/m4a';
+  const extension = kind === 'photo' ? 'jpg' : (type.split('/')[1]?.split(';')[0] ?? 'm4a');
+  const path = `${userId}/${Date.now()}.${extension}`;
+  const { error } = await sb.storage.from('photos').upload(path, blob, { contentType: type });
   if (error) throw error;
   return sb.storage.from('photos').getPublicUrl(path).data.publicUrl;
 }
