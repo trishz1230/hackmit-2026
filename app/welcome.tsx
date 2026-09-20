@@ -1,115 +1,76 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, ImageBackground, Pressable, StyleSheet } from 'react-native';
+import { Image, ImageBackground, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Text } from '../components/Handwriting';
+import { colors } from '../lib/theme';
 
 const paper = require('../assets/welcome/paper.png');
-const faceOutline = require('../assets/welcome/face-outline.png');
-const faceFilled = require('../assets/welcome/face-filled.png');
-const sparkleBig = require('../assets/welcome/sparkle-big.png');
-const sparklePair = require('../assets/welcome/sparkle-pair.png');
-const star = require('../assets/welcome/star.png');
-const hint = require('../assets/welcome/hint.png');
 
-const FACE = 250;
-const HOLD_MS = 1200;
-/** Beat between the face filling up and the app opening. */
-const SETTLE_MS = 900;
+/** The drawn animation, frame by frame: the face fills in, then it sparkles. */
+const frames = [
+  require('../assets/welcome/frames/f01.png'),
+  require('../assets/welcome/frames/f02.png'),
+  require('../assets/welcome/frames/f03.png'),
+  require('../assets/welcome/frames/f04.png'),
+  require('../assets/welcome/frames/f05.png'),
+  require('../assets/welcome/frames/f06.png'),
+  require('../assets/welcome/frames/f07.png'),
+  require('../assets/welcome/frames/f08.png'),
+  require('../assets/welcome/frames/f09.png'),
+  require('../assets/welcome/frames/f10.png'),
+  require('../assets/welcome/frames/f11.png'),
+  require('../assets/welcome/frames/f12.png'),
+];
 
-type SparkProps = {
-  source: number;
-  at: { top: number; left: number };
-  width: number;
-  height: number;
-  delay: number;
-  on: boolean;
-};
-
-function Spark({ source, at, width, height, delay, on }: SparkProps) {
-  const pop = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(pop, {
-      toValue: on ? 1 : 0,
-      delay: on ? delay : 0,
-      duration: on ? 300 : 150,
-      easing: on ? Easing.out(Easing.back(2.4)) : Easing.linear,
-      useNativeDriver: true,
-    }).start();
-  }, [on, delay, pop]);
-
-  return (
-    <Animated.Image
-      source={source}
-      resizeMode="contain"
-      style={[
-        styles.spark,
-        at,
-        { width, height, opacity: pop, transform: [{ scale: pop }] },
-      ]}
-    />
-  );
-}
+const FACE_W = 250;
+const FACE_H = FACE_W * (570 / 645);
+const FRAME_MS = 130;
+/** Beat on the last drawn frame before the app opens. */
+const SETTLE_MS = 700;
 
 export default function Welcome() {
   const router = useRouter();
-  const fill = useRef(new Animated.Value(0)).current;
-  const squish = useRef(new Animated.Value(1)).current;
-  const [full, setFull] = useState(false);
+  const [frame, setFrame] = useState(0);
+  const [holding, setHolding] = useState(false);
   const done = useRef(false);
 
-  const hold = useCallback(() => {
+  useEffect(() => {
     if (done.current) return;
-    Animated.timing(fill, {
-      toValue: 1,
-      duration: HOLD_MS,
-      easing: Easing.inOut(Easing.quad),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (!finished || done.current) return;
-      done.current = true;
-      setFull(true);
-      Animated.sequence([
-        Animated.spring(squish, { toValue: 1.07, friction: 4, useNativeDriver: true }),
-        Animated.spring(squish, { toValue: 1, friction: 5, useNativeDriver: true }),
-      ]).start();
-      setTimeout(() => router.replace('/avatar'), SETTLE_MS);
-    });
-  }, [fill, router, squish]);
 
-  const release = useCallback(() => {
-    if (done.current) return;
-    Animated.timing(fill, {
-      toValue: 0,
-      duration: 240,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: false,
-    }).start();
-  }, [fill]);
+    if (!holding) {
+      if (frame === 0) return;
+      const back = setTimeout(() => setFrame((f) => f - 1), FRAME_MS);
+      return () => clearTimeout(back);
+    }
 
-  const fillHeight = fill.interpolate({ inputRange: [0, 1], outputRange: [0, FACE] });
-  const hintFade = fill.interpolate({
-    inputRange: [0, 0.4],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
+    if (frame < frames.length - 1) {
+      const next = setTimeout(() => setFrame((f) => f + 1), FRAME_MS);
+      return () => clearTimeout(next);
+    }
+
+    done.current = true;
+    const open = setTimeout(() => router.replace('/avatar'), SETTLE_MS);
+    return () => clearTimeout(open);
+  }, [frame, holding, router]);
+
+  const hold = useCallback(() => setHolding(true), []);
+  const release = useCallback(() => setHolding(false), []);
 
   return (
     <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
-      <Animated.View style={[styles.stage, { transform: [{ scale: squish }] }]}>
-        <Pressable onPressIn={hold} onPressOut={release} style={styles.face}>
-          <Animated.Image source={faceOutline} resizeMode="contain" style={styles.outline} />
+      <Pressable onPressIn={hold} onPressOut={release} style={styles.stage}>
+        {/* Every frame stays mounted so stepping through them never waits on a load. */}
+        {frames.map((source, i) => (
+          <Image
+            key={i}
+            source={source}
+            resizeMode="contain"
+            style={[styles.face, { opacity: i === frame ? 1 : 0 }]}
+          />
+        ))}
+      </Pressable>
 
-          <Animated.View style={[styles.reveal, { height: fillHeight }]} pointerEvents="none">
-            <Animated.Image source={faceFilled} resizeMode="contain" style={styles.filled} />
-          </Animated.View>
-        </Pressable>
-
-        <Spark source={sparkleBig} at={{ top: -42, left: -30 }} width={78} height={54} delay={0} on={full} />
-        <Spark source={sparklePair} at={{ top: 156, left: 238 }} width={70} height={68} delay={110} on={full} />
-        <Spark source={star} at={{ top: 208, left: -34 }} width={104} height={74} delay={200} on={full} />
-      </Animated.View>
-
-      <Animated.Image source={hint} resizeMode="contain" style={[styles.hint, { opacity: hintFade }]} />
+      {frame === 0 ? <Text style={styles.hint}>press to get started...</Text> : null}
     </ImageBackground>
   );
 }
@@ -119,43 +80,23 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingBottom: 72,
   },
   stage: {
-    width: FACE,
-    height: FACE,
+    width: FACE_W,
+    height: FACE_H,
     alignItems: 'center',
     justifyContent: 'center',
   },
   face: {
-    width: FACE,
-    height: FACE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outline: {
     position: 'absolute',
-    width: FACE,
-    height: FACE * (444 / 504),
-  },
-  reveal: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    width: FACE,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-  },
-  filled: {
-    width: FACE,
-    height: FACE * (465 / 480),
-    marginBottom: (FACE - FACE * (465 / 480)) / 2,
-  },
-  spark: {
-    position: 'absolute',
+    width: FACE_W,
+    height: FACE_H,
   },
   hint: {
-    width: 228,
-    height: 39,
-    marginTop: 28,
+    position: 'absolute',
+    bottom: 96,
+    fontSize: 20,
+    color: colors.text,
   },
 });
