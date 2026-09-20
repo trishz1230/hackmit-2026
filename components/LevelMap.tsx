@@ -218,8 +218,8 @@ const styles = StyleSheet.create({
   faded: { opacity: 0.4 },
   glow: { position: 'absolute' },
   number: { position: 'absolute', bottom: 4, fontSize: 26, color: colors.text },
-  numberLeft: { left: -6 },
-  numberRight: { right: -6 },
+  numberLeft: { left: -24 },
+  numberRight: { right: -24 },
   badge: { position: 'absolute', top: -2, right: -2, fontSize: 18 },
   reward: {
     position: 'absolute',
