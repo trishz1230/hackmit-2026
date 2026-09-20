@@ -67,7 +67,9 @@ export default function MakeAYou() {
   const [hair, setHair] = useState(existing?.hair ?? 0);
   const [done, setDone] = useState(false);
   const [started, setStarted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const reveal = useRef(new Animated.Value(0)).current;
+  const hints = useRef(new Animated.Value(1)).current;
 
   const finish = useRef(new Animated.Value(1)).current;
   const lastTap = useRef(0);
@@ -87,6 +89,17 @@ export default function MakeAYou() {
     }, INTRO_MS);
     return () => clearTimeout(t);
   }, [reveal]);
+
+  // Once they work out the scroll, the instructions are just in the way.
+  const onScrollStart = useCallback(() => {
+    setScrolled(true);
+    Animated.timing(hints, {
+      toValue: 0,
+      duration: 260,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [hints]);
 
   const lockIn = useCallback(() => {
     if (leaving.current) return;
@@ -123,8 +136,6 @@ export default function MakeAYou() {
 
   return (
     <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
-      <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
-
       <Animated.View
         style={[styles.stage, { opacity: reveal }, done && { transform: [{ scale: finish }] }]}
         pointerEvents={started ? 'auto' : 'none'}
@@ -154,6 +165,7 @@ export default function MakeAYou() {
             selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
             onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
             onTap={onTap}
+            onScrollStart={onScrollStart}
           />
         ) : null}
 
@@ -166,17 +178,28 @@ export default function MakeAYou() {
         ) : null}
       </Animated.View>
 
-      {!started ? null : current ? (
-        <View style={styles.footer}>
-          <Text style={styles.hint}>scroll the {current} on the face</Text>
-          <Text style={styles.hint}>double tap the face to lock it in.</Text>
-          <Text style={styles.steps}>
-            {STEPS.map((s, i) => (i <= step ? `• ${s}  ` : `◦ ${s}  `)).join('')}
-          </Text>
-        </View>
-      ) : (
-        <Text style={styles.hint}>that's you!</Text>
-      )}
+      <View style={styles.footer}>
+        <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
+
+        {!started ? null : current ? (
+          <Animated.View
+            style={[styles.hints, { opacity: hints }]}
+            pointerEvents={scrolled ? 'none' : 'auto'}
+          >
+            <Text style={styles.hint}>scroll the {current} on the face</Text>
+            <Text style={styles.hint}>double tap the face to lock it in.</Text>
+            <View style={styles.stepRow}>
+              {STEPS.map((s, i) => (
+                <Text key={s} style={[styles.step, i > step && styles.stepToDo]}>
+                  • {s}
+                </Text>
+              ))}
+            </View>
+          </Animated.View>
+        ) : (
+          <Text style={styles.hint}>that&apos;s you!</Text>
+        )}
+      </View>
     </ImageBackground>
   );
 }
@@ -203,16 +226,19 @@ function FaceReel({
   selected,
   onSelect,
   onTap,
+  onScrollStart,
 }: {
   slot: Slot;
   options: Part[];
   selected: number;
   onSelect: (i: number) => void;
   onTap: () => void;
+  onScrollStart: () => void;
 }) {
   const scroller = useRef<ScrollView>(null);
   const offset = useRef(new Animated.Value(0)).current;
   const placed = useRef(false);
+  const parked = useRef(0);
   const resting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const scrolledAt = useRef(0);
   const row = slot.height * FACE;
@@ -240,6 +266,9 @@ function FaceReel({
   };
 
   const onMove = (y: number) => {
+    // The reel parks itself on the middle copy, which reports a scroll nobody
+    // made.
+    if (placed.current && Math.abs(y - parked.current) > 1) onScrollStart();
     scrolledAt.current = Date.now();
     const index = indexAt(y);
     if (index !== selected) onSelect(index);
@@ -275,7 +304,8 @@ function FaceReel({
           // Start on the middle copy; contentOffset isn't honoured everywhere.
           if (placed.current) return;
           placed.current = true;
-          scroller.current?.scrollTo({ y: loop + selected * row, animated: false });
+          parked.current = loop + selected * row;
+          scroller.current?.scrollTo({ y: parked.current, animated: false });
         }}
         scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: offset } } }], {
@@ -356,7 +386,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     color: '#2F2A26',
-    marginBottom: 56,
+    textAlign: 'center',
   },
   stage: {
     width: FACE,
@@ -376,9 +406,13 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 64,
     alignSelf: 'stretch',
-    alignItems: 'flex-start',
-    paddingLeft: 36,
+    alignItems: 'center',
+    paddingHorizontal: 36,
   },
+  hints: { alignItems: 'center', marginTop: 20 },
+  stepRow: { flexDirection: 'row', gap: 16, marginTop: 12 },
+  step: { fontSize: 15, color: '#6B5F52' },
+  stepToDo: { opacity: 0.45 },
   layer: { position: 'absolute', alignSelf: 'center' },
   reelWindow: {
     position: 'absolute',
@@ -388,10 +422,6 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 16,
     color: '#2F2A26',
-  },
-  steps: {
-    marginTop: 12,
-    fontSize: 15,
-    color: '#6B5F52',
+    textAlign: 'center',
   },
 });
