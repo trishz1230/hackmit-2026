@@ -39,7 +39,10 @@ export default function RootLayout() {
             <Stack.Screen name="family" options={{ headerShown: false }} />
             <Stack.Screen name="hangout" options={{ title: 'Hangout' }} />
             <Stack.Screen name="settings" options={{ title: 'Family settings' }} />
-            <Stack.Screen name="capture" options={{ title: "Today's task", presentation: 'modal' }} />
+            <Stack.Screen
+              name="capture"
+              options={{ headerShown: false, presentation: 'modal' }}
+            />
             <Stack.Screen name="post/[id]" options={{ title: 'Reactions' }} />
             <Stack.Screen name="history/index" options={{ title: 'History' }} />
             <Stack.Screen name="history/[day]" options={{ title: 'History' }} />

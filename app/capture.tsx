@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   InteractionManager,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -12,9 +13,10 @@ import {
 } from 'react-native';
 import { Text, TextInput } from '../components/Handwriting';
 import {
-  AudioModule,
   IOSOutputFormat,
   RecordingPresets,
+  getRecordingPermissionsAsync,
+  requestRecordingPermissionsAsync,
   setAudioModeAsync,
   useAudioRecorder,
   useAudioRecorderState,
@@ -75,6 +77,7 @@ export default function Capture() {
   const [photoError, setPhotoError] = useState('');
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
   const [voiceError, setVoiceError] = useState('');
+  const [micBlocked, setMicBlocked] = useState(false);
   const recorder = useAudioRecorder(VOICE);
   const recorderState = useAudioRecorderState(recorder);
   const started = useRef(false);
@@ -149,18 +152,28 @@ export default function Capture() {
 
   const startRecording = async () => {
     setVoiceError('');
+    setMicBlocked(false);
     try {
-      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      // iOS only ever asks once: after a refusal the request resolves denied
+      // without a dialog, which looks like the button doing nothing.
+      const existing = await getRecordingPermissionsAsync();
+      const permission = existing.granted ? existing : await requestRecordingPermissionsAsync();
       if (!permission.granted) {
-        setVoiceError('Allow microphone access to record, or just write something instead.');
+        setMicBlocked(!permission.canAskAgain);
+        setVoiceError(
+          permission.canAskAgain
+            ? 'Allow microphone access to record, or just write something instead.'
+            : 'Microphone access is off for btw.'
+        );
         return;
       }
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
-      await recorder.prepareToRecordAsync();
+      await recorder.prepareToRecordAsync(VOICE);
       setVoiceUri(null);
       recorder.record({ forDuration: MAX_RECORDING_SECONDS });
-    } catch {
-      setVoiceError('Could not start recording. Try again, or just write something.');
+    } catch (e) {
+      const why = e instanceof Error ? e.message : String(e);
+      setVoiceError(`Could not start recording: ${why}`);
     }
   };
 
@@ -292,6 +305,11 @@ export default function Capture() {
           </Pressable>
         )}
         {voiceError ? <Text style={styles.error}>{voiceError}</Text> : null}
+        {micBlocked ? (
+          <Pressable onPress={() => void Linking.openSettings()} hitSlop={8}>
+            <Text style={styles.settingsLink}>Open Settings</Text>
+          </Pressable>
+        ) : null}
 
         <TextInput
           ref={input}
@@ -378,5 +396,11 @@ const styles = StyleSheet.create({
   cta: { backgroundColor: colors.gold, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
   ctaDisabled: { opacity: 0.5 },
   ctaText: { color: colors.text, fontWeight: '700', fontSize: 16 },
+  settingsLink: {
+    fontSize: 15,
+    color: colors.accent,
+    textDecorationLine: 'underline',
+    marginTop: spacing.xs,
+  },
   error: { color: '#C62828', fontWeight: '600' },
 });
