@@ -42,6 +42,8 @@ const SLOT = {
 /** Gap between the head and the option peeking above or below it. */
 const PEEK_GAP = 22;
 const DOUBLE_TAP_MS = 450;
+/** A tap this soon after the reel moved is the end of a scroll, not a tap. */
+const SETTLE_MS = 300;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 2000;
 
@@ -199,6 +201,7 @@ function FaceReel({
   const offset = useRef(new Animated.Value(0)).current;
   const placed = useRef(false);
   const resting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const scrolledAt = useRef(0);
   const row = slot.height * FACE;
   // Shove each neighbour clear of the head rather than a fixed distance, so it
   // lands above the hair or below the chin whichever feature is being chosen.
@@ -224,6 +227,7 @@ function FaceReel({
   };
 
   const onMove = (y: number) => {
+    scrolledAt.current = Date.now();
     const index = indexAt(y);
     if (index !== selected) onSelect(index);
     clearTimeout(resting.current);
@@ -238,6 +242,14 @@ function FaceReel({
         styles.reelWindow,
         { top: slot.top * FACE - row - pushUp, height: row * 3 + pushUp + pushDown },
       ]}
+      // The reel covers the face, so the lock tap has to be counted here as
+      // well. Capturing the touch before the scroll view claims it — and
+      // handing it straight back — is the only reading of it that survives the
+      // reel settling underneath the finger.
+      onStartShouldSetResponderCapture={() => {
+        if (Date.now() - scrolledAt.current > SETTLE_MS) onTap();
+        return false;
+      }}
     >
       <Animated.ScrollView
         ref={scroller as never}
@@ -259,8 +271,6 @@ function FaceReel({
             onMove(e.nativeEvent.contentOffset.y),
         })}
       >
-        {/* The reel covers the face, so the lock tap has to land here too. */}
-        <Pressable onPress={onTap}>
         {reel.map((option, i) => (
           <Animated.View
             key={i}
@@ -300,7 +310,6 @@ function FaceReel({
             />
           </Animated.View>
         ))}
-        </Pressable>
       </Animated.ScrollView>
     </View>
   );
