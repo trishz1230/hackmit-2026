@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PostCard } from '../../components/PostCard';
 import { AvatarButton } from '../../components/AvatarButton';
 import { Tabs } from '../../components/Tabs';
-import { answeredLevel, EXTRA_PROMPT, feedLevel, isExtraPost, withinLevel } from '../../lib/posts';
+import { EXTRA_PROMPT, feedLevel, hangoutLocked, isExtraPost, withinLevel } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { paper, radius, spacing } from '../../lib/theme';
 
@@ -23,7 +23,6 @@ export default function Plus() {
     toggleLike,
     likedByMe,
     me,
-    taskLocked,
     loading,
   } = useApp();
   const insets = useSafeAreaInsets();
@@ -41,9 +40,8 @@ export default function Plus() {
     posts
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   // Answer the family first: hangout opens once your answer to the level being
-  // shown is in (a level that hasn't started has no task to answer, so there is
-  // nothing to wait on).
-  const locked = !taskLocked && !answeredLevel(tasks, posts, level, me.id);
+  // shown is in.
+  const locked = hangoutLocked(tasks, posts, Math.min(group.level, group.goal), me.id);
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>

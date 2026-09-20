@@ -26,6 +26,7 @@ import { KeyboardDismissLayer } from '../components/KeyboardDismissLayer';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { dismissKeyboard } from '../lib/keyboard';
+import { hangoutLocked } from '../lib/posts';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -60,10 +61,15 @@ export default function Capture() {
   const insets = useSafeAreaInsets();
   const { channel, start } = useLocalSearchParams<{ channel?: string; start?: string }>();
   const hangout = channel === 'hangout';
-  const { task, addPost, taskLocked, hasPostedThisCycle } = useApp();
+  const { task, addPost, taskLocked, hasPostedThisCycle, group, tasks, posts, me } = useApp();
   // The prompt is only asked once, and a locked level has no prompt to answer;
   // either way what you write is a free share rather than an answer.
   const extra = !hangout && (hasPostedThisCycle || taskLocked);
+  // A share belongs to hangout, so it waits on the family task the way hangout
+  // does: on level 1 nothing can be shared until that task is answered.
+  const shut =
+    (hangout || extra) &&
+    hangoutLocked(tasks, posts, Math.min(group?.level ?? 1, group?.goal ?? 1), me.id);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -173,7 +179,7 @@ export default function Capture() {
 
   // Arriving from a level's photo / voice / write button opens that one.
   useEffect(() => {
-    if (opened.current) return;
+    if (opened.current || shut) return;
     opened.current = true;
     if (start === 'photo') addPhoto();
     else if (start === 'voice') void startRecording();
@@ -213,16 +219,34 @@ export default function Capture() {
     else router.replace(hangout || extra ? '/(tabs)/plus' : '/(tabs)/feed');
   };
 
+  const bar = (
+    <View style={[styles.bar, { paddingTop: insets.top + spacing.md }]}>
+      <Pressable style={styles.backRow} onPress={goBack} hitSlop={8}>
+        <Text style={styles.back}>←</Text>
+        <Text style={styles.barTitle}>{hangout || extra ? 'Share more' : "Today's task"}</Text>
+      </Pressable>
+      <AvatarButton />
+    </View>
+  );
+
+  if (shut) {
+    return (
+      <View style={styles.screen}>
+        <Stack.Screen options={{ headerShown: false }} />
+        {bar}
+        <View style={styles.wrap}>
+          <Text style={styles.prompt}>
+            🔒 Locked! Answer the family task first, then sharing is all yours.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.bar, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable style={styles.backRow} onPress={goBack} hitSlop={8}>
-          <Text style={styles.back}>←</Text>
-          <Text style={styles.barTitle}>{hangout || extra ? 'Share more' : "Today's task"}</Text>
-        </Pressable>
-        <AvatarButton />
-      </View>
+      {bar}
       <KeyboardScreen contentContainerStyle={styles.wrap}>
         <Text style={styles.prompt}>
           {hangout
