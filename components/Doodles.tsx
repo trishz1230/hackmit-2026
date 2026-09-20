@@ -32,10 +32,10 @@ const styles = {
 };
 
 export function HouseIcon(p: Props) {
-  return doodle(houseImg, 130 / 122, p);
+  return doodle(houseImg, 95 / 99, p);
 }
 export function RoadIcon(p: Props) {
-  return doodle(roadImg, 125 / 175, p);
+  return doodle(roadImg, 115 / 131, p);
 }
 export function PlusIcon(p: Props) {
   return doodle(plusImg, 445 / 473, p);
