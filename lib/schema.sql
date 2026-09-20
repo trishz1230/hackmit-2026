@@ -21,6 +21,11 @@ create table if not exists groups (
 alter table groups add column if not exists pending_cadence text;
 alter table groups add column if not exists cadence_approvals text[] not null default '{}';
 
+-- So is a change of reward or of how many levels lead to it.
+alter table groups add column if not exists pending_reward_text text;
+alter table groups add column if not exists pending_reward_goal int;
+alter table groups add column if not exists reward_approvals text[] not null default '{}';
+
 create table if not exists profiles (
   id uuid primary key,
   name text not null,

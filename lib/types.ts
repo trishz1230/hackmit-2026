@@ -25,6 +25,9 @@ export type JoinOptions = {
   code: string;
 };
 
+/** The reward the family is voting on, and how many levels it takes. */
+export type RewardChange = { rewardText: string; goal: number };
+
 export type Group = {
   id: string;
   name: string;
@@ -39,6 +42,10 @@ export type Group = {
   pendingCadence?: Cadence;
   /** Ids of the members who approved the pending cadence. */
   cadenceApprovals: string[];
+  /** Reward and goal the family has been asked to switch to, until everyone approves. */
+  pendingReward?: RewardChange;
+  /** Ids of the members who approved the pending reward. */
+  rewardApprovals: string[];
 };
 
 export type Profile = {

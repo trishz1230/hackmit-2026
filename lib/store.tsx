@@ -15,7 +15,17 @@ import { describeMedia } from './describe';
 import { familyContext, generatePrompt } from './prompts';
 import { getPushToken, sendExpoPush } from './push';
 import { isSupabaseConfigured } from './supabase';
-import type { Cadence, CreateOptions, Group, JoinOptions, Post, Profile, Reaction, Task } from './types';
+import type {
+  Cadence,
+  CreateOptions,
+  Group,
+  JoinOptions,
+  Post,
+  Profile,
+  Reaction,
+  RewardChange,
+  Task,
+} from './types';
 
 /** Task posts clear levels; hangout posts are just for fun. */
 export type Channel = 'task' | 'hangout';
@@ -83,12 +93,17 @@ type State = {
   dismissCelebration: () => void;
   createGroup: (opts: CreateOptions) => void;
   joinGroup: (opts: JoinOptions) => void;
-  updateSettings: (patch: { rewardText: string; goal: number; name?: string }) => void;
+  updateSettings: (patch: { rewardText?: string; goal?: number; name?: string }) => void;
   /** Members who still have to approve the pending cadence change. */
   cadencePendingOn: Profile[];
   proposeCadence: (cadence: Cadence) => void;
   approveCadence: () => void;
   cancelCadenceChange: () => void;
+  /** Members who still have to approve the pending reward change. */
+  rewardPendingOn: Profile[];
+  proposeReward: (change: RewardChange) => void;
+  approveReward: () => void;
+  cancelRewardChange: () => void;
   addPost: (
     kind: Post['kind'],
     content: string,
@@ -341,6 +356,9 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
   const cadencePendingOn = group?.pendingCadence
     ? members.filter((m) => !group.cadenceApprovals.includes(m.id))
     : [];
+  const rewardPendingOn = group?.pendingReward
+    ? members.filter((m) => !group.rewardApprovals.includes(m.id))
+    : [];
 
   // Nothing pushes an event when midnight arrives, so poll while we're waiting.
   useEffect(() => {
@@ -448,6 +466,29 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
           await refresh(group.id);
         });
       },
+      rewardPendingOn,
+      proposeReward: (change) => {
+        if (!group) return;
+        run(async () => {
+          await api.proposeReward(group, members, userId, change);
+          await refresh(group.id);
+        });
+      },
+      approveReward: () => {
+        if (!group) return;
+        run(async () => {
+          await api.approveReward(group, members, userId);
+          await refresh(group.id);
+        });
+      },
+      cancelRewardChange: () => {
+        if (!group) return;
+        run(async () => {
+          await api.cancelRewardChange(group.id);
+          await refresh(group.id);
+        });
+      },
+
       addPost: async (kind, content, channel = 'task', caption, taskId) => {
         if (!group) return { completedGoal: false };
         // Awaited rather than fired off: a post the backend refuses has to be
@@ -594,6 +635,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       periodWaived,
       setPeriodWaived,
       cadencePendingOn,
+      rewardPendingOn,
       missedReset,
       unseenPosts,
       unseenReactions,
@@ -686,6 +728,9 @@ function MockProvider({ children }: { children: React.ReactNode }) {
   const cadencePendingOn = group?.pendingCadence
     ? members.filter((m) => !group.cadenceApprovals.includes(m.id))
     : [];
+  const rewardPendingOn = group?.pendingReward
+    ? members.filter((m) => !group.rewardApprovals.includes(m.id))
+    : [];
 
   // Nothing re-renders the mock family when the next period starts.
   const [, setClock] = useState(0);
@@ -710,6 +755,29 @@ function MockProvider({ children }: { children: React.ReactNode }) {
           return { ...g, cadence, pendingCadence: undefined, cadenceApprovals: [] };
         }
         return { ...g, pendingCadence: cadence, cadenceApprovals: approvals };
+      });
+    },
+    [members]
+  );
+
+  /** Tallies a vote, applying the reward once every member has approved. */
+  const castRewardVote = useCallback(
+    (change: RewardChange, voterId: string) => {
+      setGroup((g) => {
+        if (!g) return g;
+        const approvals = g.rewardApprovals.includes(voterId)
+          ? g.rewardApprovals
+          : [...g.rewardApprovals, voterId];
+        if (members.every((m) => approvals.includes(m.id))) {
+          return {
+            ...g,
+            rewardText: change.rewardText,
+            goal: clampLevelCount(change.goal),
+            pendingReward: undefined,
+            rewardApprovals: [],
+          };
+        }
+        return { ...g, pendingReward: change, rewardApprovals: approvals };
       });
     },
     [members]
@@ -876,7 +944,14 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       },
       updateSettings: ({ rewardText, goal, name }) => {
         setGroup((g) =>
-          g ? { ...g, rewardText, goal: clampLevelCount(goal), name: name?.trim() || g.name } : g
+          g
+            ? {
+                ...g,
+                rewardText: rewardText ?? g.rewardText,
+                goal: goal === undefined ? g.goal : clampLevelCount(goal),
+                name: name?.trim() || g.name,
+              }
+            : g
         );
       },
       cadencePendingOn,
@@ -905,6 +980,33 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         clearTimers();
         setGroup((g) => (g ? { ...g, pendingCadence: undefined, cadenceApprovals: [] } : g));
       },
+      rewardPendingOn,
+      proposeReward: (change) => {
+        if (!group) return;
+        if (change.rewardText === group.rewardText && change.goal === group.goal) {
+          setGroup((g) => (g ? { ...g, pendingReward: undefined, rewardApprovals: [] } : g));
+          return;
+        }
+        setGroup((g) => (g ? { ...g, pendingReward: change, rewardApprovals: [] } : g));
+        castRewardVote(change, me.id);
+        // The scripted relatives vote a moment later, so the demo can finish.
+        members
+          .filter((m) => m.id !== me.id)
+          .forEach((m, i) => {
+            timers.current.push(
+              setTimeout(() => castRewardVote(change, m.id), REPLY_DELAY_MS * (i + 1))
+            );
+          });
+      },
+      approveReward: () => {
+        if (!group?.pendingReward) return;
+        castRewardVote(group.pendingReward, me.id);
+      },
+      cancelRewardChange: () => {
+        clearTimers();
+        setGroup((g) => (g ? { ...g, pendingReward: undefined, rewardApprovals: [] } : g));
+      },
+
       addPost: async (kind, content, channel = 'task', caption, taskId) => {
         if (channel === 'hangout') {
           appendPost(me.id, kind, content, '', caption);
@@ -1037,6 +1139,8 @@ function MockProvider({ children }: { children: React.ReactNode }) {
       taskLocked,
       cadencePendingOn,
       castVote,
+      rewardPendingOn,
+      castRewardVote,
       waived,
       missedReset,
       unseenPosts,
