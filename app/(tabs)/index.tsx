@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,6 +6,8 @@ import { Text } from '../../components/Handwriting';
 import { AvatarFace } from '../../components/AvatarFace';
 import { AvatarButton } from '../../components/AvatarButton';
 import { weekRange, weekStats } from '../../lib/week';
+import { DEFAULT_LABELS, weekLabels, type StatLabels } from '../../lib/weekLabels';
+import { familyContext } from '../../lib/prompts';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 
@@ -16,9 +18,7 @@ export default function Home() {
   const router = useRouter();
   const { group, members, posts, hangoutPosts, reactions, memberById, loading } = useApp();
   const insets = useSafeAreaInsets();
-
-  if (loading) return <View style={styles.wrap} />;
-  if (!group) return <Redirect href="/onboarding" />;
+  const [labels, setLabels] = useState<StatLabels>(DEFAULT_LABELS);
 
   const { start, end } = weekRange();
   const all = [...posts, ...hangoutPosts];
@@ -27,6 +27,24 @@ export default function Home() {
     return at >= start.getTime() && at <= end.getTime();
   });
   const stats = weekStats(thisWeek, reactions, members);
+
+  // The week names its own categories once there is something to name them after.
+  const groupId = group?.id;
+  const weekKey = start.toDateString();
+  const named = stats.length > 0;
+  useEffect(() => {
+    if (!groupId || !named) return;
+    let live = true;
+    weekLabels(groupId, start, familyContext(group?.name ?? '', members, thisWeek)).then((l) => {
+      if (live) setLabels(l);
+    });
+    return () => {
+      live = false;
+    };
+  }, [groupId, weekKey, named]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) return <View style={styles.wrap} />;
+  if (!group) return <Redirect href="/onboarding" />;
 
   return (
     <ScrollView style={[styles.wrap, { paddingTop: insets.top }]} contentContainerStyle={styles.body}>
@@ -64,8 +82,8 @@ export default function Home() {
       </View>
 
       {stats.map((stat) => (
-        <View key={stat.label} style={styles.stat}>
-          <Text style={styles.statLabel}>{stat.label}</Text>
+        <View key={stat.metric} style={styles.stat}>
+          <Text style={styles.statLabel}>{labels[stat.metric]}</Text>
           <View style={styles.statWho}>
             <AvatarFace value={stat.member.avatar} size={28} />
             <Text style={styles.statName}>{stat.member.name}</Text>
