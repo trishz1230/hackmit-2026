@@ -65,14 +65,10 @@ export default function Home() {
       {stats.map((stat) => (
         <View key={stat.label} style={styles.stat}>
           <Text style={styles.statLabel}>{stat.label}</Text>
-          {stat.member ? (
-            <View style={styles.statWho}>
-              <AvatarFace value={stat.member.avatar} size={28} />
-              <Text style={styles.statName}>{stat.member.name}</Text>
-            </View>
-          ) : (
-            <Text style={styles.statName}>—</Text>
-          )}
+          <View style={styles.statWho}>
+            <AvatarFace value={stat.member.avatar} size={28} />
+            <Text style={styles.statName}>{stat.member.name}</Text>
+          </View>
         </View>
       ))}
     </ScrollView>

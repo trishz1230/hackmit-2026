@@ -12,7 +12,7 @@ export function weekRange(now = new Date()): { start: Date; end: Date } {
   return { start, end };
 }
 
-export type WeekStat = { label: string; member?: Profile };
+export type WeekStat = { label: string; member: Profile };
 
 const countBy = <T,>(items: T[], id: (item: T) => string) =>
   items.reduce<Record<string, number>>((acc, item) => {
@@ -21,37 +21,55 @@ const countBy = <T,>(items: T[], id: (item: T) => string) =>
     return acc;
   }, {});
 
-const pick = (members: Profile[], score: Record<string, number>, best: 'high' | 'low') =>
-  members
-    .slice()
-    .sort((a, b) => {
-      const diff = (score[a.id] ?? 0) - (score[b.id] ?? 0);
-      return best === 'high' ? -diff : diff;
-    })
-    .at(0);
+/**
+ * The one member the score singles out, or nobody: a tie for the place we are
+ * looking at means the week hasn't picked a winner yet.
+ */
+const standout = (
+  members: Profile[],
+  score: Record<string, number>,
+  best: 'high' | 'low',
+): Profile | undefined => {
+  const ranked = members
+    .map((member) => ({ member, count: score[member.id] ?? 0 }))
+    .sort((a, b) => (best === 'high' ? b.count - a.count : a.count - b.count));
+  const [first, second] = ranked;
+  if (!first || !second || first.count === second.count) return undefined;
+  return first.member;
+};
 
 /**
- * Two headline stats for the week, read straight off what the family did:
- * who said the most, and who the family is still waiting on.
+ * Headline stats for the week, read straight off what the family did. A stat
+ * is left out entirely unless the week's activity actually names someone, so
+ * an empty week shows no cards rather than defaulting to whoever is first.
  */
 export function weekStats(
   weekPosts: Post[],
   reactions: Reaction[],
   members: Profile[],
 ): WeekStat[] {
-  if (members.length === 0) return [];
+  if (members.length < 2) return [];
 
   const weekPostIds = weekPosts.map((p) => p.id);
   const weekReactions = reactions.filter((r) => weekPostIds.includes(r.postId));
   const comments = weekReactions.filter((r) => r.kind === 'comment');
 
-  const talked = countBy([...weekPosts, ...comments], (item) =>
-    'userId' in item ? item.userId : '',
-  );
+  const talked = countBy([...weekPosts, ...comments], (item) => item.userId);
   const responded = countBy(weekReactions, (r) => r.userId);
 
-  return [
-    { label: 'Most talked', member: pick(members, talked, 'high') },
-    { label: 'Least responsive', member: pick(members, responded, 'low') },
-  ];
+  const stats: WeekStat[] = [];
+  const mostTalked = weekPosts.length + comments.length > 0
+    ? standout(members, talked, 'high')
+    : undefined;
+  if (mostTalked) stats.push({ label: 'Most talked', member: mostTalked });
+
+  // Only meaningful once someone has reacted — otherwise everybody is level.
+  const leastResponsive = weekReactions.length > 0
+    ? standout(members, responded, 'low')
+    : undefined;
+  if (leastResponsive && leastResponsive.id !== mostTalked?.id) {
+    stats.push({ label: 'Least responsive', member: leastResponsive });
+  }
+
+  return stats;
 }
