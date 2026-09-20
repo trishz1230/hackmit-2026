@@ -1,14 +1,14 @@
 import { Platform } from 'react-native';
 
-/** Sketchbook palette — cream paper, pencil ink, tea-party gold. */
+/** Wonderland palette — twilight purple, tea-party gold, cheshire teal. */
 export const colors = {
-  bg: '#FAF6EC',
-  card: '#FFFDF7',
-  text: '#211E1A',
-  muted: '#8B8272',
-  accent: '#4A423A',
-  accentSoft: '#F1EADB',
-  border: '#EAE2D0',
+  bg: '#F7F1FF',
+  card: '#FFFFFF',
+  text: '#2A1B3D',
+  muted: '#7B6A93',
+  accent: '#7E4BC4',
+  accentSoft: '#EBE0FF',
+  border: '#E4D9F5',
   success: '#2BB3A3',
   gold: '#E8B84B',
   night: '#241539',
