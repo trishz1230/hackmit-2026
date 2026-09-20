@@ -8,6 +8,7 @@
  * EXPO_PUBLIC_PROMPT_API.
  */
 import { taskPrompts } from './mockData';
+import type { Post, Profile } from './types';
 
 /** Paste your deployed function URL here once, e.g. https://famstreak.vercel.app/api/prompt */
 const DEPLOYED_PROMPT_API = 'https://hackmit-2026.vercel.app/api/prompt';
@@ -20,14 +21,43 @@ function fallback(exclude: string[]): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export async function generatePrompt(recent: string[] = []): Promise<string> {
+/** What the family has been sharing, so the next prompt can pick it up. */
+export type FamilyContext = {
+  family?: string;
+  members?: string[];
+  /** Recent posts as "Name: what they said", newest first. */
+  said?: string[];
+};
+
+/**
+ * The last dozen things the family wrote, as "Name: words". A photo only
+ * contributes its caption — the image itself is a data URL nobody can read.
+ */
+export function familyContext(family: string, members: Profile[], posts: Post[]): FamilyContext {
+  const said = [...posts]
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, 12)
+    .map((p) => {
+      const words = (p.kind === 'text' ? p.content : (p.caption ?? '')).trim();
+      const who = members.find((m) => m.id === p.userId)?.name;
+      return words && who ? `${who}: ${words.slice(0, 140)}` : '';
+    })
+    .filter(Boolean);
+
+  return { family, members: members.map((m) => m.name), said };
+}
+
+export async function generatePrompt(
+  recent: string[] = [],
+  context: FamilyContext = {},
+): Promise<string> {
   if (!PROMPT_API) return fallback(recent);
 
   try {
     const res = await fetch(PROMPT_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recent }),
+      body: JSON.stringify({ recent, context }),
     });
     if (!res.ok) return fallback(recent);
 
