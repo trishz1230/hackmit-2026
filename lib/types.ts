@@ -67,9 +67,10 @@ export type Post = {
   taskId: string;
   groupId: string;
   userId: string;
-  kind: 'photo' | 'text';
+  kind: 'photo' | 'text' | 'voice';
+  /** The words themselves for text, otherwise the photo or recording's url. */
   content: string;
-  /** Words written under a photo. Text posts keep everything in `content`. */
+  /** Words written under a photo or a recording. Text posts keep everything in `content`. */
   caption?: string;
   createdAt: string;
 };

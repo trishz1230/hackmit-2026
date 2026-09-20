@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Handwriting';
 import { AvatarFace } from './AvatarFace';
+import { VoiceNote } from './VoiceNote';
 import { tallyEmoji } from '../lib/reactions';
 import { colors, radius, spacing } from '../lib/theme';
 import type { Post, Profile, Reaction } from '../lib/types';
@@ -45,6 +46,11 @@ export function PostCard({
       {post.kind === 'photo' ? (
         <>
           <Image source={{ uri: post.content }} style={styles.photo} resizeMode="cover" />
+          {post.caption ? <Text style={styles.body}>{post.caption}</Text> : null}
+        </>
+      ) : post.kind === 'voice' ? (
+        <>
+          <VoiceNote uri={post.content} />
           {post.caption ? <Text style={styles.body}>{post.caption}</Text> : null}
         </>
       ) : (
