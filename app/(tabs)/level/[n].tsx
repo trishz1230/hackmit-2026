@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../../components/Handwriting';
+import { CompletedAnnouncement } from '../../../components/CompletedAnnouncement';
 import { PostCard } from '../../../components/PostCard';
 import { levelSymbol } from '../../../components/LevelMap';
 import { AvatarButton } from '../../../components/AvatarButton';
@@ -34,6 +35,9 @@ export default function Level() {
     toggleLike,
     likedByMe,
     taskLocked,
+    hasPostedThisCycle,
+    pending,
+    remindToPost,
     loading,
   } = useApp();
   const insets = useSafeAreaInsets();
@@ -50,8 +54,9 @@ export default function Level() {
   const levelPosts = posts.filter(
     (p) => levelTaskIds.includes(p.taskId) && Date.parse(p.createdAt) >= since
   );
-  // Only the level being played can still be answered; the rest are a record.
+  // Only the level being played is still live; the rest are a record.
   const open = currentTask.level === level && !taskLocked;
+  const done = open && hasPostedThisCycle;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
@@ -73,9 +78,14 @@ export default function Level() {
         </View>
       </View>
 
-      {task ? <Text style={styles.prompt}>{task.prompt}</Text> : null}
+      {task ? (
+        <View style={styles.card}>
+          <Text style={styles.prompt}>{task.prompt}</Text>
+          {done ? <CompletedAnnouncement pending={pending} onRemind={remindToPost} /> : null}
+        </View>
+      ) : null}
 
-      {open ? (
+      {open && !done ? (
         <View style={styles.answer}>
           {ANSWERS.map((a) => (
             <Pressable
@@ -152,14 +162,13 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 28, color: colors.accent },
   title: { fontSize: 22, color: colors.text },
   date: { fontSize: 15, color: colors.muted },
-  prompt: {
+  card: {
     margin: spacing.md,
     padding: spacing.md,
     backgroundColor: colors.accentSoft,
     borderRadius: radius.md,
-    fontSize: 16,
-    color: colors.text,
   },
+  prompt: { fontSize: 16, color: colors.text },
   answer: {
     flexDirection: 'row',
     gap: spacing.sm,
