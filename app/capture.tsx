@@ -28,7 +28,7 @@ import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { dismissKeyboard } from '../lib/keyboard';
-import { answeredLevel, hangoutLocked, shownLevel } from '../lib/posts';
+import { answeredLevel, hangoutLocked } from '../lib/posts';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -88,19 +88,7 @@ export default function Capture() {
   // A share belongs to hangout, so it waits on the family task the way hangout
   // does: on level 1 nothing can be shared until that task is answered.
   const shut =
-    (hangout || extra) &&
-    hangoutLocked(
-      tasks,
-      posts,
-      shownLevel(
-        tasks,
-        posts,
-        Math.min(group?.level ?? 1, group?.goal ?? 1),
-        task.level,
-        taskLocked
-      ),
-      me.id
-    );
+    (hangout || extra) && hangoutLocked(tasks, posts, task.level, me.id, taskLocked);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [photoError, setPhotoError] = useState('');
