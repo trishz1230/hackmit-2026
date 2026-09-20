@@ -46,8 +46,11 @@ const SLOT: Record<Step, { top: number; height: number }> = {
   // Long hair hangs past the chin, so its slice is nearly the whole face.
   hair: { top: 0, height: 0.96 },
 };
-/** Gap between the head and the option peeking above or below it. */
-const PEEK_GAP = 96;
+/**
+ * Gap between the head and the option peeking above or below it. Hair needs
+ * the room because it hangs past the chin; eyes and mouth read better close in.
+ */
+const PEEK_GAP: Record<Step, number> = { eyes: 28, mouth: 28, hair: 96 };
 /** How small a neighbouring option is drawn while it waits its turn. */
 const PEEK_SCALE = 0.62;
 const DOUBLE_TAP_MS = 450;
@@ -169,6 +172,7 @@ export default function MakeAYou() {
           <FaceReel
             key={current}
             slot={SLOT[current]}
+            gap={PEEK_GAP[current]}
             options={OPTIONS[current]}
             selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
             onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
@@ -240,6 +244,7 @@ function rowStyle(part: Part, slot: Slot) {
  */
 function FaceReel({
   slot,
+  gap,
   options,
   selected,
   onSelect,
@@ -247,6 +252,7 @@ function FaceReel({
   onScrollStart,
 }: {
   slot: Slot;
+  gap: number;
   options: Part[];
   selected: number;
   onSelect: (i: number) => void;
@@ -265,8 +271,8 @@ function FaceReel({
   const middle = (slot.top + slot.height / 2) * FACE;
   // Negative for a slice as tall as the hair's, pulling its neighbours back in
   // rather than leaving them a whole row away.
-  const pushUp = middle + PEEK_GAP - row;
-  const pushDown = FACE - middle + PEEK_GAP - row;
+  const pushUp = middle + gap - row;
+  const pushDown = FACE - middle + gap - row;
   const len = options.length;
   const loop = len * row;
   const reel = [...options, ...options, ...options];
@@ -433,7 +439,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   footer: {
-    marginTop: 96,
+    marginTop: 148,
     alignSelf: 'stretch',
     alignItems: 'center',
     paddingHorizontal: 36,
