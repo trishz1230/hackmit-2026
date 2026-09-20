@@ -52,7 +52,7 @@ const DOUBLE_TAP_MS = 450;
 /** A tap this soon after the reel moved is the end of a scroll, not a tap. */
 const SETTLE_MS = 300;
 /** The title sits alone on the paper before the face appears. */
-const INTRO_MS = 2000;
+const INTRO_MS = 1000;
 
 export default function MakeAYou() {
   const router = useRouter();
