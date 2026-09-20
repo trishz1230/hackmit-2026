@@ -975,7 +975,6 @@ function MockProvider({ children }: { children: React.ReactNode }) {
           rewardText: reward.trim(),
           goal: clampLevelCount(levelCount),
           level: 1,
-          currentStreak: 0,
           awaitingNextGoal: false,
         });
         setMissedReset(false);

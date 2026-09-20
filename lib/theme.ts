@@ -24,6 +24,8 @@ export const colors = {
   gold: paper.buttonOn,
   night: paper.page,
   nightSoft: '#F4ECD8',
+  /** Behind a popup: warm ink rather than the old purple. */
+  scrim: 'rgba(58,44,20,0.45)',
 };
 
 const handwriting = 'Schoolbell_400Regular';

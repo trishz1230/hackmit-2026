@@ -32,7 +32,9 @@ export function ProgressBar({
       <View style={styles.row}>
         <Text style={styles.level}>Level {level}</Text>
         <View style={styles.right}>
-          <Text style={styles.streak}>🔥 {streak} day streak</Text>
+          <Text style={styles.streak}>
+            🔥 {streak} level{streak === 1 ? '' : 's'} streak
+          </Text>
           {myAvatar ? (
             <Pressable onPress={onPressAvatar} hitSlop={8}>
               <AvatarFace value={myAvatar} size={AVATAR_SIZE} />
