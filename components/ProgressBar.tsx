@@ -58,8 +58,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  right: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  right: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   level: { fontSize: 17, fontWeight: '700', color: colors.text },
   streak: { fontSize: 14, color: colors.muted },
   track: {

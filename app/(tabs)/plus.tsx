@@ -6,23 +6,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PostCard } from '../../components/PostCard';
 import { AvatarButton } from '../../components/AvatarButton';
 import { Tabs } from '../../components/Tabs';
-import { EXTRA_PROMPT } from '../../lib/posts';
+import { EXTRA_PROMPT, isExtraPost } from '../../lib/posts';
 import { useApp } from '../../lib/store';
 import { paper, radius, spacing } from '../../lib/theme';
 
 /** The ＋ tab: post anything to the family, counting toward no level. */
 export default function Plus() {
   const router = useRouter();
-  const { group, hangoutPosts, reactionsFor, memberById, toggleLike, likedByMe, loading } = useApp();
+  const { group, posts, hangoutPosts, reactionsFor, memberById, toggleLike, likedByMe, loading } =
+    useApp();
   const insets = useSafeAreaInsets();
 
   if (loading) return <View style={styles.wrap} />;
   if (!group) return <Redirect href="/onboarding" />;
 
+  // Extra shares made against a task belong here too, not in the family feed.
+  const shares = [...hangoutPosts, ...posts.filter((p) => isExtraPost(p, posts))].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt)
+  );
+
   return (
     <View style={[styles.wrap, { paddingTop: insets.top }]}>
       <FlatList
-        data={hangoutPosts}
+        data={shares}
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View>

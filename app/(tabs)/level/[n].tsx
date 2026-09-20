@@ -7,6 +7,7 @@ import { CompletedAnnouncement } from '../../../components/CompletedAnnouncement
 import { PostCard } from '../../../components/PostCard';
 import { levelSymbol } from '../../../components/LevelMap';
 import { AvatarButton } from '../../../components/AvatarButton';
+import { isExtraPost } from '../../../lib/posts';
 import { useApp } from '../../../lib/store';
 import { colors, radius, spacing } from '../../../lib/theme';
 
@@ -52,7 +53,10 @@ export default function Level() {
   // in the feed but don't belong to this round of the level.
   const since = task?.createdAt ? Date.parse(task.createdAt) : 0;
   const levelPosts = posts.filter(
-    (p) => levelTaskIds.includes(p.taskId) && Date.parse(p.createdAt) >= since
+    (p) =>
+      levelTaskIds.includes(p.taskId) &&
+      Date.parse(p.createdAt) >= since &&
+      !isExtraPost(p, posts)
   );
   // Only the level being played is still live; the rest are a record.
   const open = currentTask.level === level && !taskLocked;

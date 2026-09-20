@@ -7,7 +7,7 @@ import { CompletedAnnouncement } from '../../components/CompletedAnnouncement';
 import { LevelMap } from '../../components/LevelMap';
 import { ProgressBar } from '../../components/ProgressBar';
 import { VoiceNote } from '../../components/VoiceNote';
-import { describeWait, streakCount } from '../../lib/levels';
+import { streakCount } from '../../lib/levels';
 import { useApp } from '../../lib/store';
 import { colors, radius, spacing } from '../../lib/theme';
 import type { Post } from '../../lib/types';
@@ -39,9 +39,7 @@ export default function Path() {
     missedReset,
     dismissMissedReset,
     waitingForPeriod,
-    unlocksAt,
     taskLocked,
-    opensAt,
     taskForLevel,
     myPostForLevel,
     me,
@@ -52,9 +50,19 @@ export default function Path() {
   const [selected, setSelected] = useState<number | null>(null);
 
   const openLevel = (n: number) => {
-    const reachable = group ? n < group.level || (n === Math.min(group.level, group.goal) && !taskLocked) : false;
-    if (reachable) router.push(`/level/${n}`);
-    else setSelected(n);
+    if (!group) return;
+    const currentLevel = Math.min(group.level, group.goal);
+    const reachable = n < group.level || (n === currentLevel && !taskLocked);
+    if (!reachable) {
+      setSelected(n);
+      return;
+    }
+    // Nothing left to do on the level you've answered, so go to the feed.
+    if (n === currentLevel && hasPostedThisCycle) {
+      router.push('/(tabs)/feed');
+      return;
+    }
+    router.push(`/level/${n}`);
   };
 
   if (loading) return <View style={styles.fill} />;
@@ -88,8 +96,8 @@ export default function Path() {
           <Text style={styles.waitTitle}>Everyone posted</Text>
           <Text style={styles.waitBody}>
             {group.level < group.goal
-              ? `Level ${group.level + 1} will open ${describeWait(unlocksAt)}.`
-              : `${group.rewardText || 'Your reward'} unlocks ${describeWait(unlocksAt)}.`}
+              ? `Level ${group.level + 1} will open soon. What will the next conversation be?`
+              : `${group.rewardText || 'Your reward'} unlocks soon.`}
           </Text>
         </View>
       ) : hasPostedThisCycle ? (
@@ -131,7 +139,6 @@ export default function Path() {
                   <Text style={styles.sheetBody}>
                     Wait till the next notification for a new conversation :)
                   </Text>
-                  <Text style={styles.sheetMeta}>Opens {describeWait(opensAt)}.</Text>
                 </>
               ) : isCurrent ? (
                 <>
@@ -168,7 +175,6 @@ export default function Path() {
                   <Text style={styles.sheetBody}>
                     Wait till the next notification for a new conversation :)
                   </Text>
-                  <Text style={styles.sheetMeta}>Opens {describeWait(unlocksAt)}.</Text>
                 </>
               ) : (
                 <Text style={styles.sheetBody}>
@@ -203,7 +209,6 @@ const styles = StyleSheet.create({
   resetTitle: { fontWeight: '800', color: colors.text },
   resetBody: { color: colors.muted, marginTop: 2 },
   dismiss: { marginTop: spacing.xs, color: colors.accent, fontWeight: '700' },
-  sheetMeta: { color: colors.muted, marginTop: spacing.xs },
   complete: {
     marginTop: spacing.md,
     color: colors.success,
