@@ -204,12 +204,15 @@ export async function deletePost(id: string): Promise<void> {
   await sb.from('posts').delete().eq('id', id);
 }
 
+/** What a family is called when nobody names it. */
+export const DEFAULT_FAMILY_NAME = 'family';
+
 export async function createGroup(userId: string, opts: CreateOptions): Promise<Group> {
   const sb = getSupabase();
   const { data, error } = await sb
     .from('groups')
     .insert({
-      name: opts.familyName?.trim() || `${opts.myName}'s family`,
+      name: opts.familyName?.trim() || DEFAULT_FAMILY_NAME,
       join_code: randomCode(),
       goal: opts.goal,
       level: 1,
