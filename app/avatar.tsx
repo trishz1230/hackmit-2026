@@ -41,7 +41,7 @@ const SLOT = {
 } as const;
 /** Gap between the head and the option peeking above or below it. */
 const PEEK_GAP = 22;
-const DOUBLE_TAP_MS = 320;
+const DOUBLE_TAP_MS = 450;
 /** The title sits alone on the paper before the face appears. */
 const INTRO_MS = 2000;
 
@@ -132,6 +132,7 @@ export default function MakeAYou() {
             options={current === 'eyes' ? EYES : current === 'mouth' ? MOUTHS : HAIR}
             selected={current === 'eyes' ? eyes : current === 'mouth' ? mouth : hair}
             onSelect={current === 'eyes' ? setEyes : current === 'mouth' ? setMouth : setHair}
+            onTap={onTap}
           />
         ) : null}
 
@@ -186,11 +187,13 @@ function FaceReel({
   options,
   selected,
   onSelect,
+  onTap,
 }: {
   slot: Slot;
   options: (number | null)[];
   selected: number;
   onSelect: (i: number) => void;
+  onTap: () => void;
 }) {
   const scroller = useRef<ScrollView>(null);
   const offset = useRef(new Animated.Value(0)).current;
@@ -256,6 +259,8 @@ function FaceReel({
             onMove(e.nativeEvent.contentOffset.y),
         })}
       >
+        {/* The reel covers the face, so the lock tap has to land here too. */}
+        <Pressable onPress={onTap}>
         {reel.map((option, i) => (
           <Animated.View
             key={i}
@@ -295,6 +300,7 @@ function FaceReel({
             />
           </Animated.View>
         ))}
+        </Pressable>
       </Animated.ScrollView>
     </View>
   );
