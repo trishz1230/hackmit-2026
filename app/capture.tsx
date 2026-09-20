@@ -28,7 +28,7 @@ import { AvatarButton } from '../components/AvatarButton';
 import { KeyboardScreen } from '../components/KeyboardScreen';
 import { VoiceNote, clock } from '../components/VoiceNote';
 import { dismissKeyboard } from '../lib/keyboard';
-import { hangoutLocked } from '../lib/posts';
+import { answeredLevel, hangoutLocked } from '../lib/posts';
 import { useApp } from '../lib/store';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -61,12 +61,23 @@ const VOICE = {
 export default function Capture() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { channel, start } = useLocalSearchParams<{ channel?: string; start?: string }>();
+  const { channel, start, level } = useLocalSearchParams<{
+    channel?: string;
+    start?: string;
+    level?: string;
+  }>();
   const hangout = channel === 'hangout';
-  const { task, addPost, taskLocked, hasPostedThisCycle, group, tasks, posts, me } = useApp();
+  const { task, addPost, taskLocked, hasPostedThisCycle, group, tasks, posts, me, taskForLevel } =
+    useApp();
+  // Opened from a level page, the answer belongs to that level's task even if
+  // the map has since moved on to a level that hasn't opened yet.
+  const asked = (level ? taskForLevel(Number(level)) : undefined) ?? task;
+  const answered = level
+    ? answeredLevel(tasks, posts, Number(level), me.id)
+    : hasPostedThisCycle;
   // The prompt is only asked once, and a locked level has no prompt to answer;
   // either way what you write is a free share rather than an answer.
-  const extra = !hangout && (hasPostedThisCycle || taskLocked);
+  const extra = !hangout && (answered || (!level && taskLocked));
   // A share belongs to hangout, so it waits on the family task the way hangout
   // does: on level 1 nothing can be shared until that task is answered.
   const shut =
@@ -218,7 +229,8 @@ export default function Capture() {
       kind,
       voiceUri ?? photoUri ?? words,
       to,
-      kind === 'text' ? undefined : words || undefined
+      kind === 'text' ? undefined : words || undefined,
+      asked.id
     );
     if (hangout || extra) {
       router.replace('/(tabs)/plus');
@@ -270,7 +282,7 @@ export default function Capture() {
             ? 'Share anything with the family'
             : extra
               ? 'What else would you like to share with your family?'
-              : task.prompt}
+              : asked.prompt}
         </Text>
 
         <Pressable style={styles.square} onPress={addPhoto}>
