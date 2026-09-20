@@ -9,10 +9,11 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text } from '../components/Handwriting';
-import { EYES, HAIR, HEAD, MOUTHS, encodeFace } from '../components/AvatarFace';
+import { EYES, HAIR, HEAD, MOUTHS, encodeFace, parseFace } from '../components/AvatarFace';
 import { savePendingAvatar } from '../lib/api';
+import { useApp } from '../lib/store';
 
 const paper = require('../assets/welcome/paper.png');
 const sparkleBig = require('../assets/welcome/sparkle-big.png');
@@ -49,10 +50,14 @@ const INTRO_MS = 2000;
 
 export default function MakeAYou() {
   const router = useRouter();
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const editing = edit === '1';
+  const { me, updateAvatar } = useApp();
+  const existing = editing ? parseFace(me.avatar) : null;
   const [step, setStep] = useState(0);
-  const [eyes, setEyes] = useState(0);
-  const [mouth, setMouth] = useState(0);
-  const [hair, setHair] = useState(0);
+  const [eyes, setEyes] = useState(existing?.eyes ?? 0);
+  const [mouth, setMouth] = useState(existing?.mouth ?? 0);
+  const [hair, setHair] = useState(existing?.hair ?? 0);
   const [done, setDone] = useState(false);
   const [started, setStarted] = useState(false);
   const reveal = useRef(new Animated.Value(0)).current;
@@ -95,18 +100,23 @@ export default function MakeAYou() {
     if (!started || step < STEPS.length || leaving.current) return;
     leaving.current = true;
     setDone(true);
-    savePendingAvatar(encodeFace({ eyes, mouth, hair })).catch(() => {});
+    const face = encodeFace({ eyes, mouth, hair });
+    if (editing) updateAvatar(face);
+    else savePendingAvatar(face).catch(() => {});
     Animated.sequence([
       Animated.spring(finish, { toValue: 1.12, friction: 4, useNativeDriver: true }),
       Animated.spring(finish, { toValue: 1, friction: 5, useNativeDriver: true }),
     ]).start();
-    const t = setTimeout(() => router.replace('/onboarding'), 1600);
+    const t = setTimeout(() => {
+      if (editing) router.back();
+      else router.replace('/onboarding');
+    }, 1600);
     return () => clearTimeout(t);
-  }, [eyes, finish, hair, mouth, router, started, step]);
+  }, [editing, eyes, finish, hair, mouth, router, started, step, updateAvatar]);
 
   return (
     <ImageBackground source={paper} resizeMode="cover" style={styles.screen}>
-      <Text style={styles.title}>make a you...</Text>
+      <Text style={styles.title}>{editing ? 'redo you...' : 'make a you...'}</Text>
 
       <Animated.View
         style={[styles.stage, { opacity: reveal }, done && { transform: [{ scale: finish }] }]}

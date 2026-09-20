@@ -26,15 +26,20 @@ export default function FamilyAvatars() {
       </Text>
 
       <View style={styles.grid}>
-        {members.map((m) => (
-          <View key={m.id} style={styles.member}>
-            <AvatarFace value={m.avatar} size={96} />
-            <Text style={styles.name}>
-              {m.name}
-              {m.id === me.id ? ' (you)' : ''}
-            </Text>
-          </View>
-        ))}
+        {members.map((m) =>
+          m.id === me.id ? (
+            <Pressable key={m.id} style={styles.member} onPress={() => router.push('/avatar?edit=1')}>
+              <AvatarFace value={m.avatar} size={96} />
+              <Text style={styles.name}>{m.name} (you)</Text>
+              <Text style={styles.edit}>edit avatar</Text>
+            </Pressable>
+          ) : (
+            <View key={m.id} style={styles.member}>
+              <AvatarFace value={m.avatar} size={96} />
+              <Text style={styles.name}>{m.name}</Text>
+            </View>
+          )
+        )}
       </View>
 
       <Pressable style={styles.cta} onPress={() => router.replace('/')}>
@@ -57,6 +62,7 @@ const styles = StyleSheet.create({
   },
   member: { alignItems: 'center', width: 110 },
   name: { marginTop: spacing.xs, fontSize: 16, color: colors.text },
+  edit: { fontSize: 14, color: colors.accent, textDecorationLine: 'underline' },
   cta: {
     marginTop: spacing.lg,
     backgroundColor: colors.accent,

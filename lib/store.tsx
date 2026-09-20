@@ -103,6 +103,8 @@ type State = {
   reactionsFor: (postId: string) => Reaction[];
   memberById: (id: string) => Profile | undefined;
   updateProfile: (input: { name: string; phone?: string }) => void;
+  /** Replaces the drawn face on an existing profile. */
+  updateAvatar: (face: string) => void;
   leaveGroup: () => void;
   startNextGoal: (reward: string, levelCount: number) => void;
   simulateMissedDay: () => void;
@@ -499,6 +501,12 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
       updateProfile: ({ name, phone }) => {
         run(async () => {
           await api.saveProfile(userId, name.trim() || me.name, group?.id ?? null, phone);
+          if (group) await refresh(group.id);
+        });
+      },
+      updateAvatar: (face) => {
+        run(async () => {
+          await api.saveAvatar(userId, face);
           if (group) await refresh(group.id);
         });
       },
@@ -951,6 +959,9 @@ function MockProvider({ children }: { children: React.ReactNode }) {
         setMembers((prev) =>
           prev.map((m) => (m.id === CURRENT_USER_ID ? { ...m, name: name.trim() || m.name, phone } : m))
         );
+      },
+      updateAvatar: (face) => {
+        setMembers((prev) => prev.map((m) => (m.id === CURRENT_USER_ID ? { ...m, avatar: face } : m)));
       },
       leaveGroup: () => {
         clearTimers();
