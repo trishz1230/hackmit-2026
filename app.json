@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FamStreak",
+    "name": "btw",
     "slug": "famstreak",
     "scheme": "famstreak",
     "version": "1.0.0",
@@ -36,8 +36,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "FamStreak uses your photos so you can post today's task.",
-          "cameraPermission": "FamStreak uses the camera so you can post today's task."
+          "photosPermission": "btw uses your photos so you can post today's task.",
+          "cameraPermission": "btw uses the camera so you can post today's task."
         }
       ],
       [
@@ -49,7 +49,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow FamStreak to record a voice message for your family."
+          "microphonePermission": "Allow btw to record a voice message for your family."
         }
       ]
     ]

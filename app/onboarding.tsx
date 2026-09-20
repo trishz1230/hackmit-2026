@@ -105,9 +105,9 @@ export default function Onboarding() {
       automaticallyAdjustKeyboardInsets
       contentContainerStyle={[styles.wrap, { paddingBottom: spacing.lg + insets.bottom }]}
     >
-      <Text style={styles.logo}>FamStreak</Text>
+      <Text style={styles.logo}>btw</Text>
       <Text style={styles.tagline}>
-        One task per level. Everyone posts, or the whole family&apos;s streak resets.
+        Between us. Everyone posts, or the whole family&apos;s streak resets.
       </Text>
 
       <View style={styles.toggle}>

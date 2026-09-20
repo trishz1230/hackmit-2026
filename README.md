@@ -1,6 +1,6 @@
-# FamStreak
+# btw
 
-A family streak app: everyone in the group gets the same task each cycle, a reminder
+A family streak app — *between us*: everyone in the group gets the same task each cycle, a reminder
 nags you until you do it, and posts land in a shared feed. If one person misses, the
 whole group's streak resets. Hit the level goal and the family unlocks its reward.
 

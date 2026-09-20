@@ -652,7 +652,7 @@ export async function addReaction(input: Omit<Reaction, 'id'>): Promise<void> {
       : input.kind === 'like'
         ? `${actorName} liked your post`
         : `${actorName} reacted ${input.value}`;
-  const body = input.kind === 'comment' ? input.value : 'Open FamStreak to see their reaction.';
+  const body = input.kind === 'comment' ? input.value : 'Open btw to see their reaction.';
   await notifyProfile(author.data ? toProfile(author.data as Row) : undefined, title, body, {
     type: 'post',
     postId: input.postId,
