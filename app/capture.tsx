@@ -208,21 +208,23 @@ export default function Capture() {
   useEffect(() => {
     if (opened.current || shut) return;
     opened.current = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const run = InteractionManager.runAfterInteractions(() => {
-      if (start === 'photo') addPhoto();
-      else if (start === 'voice') void startRecording();
-      else if (start === 'text') input.current?.focus();
+      // A beat after the sheet settles, so the three choices are on screen
+      // before the photo chooser is drawn over them.
+      timer = setTimeout(() => {
+        if (start === 'photo') addPhoto();
+        else if (start === 'voice') void startRecording();
+        else if (start === 'text') input.current?.focus();
+      }, 350);
     });
-    return () => run.cancel();
+    return () => {
+      run.cancel();
+      if (timer) clearTimeout(timer);
+    };
     // Only ever the arrival, so the pickers don't reopen on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [start]);
-
-  // Picking photo/voice/write on the level page already chose the channel, so
-  // capture shows just that one instead of offering the three again.
-  const only = start === 'photo' || start === 'voice' || start === 'text' ? start : null;
-  const showPhoto = !only || only === 'photo' || Boolean(photoUri);
-  const showVoice = !only || only === 'voice' || Boolean(voiceUri);
 
   const words = text.trim();
   const canPost = Boolean(photoUri || voiceUri || words) && !recorderState.isRecording;
@@ -309,21 +311,19 @@ export default function Capture() {
               : asked.prompt}
         </Text>
 
-        {showPhoto ? (
-          <Pressable style={styles.square} onPress={addPhoto}>
-            {photoUri ? (
-              <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
-            ) : (
-              <>
-                <Text style={styles.squareIcon}>📷</Text>
-                <Text style={styles.squareText}>Add a photo</Text>
-              </>
-            )}
-          </Pressable>
-        ) : null}
+        <Pressable style={styles.square} onPress={addPhoto}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
+          ) : (
+            <>
+              <Text style={styles.squareIcon}>📷</Text>
+              <Text style={styles.squareText}>Add a photo</Text>
+            </>
+          )}
+        </Pressable>
         {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
 
-        {!showVoice ? null : voiceUri ? (
+        {voiceUri ? (
           <View style={styles.voice}>
             <VoiceNote uri={voiceUri} />
             <Pressable onPress={() => setVoiceUri(null)} hitSlop={8}>

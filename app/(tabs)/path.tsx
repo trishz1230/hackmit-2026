@@ -159,7 +159,7 @@ export default function Path() {
                       style={styles.cta}
                       onPress={() => {
                         setSelected(null);
-                        router.push('/capture');
+                        router.push(`/capture?level=${shown}`);
                       }}
                     >
                       <Text style={styles.ctaText}>Complete task</Text>
